@@ -1,8 +1,5 @@
-import sys
-sys.path.insert(0, '/home/claude/QOMET')
-
-from app.game.game import Game
-from app.game.rules import Rules
+from backend.game.game import Game
+from backend.game.rules import Rules
 
 print("=== TEST 1 : Poser des étoiles ===")
 g = Game("Alice", "Bob")
@@ -17,11 +14,11 @@ print()
 
 print("=== TEST 2 : Détection victoire ===")
 g2 = Game("Alice", "Bob")
-# Alice forme un carré (0,0)(0,2)(2,0)(2,2)
-g2.board.poser(0, 0, "clair")
-g2.board.poser(0, 2, "clair")
-g2.board.poser(2, 0, "clair")
-g2.board.poser(2, 2, "clair")
+# Alice forme un carré (1,1)(1,5)(5,1)(5,5) — cases toutes jouables
+g2.board.poser(1, 1, "clair")
+g2.board.poser(1, 5, "clair")
+g2.board.poser(5, 1, "clair")
+g2.board.poser(5, 5, "clair")
 g2.board.afficher()
 gagnants = Rules.verifier_victoire(g2.board)
 print("Gagnant détecté:", gagnants)

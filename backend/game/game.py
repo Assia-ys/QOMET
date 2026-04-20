@@ -1,6 +1,6 @@
-from app.game.board import Board
-from app.game.player import Player
-from app.game.rules import Rules
+from backend.game.board import Board
+from backend.game.player import Player
+from backend.game.rules import Rules
 
 class Game:
     def __init__(self, nom_j1="Joueur 1", nom_j2="Joueur 2"):

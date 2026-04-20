@@ -1,4 +1,4 @@
-from app.game.board import CASES_JOUABLES, TAILLE
+from backend.game.board import CASES_JOUABLES, TAILLE
 
 DIRECTIONS = [
     (0, 1),   # droite
