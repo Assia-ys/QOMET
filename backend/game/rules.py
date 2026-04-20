@@ -1,4 +1,4 @@
-from backend.game.board import CASES_JOUABLES, TAILLE
+from backend.game.board import CASES_JOUABLES, TAILLE, CASE_HORS_PLATEAU
 
 DIRECTIONS = [
     (0, 1),   # droite
@@ -134,6 +134,9 @@ class Rules:
             b.set(r1, c1, None)
             b.dernier_coup = coup
 
+        else:
+            raise ValueError(f"Type de coup inconnu : '{type_coup}'")
+
         return b
 
     @staticmethod
@@ -166,7 +169,7 @@ class Rules:
                             board.get(r4, c4),
                         ]
                         if (None not in coins and
-                            False not in coins and
+                            CASE_HORS_PLATEAU not in coins and
                             len(set(coins)) == 1):
                             gagnants.add(coins[0])
 

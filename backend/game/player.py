@@ -16,7 +16,7 @@ class Player:
         return True
 
     def recuperer_etoile(self):
-        # quand une étoile sort du plateau
+        assert self.etoiles_sur_plateau > 0, f"{self.nom} n'a aucune étoile sur le plateau à récupérer"
         self.etoiles_en_main += 1
         self.etoiles_sur_plateau -= 1
 

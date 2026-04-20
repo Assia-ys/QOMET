@@ -34,6 +34,12 @@ class Game:
 
     def jouer_deplacement(self, coup):
         """Le joueur déplace une étoile (coup validé par Rules)"""
+        coups_legaux = Rules.deplacements_valides(
+            self.board, coup[1], coup[2], self.board.dernier_coup
+        )
+        if coup not in coups_legaux:
+            return False, "Coup illégal"
+
         self.board = Rules.appliquer_coup(
             self.board, coup, self.joueur_actif, self.joueur_adverse
         )
@@ -59,8 +65,13 @@ class Game:
         self.termine = True
 
     def etat(self):
+        from backend.game.board import CASES_JOUABLES
+        plateau = {
+            f"{r},{c}": self.board.get(r, c)
+            for (r, c) in CASES_JOUABLES
+        }
         return {
-            "grille": self.board.grille,
+            "plateau": plateau,
             "joueur_actif": self.joueur_actif.nom,
             "j1": str(self.joueur1),
             "j2": str(self.joueur2),

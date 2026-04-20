@@ -1,4 +1,5 @@
 TAILLE = 7
+CASE_HORS_PLATEAU = "hors_plateau"
 
 # Les 25 cases jouables du plateau en losange
 CASES_JOUABLES = {
@@ -15,7 +16,7 @@ class Board:
     def __init__(self):
         # None = case vide, False = case non jouable, sinon "clair" ou "fonce"
         self.grille = [
-            [None if (r, c) in CASES_JOUABLES else False
+            [None if (r, c) in CASES_JOUABLES else CASE_HORS_PLATEAU
              for c in range(TAILLE)]
             for r in range(TAILLE)
         ]
@@ -46,10 +47,11 @@ class Board:
         return self.grille[row][col]
 
     def set(self, row, col, valeur):
+        assert self.est_jouable(row, col), f"Tentative d'écriture sur case non jouable ({row},{col})"
         self.grille[row][col] = valeur
 
     def afficher(self):
-        symboles = {None: "O", False: ".", "clair": "C", "fonce": "F"}
+        symboles = {None: "O", CASE_HORS_PLATEAU: ".", "clair": "C", "fonce": "F"}
         for r in range(TAILLE):
             ligne = ""
             for c in range(TAILLE):
