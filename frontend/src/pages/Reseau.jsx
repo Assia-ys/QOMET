@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 const C = {
   bg: '#0f172a',
@@ -26,6 +27,7 @@ function genererCode() {
 // ─── Vue principale ────────────────────────────────────────────────────────────
 
 function VueAccueil({ onCreer, onRejoindre }) {
+  const navigate = useNavigate()
   const [prenomCreateur, setPrenomCreateur] = useState('')
   const [prenomRejoignant, setPrenomRejoignant] = useState('')
   const [codeInput, setCodeInput] = useState(['', '', '', ''])
@@ -59,6 +61,14 @@ function VueAccueil({ onCreer, onRejoindre }) {
 
   return (
     <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 16px' }}>
+      <button
+        onClick={() => navigate('/')}
+        style={{ position: 'absolute', top: 24, left: 24, background: 'transparent', border: 'none', color: C.textSub, fontSize: 14, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+        onMouseEnter={e => e.currentTarget.style.color = '#f1f5f9'}
+        onMouseLeave={e => e.currentTarget.style.color = C.textSub}
+      >
+        ← Menu
+      </button>
       <h1 style={{ fontSize: 30, fontWeight: 800, color: '#f1f5f9', marginBottom: 6, textAlign: 'center' }}>
         Multijoueur sur réseau local
       </h1>
@@ -178,6 +188,8 @@ function VueAccueil({ onCreer, onRejoindre }) {
 // ─── Salle d'attente ───────────────────────────────────────────────────────────
 
 function SalleAttente({ code, prenom, onAnnuler }) {
+  const navigate = useNavigate()
+
   return (
     <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 16px' }}>
       <h1 style={{ fontSize: 26, fontWeight: 800, color: '#f1f5f9', marginBottom: 6 }}>Partie créée !</h1>
@@ -213,14 +225,24 @@ function SalleAttente({ code, prenom, onAnnuler }) {
         En attente de l'adversaire...
       </p>
 
-      <button
-        onClick={onAnnuler}
-        style={{ background: C.card, color: '#f1f5f9', border: `1.5px solid ${C.cardBorder}`, borderRadius: 14, padding: '12px 32px', fontWeight: 600, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, transition: 'background 0.2s' }}
-        onMouseEnter={e => e.currentTarget.style.background = '#334155'}
-        onMouseLeave={e => e.currentTarget.style.background = C.card}
-      >
-        <span style={{ fontSize: 16 }}>✕</span> Annuler
-      </button>
+      <div style={{ display: 'flex', gap: 12 }}>
+        <button
+          onClick={onAnnuler}
+          style={{ background: C.card, color: '#f1f5f9', border: `1.5px solid ${C.cardBorder}`, borderRadius: 14, padding: '12px 24px', fontWeight: 600, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, transition: 'background 0.2s' }}
+          onMouseEnter={e => e.currentTarget.style.background = '#334155'}
+          onMouseLeave={e => e.currentTarget.style.background = C.card}
+        >
+          <span style={{ fontSize: 16 }}>✕</span> Annuler
+        </button>
+        <button
+          onClick={() => navigate('/')}
+          style={{ background: C.card, color: C.textSub, border: `1.5px solid ${C.cardBorder}`, borderRadius: 14, padding: '12px 24px', fontWeight: 600, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, transition: 'background 0.2s' }}
+          onMouseEnter={e => e.currentTarget.style.background = '#334155'}
+          onMouseLeave={e => e.currentTarget.style.background = C.card}
+        >
+          <span>←</span> Menu
+        </button>
+      </div>
     </div>
   )
 }
