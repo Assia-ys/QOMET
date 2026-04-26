@@ -75,7 +75,7 @@ Les librairies du projet (React, React Router, Zustand, etc.) ne sont pas
 incluses dans Git. Il faut les télécharger une première fois.
 
 ```bash
-cd src
+cd frontend/src
 npm install
 ```
 
@@ -123,10 +123,10 @@ Chaque route doit afficher une page différente :
 | URL | Page affichée |
 |---|---|
 | `http://127.0.0.1:5173/#/` | Accueil |
-| `http://127.0.0.1:5573/#/jeu` | Jeu |
-| `http://127.0.0.1:5573/#/ia` | Intelligence Artificielle |
-| `http://127.0.0.1:5573/#/reseau` | Réseau |
-| `http://127.0.0.1:5573/#/parametres` | Paramètres |
+| `http://127.0.0.1:5173/#/jeu` | Jeu |
+| `http://127.0.0.1:5173/#/ia` | Intelligence Artificielle |
+| `http://127.0.0.1:5173/#/reseau` | Réseau |
+| `http://127.0.0.1:5173/#/parametres` | Paramètres |
 
 Si les pages changent sans rechargement complet → tout fonctionne.
 
@@ -137,14 +137,14 @@ Si les pages changent sans rechargement complet → tout fonctionne.
 À faire **une seule fois** (installation) :
 
 ```bash
-cd src
+cd frontend/src
 npm install
 ```
 
 À faire **à chaque fois** que tu travailles sur le projet :
 
 ```bash
-cd src
+cd frontend/src
 npm run dev
 ```
 
@@ -161,7 +161,7 @@ npm run dev
 
 ### "page introuvable" dans le navigateur
 → Vérifie que le terminal avec `npm run dev` est encore ouvert et actif.
-→ Utilise `http://127.0.0.1:5573/` et non `http://localhost:5173/`.
+→ Utilise `http://127.0.0.1:5173/` `.
 
 ### Le terminal affiche des erreurs rouges au lancement
 → Tu as probablement oublié de faire `npm install`. Relance-le.
