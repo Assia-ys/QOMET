@@ -9,7 +9,7 @@ import urllib.error
 import json
 import time
 
-TOKEN = "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"
+TOKEN = "VOTRE_TOKEN_GITHUB_ICI"
 REPO  = "Assia-ys/QOMET"
 API   = f"https://api.github.com/repos/{REPO}/issues"
 
