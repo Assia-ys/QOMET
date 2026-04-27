@@ -10,6 +10,8 @@ const etatInitial = {
   selectionne: null,
   coupsValides: [],
   dernierCoup: null,
+  niveauIA: 'facile',   
+  prenomJoueur: '',
 }
 
 const useGameStore = create((set, get) => ({
