@@ -12,25 +12,5 @@ export const GRILLE_VIDE = Array.from({ length: 7 }, () =>
   Array.from({ length: 7 }, () => null)
 )
 
-export const GRILLE_TEST = Array.from({ length: 7 }, (_, r) =>
-  Array.from({ length: 7 }, (_, c) => {
-    if (r === 0 && c === 0) return 'clair'
-    if (r === 3 && c === 3) return 'fonce'
-    if (r === 6 && c === 6) return 'clair'
-    return null
-  })
-)
-
-export const JOUEUR_1_MOCK = {
-  nom: 'Alice',
-  couleur: 'clair',
-  en_main: 5,
-  sur_plateau: 2,
-}
-
-export const JOUEUR_2_MOCK = {
-  nom: 'Bob',
-  couleur: 'fonce',
-  en_main: 6,
-  sur_plateau: 1,
-}
+export const JOUEUR_1_MOCK = { nom: 'Alice', couleur: 'clair', en_main: 7, sur_plateau: 0 }
+export const JOUEUR_2_MOCK = { nom: 'Bob',   couleur: 'fonce', en_main: 7, sur_plateau: 0 }
