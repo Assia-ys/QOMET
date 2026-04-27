@@ -10,6 +10,8 @@ const etatInitial = {
   selectionne: null,
   coupsValides: [],
   dernierCoup: null,
+  niveauIA: 'facile',   
+  prenomJoueur: '',
 }
 
 const useGameStore = create((set, get) => ({
@@ -45,6 +47,11 @@ const useGameStore = create((set, get) => ({
       ...etatInitial,
       plateau: GRILLE_VIDE,
       joueurs: [{ ...JOUEUR_1_MOCK }, { ...JOUEUR_2_MOCK }],
+    }),
+  setConfigIA: (niveau, prenom) =>
+    set({
+      niveauIA: niveau,
+      prenomJoueur: prenom,
     }),
 }))
 
