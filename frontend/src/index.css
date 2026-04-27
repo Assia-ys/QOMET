@@ -9,3 +9,7 @@ body {
   color: #f1f5f9;
   font-family: 'Segoe UI', sans-serif;
 }
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
