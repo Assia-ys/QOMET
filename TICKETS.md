@@ -219,9 +219,9 @@ Implémenter les événements Socket.io :
 
 | Personne | Phase 1 | Phase 2 | Phase 3 |
 |---|---|---|---|
-| Membre 1 | F-01, F-04, F-09 | N-01, N-02 | IA-01, IA-05 |
-| Membre 2 | F-02, F-05, F-06 | N-05 | IA-02, IA-03 |
-| Membre 3 | F-03, F-07, F-08 | N-03, N-04 | IA-04 |
+| Membre 1 | F-01, F-04, F-09 | N-02, N-03 | IA-01, IA-05 |
+| Membre 2 | F-02, F-05, F-06 | N-01 | IA-02, IA-03 |
+| Membre 3 | F-03, F-07, F-08 | N-04, N-05 | IA-04 |
 
 ---
 
