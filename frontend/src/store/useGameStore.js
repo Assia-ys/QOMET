@@ -49,6 +49,8 @@ const useGameStore = create((set, get) => ({
       ),
     })),
 
+  setConfigIA: (niveau, prenom) => set({ niveauIA: niveau, prenomJoueur: prenom }),
+
   reinitialiser: () => set({ ...etatInitial }),
 }))
 
