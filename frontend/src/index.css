@@ -9,12 +9,11 @@ body {
   color: #f1f5f9;
   font-family: 'Segoe UI', sans-serif;
 }
-<<<<<<< Updated upstream
-=======
 
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
 
 @keyframes pageEnter {
   from { opacity: 0; transform: translateY(10px); }
@@ -36,4 +35,4 @@ body {
   0%, 100% { transform: scale(1);    filter: drop-shadow(0 0 6px #fbbf24); }
   50%       { transform: scale(1.1); filter: drop-shadow(0 0 16px #fde68a) drop-shadow(0 0 28px #f59e0b); }
 }
->>>>>>> Stashed changes
+

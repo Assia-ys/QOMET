@@ -5,11 +5,13 @@ const etatInitial = {
   plateau: GRILLE_VIDE,
   joueurs: [{ ...JOUEUR_1_MOCK }, { ...JOUEUR_2_MOCK }],
   indexJoueurActif: 0,
-  etatPartie: 'en_attente', // 'en_attente' | 'en_cours' | 'terminee'
+  etatPartie: 'en_attente',
   gagnant: null,
   selectionne: null,
   coupsValides: [],
   dernierCoup: null,
+  niveauIA: 'facile',   
+  prenomJoueur: '',
 }
 
 const useGameStore = create((set, get) => ({
@@ -18,19 +20,12 @@ const useGameStore = create((set, get) => ({
   joueurActif: () => get().joueurs[get().indexJoueurActif],
 
   selectionnerCase: (row, col) =>
-    set({ selectionne: [row, col] }),
+    set({ selectionne: row === null ? null : [row, col] }),
 
-  setCoupsValides: (coups) =>
-    set({ coupsValides: coups }),
-
-  setPlateau: (plateau) =>
-    set({ plateau }),
-
-  setEtatPartie: (etat) =>
-    set({ etatPartie: etat }),
-
-  setGagnant: (joueur) =>
-    set({ gagnant: joueur, etatPartie: 'terminee' }),
+  setCoupsValides: (coups) => set({ coupsValides: coups }),
+  setPlateau:      (plateau) => set({ plateau }),
+  setEtatPartie:   (etat) => set({ etatPartie: etat }),
+  setGagnant:      (joueur) => set({ gagnant: joueur, etatPartie: 'terminee' }),
 
   changerTour: () =>
     set((state) => ({
@@ -40,12 +35,32 @@ const useGameStore = create((set, get) => ({
       dernierCoup: state.selectionne,
     })),
 
-  reinitialiser: () =>
-    set({
-      ...etatInitial,
-      plateau: GRILLE_VIDE,
-      joueurs: [{ ...JOUEUR_1_MOCK }, { ...JOUEUR_2_MOCK }],
-    }),
+  poserEtoile: (indexJoueur) =>
+    set((state) => ({
+      joueurs: state.joueurs.map((j, i) =>
+        i === indexJoueur ? { ...j, en_main: j.en_main - 1, sur_plateau: j.sur_plateau + 1 } : j
+      ),
+    })),
+
+  recupererEtoile: (couleur) =>
+    set((state) => ({
+      joueurs: state.joueurs.map(j =>
+        j.couleur === couleur ? { ...j, en_main: j.en_main + 1, sur_plateau: j.sur_plateau - 1 } : j
+      ),
+    })),
+
+
+    setConfigIA: (niveau, prenom) =>
+    set((state) => ({
+      niveauIA: niveau,
+      prenomJoueur: prenom,
+      joueurs: [
+        { ...state.joueurs[0], nom: prenom },
+        { ...state.joueurs[1], nom: 'IA' },
+      ],
+    })),
+
+  reinitialiser: () => set({ ...etatInitial }),
 }))
 
 export default useGameStore

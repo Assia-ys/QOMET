@@ -1,9 +1,7 @@
-<<<<<<< Updated upstream
 import PagePlaceholder from '../components/PagePlaceholder'
 
 export default function Game() {
   return <PagePlaceholder nom="Jeu" route="/jeu" />
-=======
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Board from '../components/Board'
@@ -139,5 +137,90 @@ export default function Game() {
 
     </div>
   )
->>>>>>> Stashed changes
+}
+
+function BoutonPhase({ label, actif, onClick }) {
+  return (
+    <button onClick={onClick} style={{
+      padding: '6px 16px', borderRadius: 20, border: 'none',
+      backgroundColor: actif ? '#7c3aed' : '#1e293b',
+      color: actif ? '#fff' : '#64748b',
+      fontWeight: actif ? '600' : '400',
+      fontSize: '0.85rem', cursor: 'pointer', transition: 'all 0.15s',
+    }}>
+      {label}
+    </button>
+  )
+}
+
+function BoutonAction({ label, couleur, onClick }) {
+  const [survol, setSurvol] = useState(false)
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setSurvol(true)}
+      onMouseLeave={() => setSurvol(false)}
+      style={{
+        padding: '10px 22px', borderRadius: 8, border: 'none',
+        backgroundColor: survol ? couleur : couleur + 'cc',
+        color: '#fff', fontWeight: '600', fontSize: '0.9rem',
+        cursor: 'pointer', transition: 'all 0.15s',
+        transform: survol ? 'scale(1.03)' : 'scale(1)',
+      }}
+    >
+      {label}
+    </button>
+  )
+}
+
+function Modale({ children }) {
+  return (
+    <div style={styles.overlay}>
+      <div style={styles.modale}>{children}</div>
+    </div>
+  )
+}
+
+function JoueurPause({ nom, label }) {
+  return (
+    <div style={{ textAlign: 'center' }}>
+      <div style={{ color: '#f1f5f9', fontWeight: 'bold' }}>{nom}</div>
+      <div style={{ color: '#64748b', fontSize: '0.8rem' }}>{label}</div>
+    </div>
+  )
+}
+
+const styles = {
+  page: {
+    minHeight: '100vh', backgroundColor: '#0f172a',
+    display: 'flex', flexDirection: 'column',
+    alignItems: 'center', justifyContent: 'center',
+    gap: 20, padding: 20,
+  },
+  bandeau:     { display: 'flex', alignItems: 'center', gap: 16 },
+  bandeauTexte:{ color: '#94a3b8', fontSize: '0.9rem' },
+  switchPhase: {
+    display: 'flex', gap: 4, backgroundColor: '#0f172a',
+    padding: 4, borderRadius: 24, border: '1px solid #1e293b',
+  },
+  zoneJeu:  { display: 'flex', alignItems: 'center', gap: 24 },
+  actions:  { display: 'flex', gap: 12, marginTop: 8 },
+  overlay:  {
+    position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100,
+  },
+  modale: {
+    backgroundColor: '#1e293b', border: '1px solid #334155',
+    borderRadius: 16, padding: 36,
+    display: 'flex', flexDirection: 'column', alignItems: 'center',
+    gap: 16, minWidth: 320, boxShadow: '0 25px 60px rgba(0,0,0,0.5)',
+  },
+  modaleIcone:   { fontSize: '2rem', color: '#a78bfa', fontWeight: 'bold' },
+  modaleTitre:   { color: '#f1f5f9', fontSize: '1.4rem', fontWeight: 'bold' },
+  modaleSousTexte: { color: '#94a3b8', textAlign: 'center', lineHeight: 1.6, fontSize: '0.9rem' },
+  modaleJoueurs: {
+    display: 'flex', alignItems: 'center', gap: 24,
+    padding: '12px 24px', backgroundColor: '#0f172a',
+    borderRadius: 12, width: '100%', justifyContent: 'center',
+  },
 }

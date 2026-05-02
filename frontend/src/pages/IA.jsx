@@ -1,9 +1,38 @@
 import PagePlaceholder from '../components/PagePlaceholder'
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import useGameStore from '../store/useGameStore'
+import { Sparkles, Zap, Flame } from 'lucide-react'
+
+const NIVEAUX = [
+  {
+    id: 'facile',
+    label: 'Facile',
+    badge: 'Accessible à tous',
+    description: 'Parfait pour débuter et apprendre les mécaniques du jeu',
+    icon: <Sparkles size={32} />,
+    couleur: 'green',
+  },
+  {
+    id: 'moyen',
+    label: 'Moyen',
+    badge: 'Challenge modéré',
+    description: 'Un challenge équilibré pour les joueurs expérimentés',
+    icon: <Zap size={32} />,
+    couleur: 'orange',
+  },
+  {
+    id: 'difficile',
+    label: 'Difficile',
+    badge: 'Expert seulement',
+    description: "Une IA impitoyable qui ne vous fera aucun cadeau",
+    icon: <Flame size={32} />,
+    couleur: 'red',
+  },
+]
 
 export default function IA() {
-<<<<<<< Updated upstream
   return <PagePlaceholder nom="Intelligence Artificielle" route="/ia" />
-=======
   const navigate = useNavigate()
   const { reinitialiser, setConfigIA } = useGameStore()
 
@@ -40,6 +69,7 @@ export default function IA() {
       <button
         style={{ ...styles.bouton, opacity: prenom.trim() ? 1 : 0.5, cursor: prenom.trim() ? 'pointer' : 'not-allowed',}}
         onClick={() => navigate('/jeu')}
+        onClick={commencer}
         disabled={!prenom.trim()}
       >
         Commencer la partie contre IA
@@ -90,5 +120,5 @@ const styles = {
   input:   { background: '#1e293b', border: '1px solid #334155', borderRadius: 8, padding: '10px 14px', color: '#fff', fontSize: 15, outline: 'none' },
   bouton:  { background: '#6366f1', color: '#fff', border: 'none', borderRadius: 10, padding: '14px 40px', fontSize: 16, fontWeight: 600, width: 400 },
   retour: { position: 'absolute', top: 24, left: 24, background: 'transparent', border: '1px solid #334155', borderRadius: 8, padding: '8px 16px', color: '#94a3b8', fontSize: 14, cursor: 'pointer' },
->>>>>>> Stashed changes
+
 }

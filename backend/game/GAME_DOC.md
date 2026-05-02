@@ -1,5 +1,5 @@
 # Documentation — Package `backend/game`
-
+⚠️‼️: Pour visualiser le fichier DOC lisiblement je vous invite a tapper ctr+shift+v
 ---
 
 # `board.py`
@@ -254,7 +254,7 @@ Représentation textuelle du joueur, utilisée pour le debug et `game.etat()`.
 Alice (clair) — en main: 5 | sur plateau: 2
 ```
 
------------------------------------------
+--------------------------------------------
 
 # `rules.py`
 
@@ -275,7 +275,7 @@ Liste des 8 directions de déplacement possibles sous forme de vecteurs `(dr, dc
 
 Conforme aux règles : déplacement possible sur toute ligne horizontale, verticale ou diagonale.
 
-
+-----------------------------------------
 
 ## Classe `Rules`
 
@@ -397,134 +397,3 @@ Retourne un `set` de couleurs gagnantes (peut contenir 0, 1 ou 2 éléments).
 
 Le plus grand carré possible utilise les 4 coins extrêmes du plateau :
 `(0,0) (0,6) (6,0) (6,6)`.
-
----
-
-# `game.py`
-
-## Classe `Game`
-
-Chef d'orchestre du jeu — relie `Board`, `Player` et `Rules` ensemble.
-Gère le déroulement complet d'une partie : tours, actions, fin de partie.
-
----
-
-### `__init__(self, nom_j1, nom_j2)`
-Initialise une nouvelle partie.
-
-| Attribut | Valeur | Rôle |
-|---|---|---|
-| `self.board` | `Board()` | Plateau vide |
-| `self.joueur1` | `Player(nom_j1, "clair")` | Joueur 1 |
-| `self.joueur2` | `Player(nom_j2, "fonce")` | Joueur 2 |
-| `self.joueur_actif` | `joueur1` | Joueur dont c'est le tour |
-| `self.joueur_adverse` | `joueur2` | Joueur qui attend |
-| `self.termine` | `False` | La partie est-elle finie ? |
-| `self.gagnant` | `None` | Gagnant (None tant que pas de victoire) |
-
-> Le premier joueur actif est `joueur1` par défaut.
-> L'aléatoire du premier joueur est géré par la couche réseau (FastAPI)
-> au moment de la création de la partie.
-
----
-
-### `changer_tour(self)`
-Inverse les rôles entre joueur actif et joueur adverse.
-
-```python
-self.joueur_actif, self.joueur_adverse = self.joueur_adverse, self.joueur_actif
-```
-
-Appelée après chaque action réussie (pose ou déplacement), sauf si la
-partie est terminée.
-
----
-
-### `jouer_poser(self, row, col)` → (bool, str)
-Le joueur actif pose une étoile sur la case `(row, col)`.
-
-**Ordre d'exécution :**
-1. Vérifie que le joueur a encore des étoiles en main (`peut_poser`)
-2. Demande au `Board` de poser l'étoile (valide case jouable + libre)
-3. Met à jour le compteur du joueur (`poser_etoile`)
-4. Vérifie si la partie est terminée (`_verifier_fin`)
-5. Change de tour si la partie continue
-
-Retourne `(False, message)` en cas d'échec, `(True, "OK")` en cas de succès.
-
----
-
-### `jouer_deplacement(self, coup)` → (bool, str)
-Le joueur actif déplace une étoile selon le coup fourni.
-
-```python
-coups_legaux = Rules.deplacements_valides(
-    self.board, coup[1], coup[2], self.board.dernier_coup
-)
-if coup not in coups_legaux:
-    return False, "Coup illégal"
-```
-
-**Validation obligatoire :** le coup est vérifié contre la liste des coups
-légaux avant d'être appliqué. Cela garantit :
-- Que la pièce déplacée est bien sur le plateau
-- Que le mouvement respecte toutes les règles (C1, C2)
-- Qu'on ne peut pas tricher en envoyant un coup arbitraire
-
-`coup[1]` et `coup[2]` sont les coordonnées `row, col` de la pièce à déplacer
-(position 1 et 2 dans le tuple, après le type).
-
----
-
-### `_verifier_fin(self)`
-Vérifie si un carré gagnant est formé après chaque action.
-
-```python
-gagnants = Rules.verifier_victoire(self.board)  # set de couleurs gagnantes
-
-if couleur_adverse in gagnants:   # priorité à l'adversaire
-    self.gagnant = self.joueur_adverse
-elif couleur_actif in gagnants:
-    self.gagnant = self.joueur_actif
-
-self.termine = True
-```
-
-**Règle de responsabilité :** l'adversaire est testé en premier.
-Cela couvre deux cas en une seule condition :
-- Carré involontaire : le joueur actif forme un carré pour l'adversaire → adversaire gagne
-- Carré simultané : les deux carrés sont formés → adversaire du joueur courant gagne
-
----
-
-### `etat(self)` → dict
-Retourne l'état complet de la partie, prêt à être envoyé au frontend via l'API.
-
-```python
-plateau = {
-    f"{r},{c}": self.board.get(r, c)
-    for (r, c) in CASES_JOUABLES
-}
-```
-
-**Pourquoi cette sérialisation ?**
-La grille brute `board.grille` est une matrice 7×7 avec 24 cases `"hors_plateau"`.
-Au lieu d'envoyer 49 valeurs dont 24 inutiles, on envoie uniquement les
-**25 cases jouables** sous forme de dictionnaire `"row,col" → valeur`.
-
-**Structure retournée :**
-```json
-{
-  "plateau": {
-    "0,0": null,
-    "0,3": "clair",
-    "3,3": "fonce",
-    ...
-  },
-  "joueur_actif": "Alice",
-  "j1": "Alice (clair) — en main: 5 | sur plateau: 2",
-  "j2": "Bob (fonce) — en main: 6 | sur plateau: 1",
-  "termine": false,
-  "gagnant": null
-}
-```
