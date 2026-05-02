@@ -5,6 +5,7 @@
  */
 
 import { NEIGHBORS, estValide, estJouable } from './boardGeometry'
+import { CASES_JOUABLES } from '../data/mockData'
 
 function estLibre(plateau, r, c) {
   return plateau[r][c] === null
@@ -31,6 +32,29 @@ export function getCasesAccessibles(plateau, row, col) {
   }
 
   return resultats
+}
+
+/**
+ * Détecte si 4 étoiles de même couleur forment un carré sur le plateau.
+ * Retourne { couleur, cellules: [[r,c]×4] } ou null.
+ */
+export function detecterCarreGagnant(plateau) {
+  for (let i = 0; i < CASES_JOUABLES.length; i++) {
+    for (let j = i + 1; j < CASES_JOUABLES.length; j++) {
+      const [r1, c1] = CASES_JOUABLES[i]
+      const [r2, c2] = CASES_JOUABLES[j]
+      const couleur = plateau[r1][c1]
+      if (!couleur || couleur !== plateau[r2][c2]) continue
+      const dr = r2 - r1, dc = c2 - c1
+      const r3 = r1 + dc, c3 = c1 - dr
+      const r4 = r2 + dc, c4 = c2 - dr
+      if (!estValide(r3, c3) || !estJouable(r3, c3)) continue
+      if (!estValide(r4, c4) || !estJouable(r4, c4)) continue
+      if (plateau[r3][c3] !== couleur || plateau[r4][c4] !== couleur) continue
+      return { couleur, cellules: [[r1, c1], [r2, c2], [r3, c3], [r4, c4]] }
+    }
+  }
+  return null
 }
 
 /**

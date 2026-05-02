@@ -1,9 +1,13 @@
+import PagePlaceholder from '../components/PagePlaceholder'
+
+export default function Game() {
+  return <PagePlaceholder nom="Jeu" route="/jeu" />
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Board from '../components/Board'
 import PlayerInfo from '../components/PlayerInfo'
 import useGameStore from '../store/useGameStore'
-import { getCasesAccessibles, appliquerMouvement } from '../utils/rulesClient'
+import { getCasesAccessibles, appliquerMouvement, detecterCarreGagnant } from '../utils/rulesClient'
 
 export default function Game() {
   const navigate = useNavigate()
@@ -16,6 +20,15 @@ export default function Game() {
   const [phase, setPhase] = useState('pose')
   const [pauseVisible, setPauseVisible] = useState(false)
   const [abandonVisible, setAbandonVisible] = useState(false)
+  const [cellulesGagnantes, setCellulesGagnantes] = useState(new Set())
+
+  function mettreAJourVictoire(nouvPlateau) {
+    const resultat = detecterCarreGagnant(nouvPlateau)
+    setCellulesGagnantes(resultat
+      ? new Set(resultat.cellules.map(([r, c]) => `${r},${c}`))
+      : new Set()
+    )
+  }
 
   const joueurActif = joueurs[indexJoueurActif]
 
@@ -26,6 +39,7 @@ export default function Game() {
     if (selectionne && coupsValides.some(([vr, vc]) => vr === r && vc === c)) {
       const { nouveauPlateau, etoileEjectee } = appliquerMouvement(plateau, selectionne[0], selectionne[1], r, c)
       setPlateau(nouveauPlateau)
+      mettreAJourVictoire(nouveauPlateau)
       if (etoileEjectee) recupererEtoile(etoileEjectee)
       selectionnerCase(null, null)
       setCoupsValides([])
@@ -45,6 +59,7 @@ export default function Game() {
       const nouveau = plateau.map(row => [...row])
       nouveau[r][c] = joueurActif.couleur
       setPlateau(nouveau)
+      mettreAJourVictoire(nouveau)
       poserEtoile(indexJoueurActif)
       changerTour()
       return
@@ -82,6 +97,7 @@ export default function Game() {
           coupsValides={coupsValides}
           onCellClick={handleCellClick}
           phase={phase}
+          cellulesGagnantes={cellulesGagnantes}
         />
         <PlayerInfo joueur={joueurs[1]} estActif={indexJoueurActif === 1} />
       </div>

@@ -13,3 +13,26 @@ body {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+
+@keyframes pageEnter {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes starPop {
+  0%   { transform: scale(0) rotate(-30deg); opacity: 0; }
+  60%  { transform: scale(1.25) rotate(5deg); }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+@keyframes starOut {
+  0%   { transform: scale(1) rotate(0deg); opacity: 1; }
+  100% { transform: scale(0) rotate(45deg); opacity: 0; }
+}
+
+@keyframes winPulse {
+  0%, 100% { transform: scale(1);    filter: drop-shadow(0 0 6px #fbbf24); }
+  50%       { transform: scale(1.1); filter: drop-shadow(0 0 16px #fde68a) drop-shadow(0 0 28px #f59e0b); }
+}
+
