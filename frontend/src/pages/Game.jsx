@@ -37,26 +37,67 @@ function evaluerPlateau(plateau, couleur) {
   return score
 }
 
+const DUREE_MAX_PAUSE = 60 // secondes
+
 export default function Game() {
   const navigate = useNavigate()
   const socket   = useSocket()
   const {
     plateau, joueurs, indexJoueurActif, niveauIA,
     selectionne, coupsValides, gagnant, codeRoom, maCouleur,
-    selectionnerCase, setCoupsValides, setGagnant,
+    adversaireEnPause,
+    selectionnerCase, setCoupsValides,
   } = useGameStore()
 
   const [pauseVisible, setPauseVisible]     = useState(false)
   const [abandonVisible, setAbandonVisible] = useState(false)
-  const [startTime]                 = useState(Date.now())
+  const [startTime]                         = useState(Date.now())
   const [dureePartie, setDureePartie]       = useState('')
+  const [tempsJeu, setTempsJeu]             = useState('00:00')
+  const [tempsPause, setTempsPause]         = useState(DUREE_MAX_PAUSE)
 
   const joueurActif = joueurs[indexJoueurActif]
   const modeIA      = joueurs[1]?.nom === 'IA'
   const estTourIA   = modeIA && indexJoueurActif === 1
   const estMonTour  = !codeRoom || joueurActif?.couleur === maCouleur
 
-  // Phase dérivée automatiquement : pose tant qu'il reste des étoiles en main
+  // ── Timer de partie ──────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (gagnant || pauseVisible || adversaireEnPause) return
+    const interval = setInterval(() => {
+      const s = Math.floor((Date.now() - startTime) / 1000)
+      setTempsJeu(`${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`)
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [gagnant, pauseVisible, adversaireEnPause])
+
+  // ── Durée finale à la fin de partie ─────────────────────────────────────────
+  useEffect(() => {
+    if (gagnant && !dureePartie) setDureePartie(tempsJeu)
+  }, [gagnant])
+
+  // ── Compte à rebours de pause ────────────────────────────────────────────────
+  useEffect(() => {
+    if (!pauseVisible) { setTempsPause(DUREE_MAX_PAUSE); return }
+    const interval = setInterval(() => {
+      setTempsPause(t => {
+        if (t <= 1) {
+          // Temps de pause dépassé → reprendre automatiquement
+          setPauseVisible(false)
+          if (codeRoom) socket.emit('reprendre')
+          return DUREE_MAX_PAUSE
+        }
+        return t - 1
+      })
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [pauseVisible])
+
+  // ── Afficher la pause de l'adversaire ────────────────────────────────────────
+  useEffect(() => {
+    if (adversaireEnPause) setPauseVisible(true)
+    else if (!adversaireEnPause && pauseVisible) setPauseVisible(false)
+  }, [adversaireEnPause])
   const phase = joueurActif?.en_main > 0 ? 'pose' : 'deplacement'
 
   // ── Durée de partie ──────────────────────────────────────────────────────────
@@ -183,6 +224,7 @@ export default function Game() {
         <span style={styles.bandeauTexte}>
           {joueurActif?.en_main > 0 ? 'Clique pour poser ou déplacer' : 'Déplace une étoile'}
         </span>
+        <span style={{ color: '#475569', fontSize: '0.85rem', fontFamily: 'monospace' }}>⏱ {tempsJeu}</span>
       </div>
 
       {estTourIA && (
@@ -206,7 +248,10 @@ export default function Game() {
 
       <div style={styles.actions}>
         <BoutonAction label="← Retour"     couleur="#374151" onClick={() => { socket.emit('abandonner'); navigate('/') }} />
-        {!modeIA && <BoutonAction label="⏸ Pause" couleur="#1e40af" onClick={() => setPauseVisible(true)} />}
+        {!modeIA && <BoutonAction label="⏸ Pause" couleur="#1e40af" onClick={() => {
+          setPauseVisible(true)
+          if (codeRoom) socket.emit('pause')
+        }} />}
         <BoutonAction label="⚑ Abandonner" couleur="#dc2626" onClick={() => setAbandonVisible(true)} />
       </div>
 
@@ -214,14 +259,24 @@ export default function Game() {
         <Modale>
           <div style={styles.modaleIcone}>II</div>
           <h2 style={styles.modaleTitre}>Pause</h2>
-          <p style={styles.modaleSousTexte}>La partie est en pause.<br />Reprends quand tu es prêt !</p>
+          <p style={styles.modaleSousTexte}>
+            {adversaireEnPause
+              ? 'Ton adversaire a mis la partie en pause.'
+              : 'La partie est en pause.'}
+            <br />Temps restant : <strong style={{ color: tempsPause <= 10 ? '#ef4444' : '#a78bfa' }}>{tempsPause}s</strong>
+          </p>
           <div style={styles.modaleJoueurs}>
-            <JoueurPause nom={joueurs[0].nom} label="Ton tour" />
+            <JoueurPause nom={joueurs[0].nom} label="Joueur 1" />
             <span style={{ color: '#64748b', fontWeight: 'bold' }}>VS</span>
-            <JoueurPause nom={joueurs[1].nom} label="En attente" />
+            <JoueurPause nom={joueurs[1].nom} label="Joueur 2" />
           </div>
-          <BoutonAction label="▶ Reprendre la partie" couleur="#7c3aed" onClick={() => setPauseVisible(false)} />
-          <BoutonAction label="← Menu principal"      couleur="#374151" onClick={() => { socket.emit('abandonner'); navigate('/') }} />
+          {!adversaireEnPause && (
+            <BoutonAction label="▶ Reprendre la partie" couleur="#7c3aed" onClick={() => {
+              setPauseVisible(false)
+              if (codeRoom) socket.emit('reprendre')
+            }} />
+          )}
+          <BoutonAction label="← Menu principal" couleur="#374151" onClick={() => { socket.emit('abandonner'); navigate('/') }} />
         </Modale>
       )}
 

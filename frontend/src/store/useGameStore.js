@@ -2,17 +2,18 @@ import { create } from 'zustand'
 import { GRILLE_VIDE, JOUEUR_1_MOCK, JOUEUR_2_MOCK } from '../data/mockData'
 
 const etatInitial = {
-  plateau:          GRILLE_VIDE,
-  joueurs:          [{ ...JOUEUR_1_MOCK }, { ...JOUEUR_2_MOCK }],
-  indexJoueurActif: 0,
-  etatPartie:       'en_attente',
-  gagnant:          null,
-  selectionne:      null,
-  coupsValides:     [],
-  niveauIA:         'facile',
-  prenomJoueur:     '',
-  codeRoom:         null,
-  maCouleur:        null,
+  plateau:           GRILLE_VIDE,
+  joueurs:           [{ ...JOUEUR_1_MOCK }, { ...JOUEUR_2_MOCK }],
+  indexJoueurActif:  0,
+  etatPartie:        'en_attente',
+  gagnant:           null,
+  selectionne:       null,
+  coupsValides:      [],
+  niveauIA:          'facile',
+  prenomJoueur:      '',
+  codeRoom:          null,
+  maCouleur:         null,
+  adversaireEnPause: false,
 }
 
 const useGameStore = create((set, get) => ({
@@ -25,9 +26,10 @@ const useGameStore = create((set, get) => ({
 
   setCoupsValides:  (coups)   => set({ coupsValides: coups }),
   setEtatPartie:    (etat)    => set({ etatPartie: etat }),
-  setCodeRoom:      (code)    => set({ codeRoom: code }),
-  setMaCouleur:     (couleur) => set({ maCouleur: couleur }),
-  setPrenomJoueur:  (prenom)  => set({ prenomJoueur: prenom }),
+  setCodeRoom:         (code)    => set({ codeRoom: code }),
+  setMaCouleur:        (couleur) => set({ maCouleur: couleur }),
+  setPrenomJoueur:     (prenom)  => set({ prenomJoueur: prenom }),
+  setAdversaireEnPause:(val)     => set({ adversaireEnPause: val }),
 
   setGagnant: (gagnant) =>
     set({ gagnant, etatPartie: 'terminee' }),

@@ -110,6 +110,22 @@ async def abandonner(sid):
 
 
 @sio.event
+async def pause(sid):
+    """Un joueur met la partie en pause."""
+    code, _ = couleur_du_joueur(sid)
+    if code:
+        await sio.emit("adversaire_en_pause", {}, room=code, skip_sid=sid)
+
+
+@sio.event
+async def reprendre(sid):
+    """Un joueur reprend la partie."""
+    code, _ = couleur_du_joueur(sid)
+    if code:
+        await sio.emit("adversaire_a_repris", {}, room=code, skip_sid=sid)
+
+
+@sio.event
 async def jouer(sid, data):
     """
     Reçu quand un joueur joue un coup.

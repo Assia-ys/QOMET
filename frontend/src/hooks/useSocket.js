@@ -18,7 +18,7 @@ export function getSocketIA() {
 }
 
 export default function useSocket() {
-  const { setEtatServeur, setCodeRoom, setEtatPartie, setGagnant, setCoupsValides } = useGameStore()
+  const { setEtatServeur, setCodeRoom, setEtatPartie, setGagnant, setCoupsValides, setAdversaireEnPause } = useGameStore()
 
   useEffect(() => {
     const s = getSocket()
@@ -34,7 +34,9 @@ export default function useSocket() {
       setGagnant({ nom: prenomJoueur, forfait: true })
       setEtatPartie('terminee')
     }
-    function onErreur(data) { console.error('[Socket] Erreur :', data.code, data.msg || '') }
+    function onAdversaireEnPause()  { setAdversaireEnPause(true) }
+    function onAdversaireARepris()  { setAdversaireEnPause(false) }
+    function onErreur(data)         { console.error('[Socket] Erreur :', data.code, data.msg || '') }
 
     s.on('etat',                  onEtat)
     s.on('partie_demarree',       onPartieDemarree)
@@ -42,6 +44,8 @@ export default function useSocket() {
     s.on('fin_partie',            onFinPartie)
     s.on('coups_valides',         onCoupsValides)
     s.on('adversaire_deconnecte', onAdversaireDeconnecte)
+    s.on('adversaire_en_pause',   onAdversaireEnPause)
+    s.on('adversaire_a_repris',   onAdversaireARepris)
     s.on('erreur',                onErreur)
 
     return () => {
@@ -51,6 +55,8 @@ export default function useSocket() {
       s.off('fin_partie',            onFinPartie)
       s.off('coups_valides',         onCoupsValides)
       s.off('adversaire_deconnecte', onAdversaireDeconnecte)
+      s.off('adversaire_en_pause',   onAdversaireEnPause)
+      s.off('adversaire_a_repris',   onAdversaireARepris)
       s.off('erreur',                onErreur)
     }
   }, [])
