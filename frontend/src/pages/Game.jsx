@@ -46,7 +46,6 @@ export default function Game() {
     selectionnerCase, setCoupsValides, setGagnant,
   } = useGameStore()
 
-  const [phase, setPhase]           = useState('pose')
   const [pauseVisible, setPauseVisible]     = useState(false)
   const [abandonVisible, setAbandonVisible] = useState(false)
   const [startTime]                 = useState(Date.now())
@@ -57,6 +56,9 @@ export default function Game() {
   const estTourIA   = modeIA && indexJoueurActif === 1
   const estMonTour  = !codeRoom || joueurActif?.couleur === maCouleur
 
+  // Phase dérivée automatiquement : pose tant qu'il reste des étoiles en main
+  const phase = joueurActif?.en_main > 0 ? 'pose' : 'deplacement'
+
   // ── Durée de partie ──────────────────────────────────────────────────────────
   useEffect(() => {
     if (gagnant && !dureePartie) {
@@ -64,13 +66,6 @@ export default function Game() {
       setDureePartie(`${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`)
     }
   }, [gagnant])
-
-  // ── Auto-switch pose → déplacement ──────────────────────────────────────────
-  useEffect(() => {
-    if (phase === 'pose' && joueurs[0].en_main === 0 && joueurs[1].en_main === 0) {
-      setPhase('deplacement')
-    }
-  }, [joueurs])
 
   // ── Tour de l'IA (via socketIA — le backend applique les mêmes règles) ───────
   useEffect(() => {
@@ -138,7 +133,7 @@ export default function Game() {
     }, delay)
 
     return () => clearTimeout(timer)
-  }, [indexJoueurActif, phase, gagnant])
+  }, [indexJoueurActif, gagnant, joueurs])
 
   // ── Interactions humain (tout via socket — backend valide) ────────────────────
   function handleCellClick(r, c) {
@@ -153,26 +148,27 @@ export default function Game() {
       return
     }
 
-    // Sélectionner une pièce → demander les coups valides au backend
-    if (valeur === joueurActif?.couleur && phase === 'deplacement') {
+    // Clic sur la pièce déjà sélectionnée → désélectionner
+    if (selectionne && selectionne[0] === r && selectionne[1] === c) {
+      selectionnerCase(null, null)
+      setCoupsValides([])
+      return
+    }
+
+    // Sélectionner une pièce pour déplacement
+    if (valeur === joueurActif?.couleur) {
       selectionnerCase(r, c)
       setCoupsValides([])
       socket.emit('deplacements_valides', { row: r, col: c })
       return
     }
 
-    // Poser une étoile
-    if (phase === 'pose' && !valeur && joueurActif?.en_main > 0) {
+    // Poser une étoile sur case vide (si encore des étoiles en main)
+    if (!valeur && joueurActif?.en_main > 0) {
       socket.emit('jouer', { type: 'poser', row: r, col: c })
       return
     }
 
-    selectionnerCase(null, null)
-    setCoupsValides([])
-  }
-
-  function changerPhase(p) {
-    setPhase(p)
     selectionnerCase(null, null)
     setCoupsValides([])
   }
@@ -185,14 +181,8 @@ export default function Game() {
 
       <div style={styles.bandeau}>
         <span style={styles.bandeauTexte}>
-          {phase === 'pose' ? '⭐ Phase de pose' : '↔ Phase de déplacement'}
+          {joueurActif?.en_main > 0 ? 'Clique pour poser ou déplacer' : 'Déplace une étoile'}
         </span>
-        {!modeIA && (
-          <div style={styles.switchPhase}>
-            <BoutonPhase label="Poser"    actif={phase === 'pose'}        onClick={() => changerPhase('pose')} />
-            <BoutonPhase label="Déplacer" actif={phase === 'deplacement'} onClick={() => changerPhase('deplacement')} />
-          </div>
-        )}
       </div>
 
       {estTourIA && (
@@ -254,19 +244,6 @@ export default function Game() {
   )
 }
 
-function BoutonPhase({ label, actif, onClick }) {
-  return (
-    <button onClick={onClick} style={{
-      padding: '6px 16px', borderRadius: 20, border: 'none',
-      backgroundColor: actif ? '#7c3aed' : '#1e293b',
-      color: actif ? '#fff' : '#64748b',
-      fontWeight: actif ? '600' : '400',
-      fontSize: '0.85rem', cursor: 'pointer', transition: 'all 0.15s',
-    }}>
-      {label}
-    </button>
-  )
-}
 
 function BoutonAction({ label, couleur, onClick }) {
   const [survol, setSurvol] = useState(false)
@@ -314,10 +291,6 @@ const styles = {
   },
   bandeau:      { display: 'flex', alignItems: 'center', gap: 16 },
   bandeauTexte: { color: '#94a3b8', fontSize: '0.9rem' },
-  switchPhase: {
-    display: 'flex', gap: 4, backgroundColor: '#0f172a',
-    padding: 4, borderRadius: 24, border: '1px solid #1e293b',
-  },
   iaThink: {
     color: '#a78bfa', fontSize: '0.85rem', margin: '-8px 0 0',
     display: 'flex', alignItems: 'center', gap: 8,
