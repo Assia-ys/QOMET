@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import useGameStore from '../store/useGameStore'
+import { getSocket } from '../hooks/useSocket'
 import { Trophy, Frown, Star, RotateCcw, Home, UserX } from 'lucide-react'
 
 export default function ModalFinPartie({ gagnant, duree }) {
@@ -18,6 +19,7 @@ export default function ModalFinPartie({ gagnant, duree }) {
   }
 
   function menu() {
+    getSocket().emit('abandonner')
     reinitialiser()
     navigate('/')
   }

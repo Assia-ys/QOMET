@@ -192,7 +192,7 @@ export default function Game() {
       )}
 
       <div style={styles.zoneJeu}>
-        <PlayerInfo joueur={joueurs[0]} estActif={indexJoueurActif === 0} estMoi={!modeIA || maCouleur === 'clair'} />
+        <PlayerInfo joueur={joueurs[0]} estActif={indexJoueurActif === 0} estMoi={joueurs[0].couleur === maCouleur} />
         <Board
           plateau={plateau}
           selectionne={selectionne}
@@ -201,11 +201,11 @@ export default function Game() {
           phase={phase}
           cellulesGagnantes={new Set()}
         />
-        <PlayerInfo joueur={joueurs[1]} estActif={indexJoueurActif === 1} estMoi={modeIA ? false : maCouleur === 'fonce'} />
+        <PlayerInfo joueur={joueurs[1]} estActif={indexJoueurActif === 1} estMoi={joueurs[1].couleur === maCouleur} />
       </div>
 
       <div style={styles.actions}>
-        <BoutonAction label="← Retour"     couleur="#374151" onClick={() => navigate('/')} />
+        <BoutonAction label="← Retour"     couleur="#374151" onClick={() => { socket.emit('abandonner'); navigate('/') }} />
         {!modeIA && <BoutonAction label="⏸ Pause" couleur="#1e40af" onClick={() => setPauseVisible(true)} />}
         <BoutonAction label="⚑ Abandonner" couleur="#dc2626" onClick={() => setAbandonVisible(true)} />
       </div>
@@ -221,7 +221,7 @@ export default function Game() {
             <JoueurPause nom={joueurs[1].nom} label="En attente" />
           </div>
           <BoutonAction label="▶ Reprendre la partie" couleur="#7c3aed" onClick={() => setPauseVisible(false)} />
-          <BoutonAction label="← Menu principal"      couleur="#374151" onClick={() => navigate('/')} />
+          <BoutonAction label="← Menu principal"      couleur="#374151" onClick={() => { socket.emit('abandonner'); navigate('/') }} />
         </Modale>
       )}
 
