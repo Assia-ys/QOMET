@@ -5,7 +5,7 @@ const COULEURS = {
   fonce: { fill: '#dc2626', stroke: '#fca5a5' },
 }
 
-export default function PlayerInfo({ joueur, estActif }) {
+export default function PlayerInfo({ joueur, estActif, estMoi = true }) {
   const { fill, stroke } = COULEURS[joueur.couleur]
 
   return (
@@ -17,12 +17,12 @@ export default function PlayerInfo({ joueur, estActif }) {
 
       {estActif && (
         <div style={{
-          background: '#7c3aed', color: 'white',
+          background: estMoi ? '#7c3aed' : '#374151', color: 'white',
           fontSize: 11, fontWeight: 'bold',
           padding: '3px 10px', borderRadius: 20,
           display: 'inline-block', marginBottom: 10, letterSpacing: 1,
         }}>
-          TON TOUR
+          {estMoi ? 'TON TOUR' : 'SON TOUR'}
         </div>
       )}
 

@@ -16,7 +16,7 @@ class CreerPartieBody(BaseModel):
 @router.post("")
 async def creer_partie(body: CreerPartieBody):
     """Crée une nouvelle partie et retourne le code à 4 caractères."""
-    code = creer_room("http", body.prenom)
+    code = creer_room(body.prenom)
     return {"code": code, "message": "Partie créée"}
 
 

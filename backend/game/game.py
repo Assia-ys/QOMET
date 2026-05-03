@@ -71,10 +71,24 @@ class Game:
             for (r, c) in CASES_JOUABLES
         }
         return {
-            "plateau": plateau,
+            "plateau":      plateau,
             "joueur_actif": self.joueur_actif.nom,
-            "j1": str(self.joueur1),
-            "j2": str(self.joueur2),
+            "j1":           str(self.joueur1),
+            "j2":           str(self.joueur2),
+            "joueurs": [
+                {
+                    "nom":         self.joueur1.nom,
+                    "couleur":     self.joueur1.couleur,
+                    "en_main":     self.joueur1.etoiles_en_main,
+                    "sur_plateau": self.joueur1.etoiles_sur_plateau,
+                },
+                {
+                    "nom":         self.joueur2.nom,
+                    "couleur":     self.joueur2.couleur,
+                    "en_main":     self.joueur2.etoiles_en_main,
+                    "sur_plateau": self.joueur2.etoiles_sur_plateau,
+                },
+            ],
             "termine": self.termine,
             "gagnant": self.gagnant.nom if self.gagnant else None,
         }

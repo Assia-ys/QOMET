@@ -12,5 +12,5 @@ export const GRILLE_VIDE = Array.from({ length: 7 }, () =>
   Array.from({ length: 7 }, () => null)
 )
 
-export const JOUEUR_1_MOCK = { nom: 'Alice', couleur: 'clair', en_main: 7, sur_plateau: 0 }
-export const JOUEUR_2_MOCK = { nom: 'Bob',   couleur: 'fonce', en_main: 7, sur_plateau: 0 }
+export const JOUEUR_1_MOCK = { nom: 'Joueur 1', couleur: 'clair', en_main: 7, sur_plateau: 0 }
+export const JOUEUR_2_MOCK = { nom: 'Joueur 2', couleur: 'fonce', en_main: 7, sur_plateau: 0 }

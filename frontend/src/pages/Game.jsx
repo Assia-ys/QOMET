@@ -4,6 +4,7 @@ import Board from '../components/Board'
 import PlayerInfo from '../components/PlayerInfo'
 import ModalFinPartie from '../components/ModalFinPartie'
 import useGameStore from '../store/useGameStore'
+import useSocket from '../hooks/useSocket'
 import { getCasesAccessibles, appliquerMouvement, detecterCarreGagnant } from '../utils/rulesClient'
 import { estValide, estJouable } from '../utils/boardGeometry'
 import { CASES_JOUABLES } from '../data/mockData'
@@ -31,9 +32,10 @@ function evaluerPlateau(plateau, couleur) {
 
 export default function Game() {
   const navigate = useNavigate()
+  const socket   = useSocket()
   const {
     plateau, joueurs, indexJoueurActif, niveauIA,
-    selectionne, coupsValides, gagnant,
+    selectionne, coupsValides, gagnant, codeRoom, maCouleur,
     selectionnerCase, setCoupsValides, setPlateau, changerTour,
     poserEtoile, recupererEtoile, setGagnant,
   } = useGameStore()
@@ -45,9 +47,11 @@ export default function Game() {
   const [startTime]                               = useState(Date.now())
   const [dureePartie, setDureePartie]             = useState('')
 
-  const joueurActif = joueurs[indexJoueurActif]
-  const modeIA    = joueurs[1]?.nom === 'IA'
-  const estTourIA = modeIA && indexJoueurActif === 1
+  const joueurActif  = joueurs[indexJoueurActif]
+  const modeIA       = joueurs[1]?.nom === 'IA'
+  const modeReseau   = !!codeRoom && !modeIA
+  const estTourIA    = modeIA && indexJoueurActif === 1
+  const estMonTour   = !modeReseau || joueurActif?.couleur === maCouleur
 
   // ── Détection victoire ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -135,33 +139,51 @@ export default function Game() {
 
   // ── Interactions humain ───────────────────────────────────────────────────────
   function handleCellClick(r, c) {
-    if (estTourIA || gagnant) return
+    if (estTourIA || gagnant || !estMonTour) return
     const valeur = plateau[r][c]
 
     if (selectionne && coupsValides.some(([vr,vc]) => vr === r && vc === c)) {
-      const { nouveauPlateau, etoileEjectee } = appliquerMouvement(
-        plateau, selectionne[0], selectionne[1], r, c
-      )
-      setPlateau(nouveauPlateau)
-      if (etoileEjectee) recupererEtoile(etoileEjectee)
-      selectionnerCase(null, null)
-      setCoupsValides([])
-      changerTour()
+      if (modeReseau) {
+        // Mode réseau : envoyer le coup au serveur
+        socket.emit('jouer', { type: 'deplacement', coup: [selectionne[0], selectionne[1], r, c] })
+        selectionnerCase(null, null)
+        setCoupsValides([])
+      } else {
+        const { nouveauPlateau, etoileEjectee } = appliquerMouvement(
+          plateau, selectionne[0], selectionne[1], r, c
+        )
+        setPlateau(nouveauPlateau)
+        if (etoileEjectee) recupererEtoile(etoileEjectee)
+        selectionnerCase(null, null)
+        setCoupsValides([])
+        changerTour()
+      }
       return
     }
 
     if (valeur === joueurActif.couleur && phase === 'deplacement') {
       selectionnerCase(r, c)
-      setCoupsValides(getCasesAccessibles(plateau, r, c))
+      setCoupsValides([])
+
+      if (modeReseau) {
+        socket.emit('deplacements_valides', { row: r, col: c })
+      } else {
+        setCoupsValides(getCasesAccessibles(plateau, r, c))
+      }
       return
     }
 
     if (phase === 'pose' && !valeur && joueurActif.en_main > 0) {
-      const nouveau = plateau.map(row => [...row])
-      nouveau[r][c] = joueurActif.couleur
-      setPlateau(nouveau)
-      poserEtoile(indexJoueurActif)
-      changerTour()
+      if (modeReseau) {
+        // Mode réseau : envoyer la pose au serveur
+        socket.emit('jouer', { type: 'poser', row: r, col: c })
+      } else {
+        const nouveau = plateau.map(row => [...row])
+        nouveau[r][c] = joueurActif.couleur
+        setPlateau(nouveau)
+        poserEtoile(indexJoueurActif)
+        changerTour()
+      }
       return
     }
 
@@ -200,7 +222,7 @@ export default function Game() {
       )}
 
       <div style={styles.zoneJeu}>
-        <PlayerInfo joueur={joueurs[0]} estActif={indexJoueurActif === 0} />
+        <PlayerInfo joueur={joueurs[0]} estActif={indexJoueurActif === 0} estMoi={!modeReseau || maCouleur === 'clair'} />
         <Board
           plateau={plateau}
           selectionne={selectionne}
@@ -209,7 +231,7 @@ export default function Game() {
           phase={phase}
           cellulesGagnantes={cellulesGagnantes}
         />
-        <PlayerInfo joueur={joueurs[1]} estActif={indexJoueurActif === 1} />
+        <PlayerInfo joueur={joueurs[1]} estActif={indexJoueurActif === 1} estMoi={!modeReseau || maCouleur === 'fonce'} />
       </div>
 
       <div style={styles.actions}>
@@ -240,7 +262,12 @@ export default function Game() {
           <p style={styles.modaleSousTexte}>Es-tu sûr de vouloir quitter ?<br />Cette action sera comptée comme une <strong>défaite</strong>.</p>
           <div style={{ display: 'flex', gap: 12 }}>
             <BoutonAction label="Annuler"    couleur="#374151" onClick={() => setAbandonVisible(false)} />
-            <BoutonAction label="Abandonner" couleur="#dc2626" onClick={() => navigate('/')} />
+            <BoutonAction label="Abandonner" couleur="#dc2626" onClick={() => {
+              if (modeReseau) {
+                socket.emit('abandonner')
+              }
+              navigate('/')
+            }} />
           </div>
         </Modale>
       )}

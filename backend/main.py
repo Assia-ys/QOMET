@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from config.settings import HOST, PORT
+from backend.game.rules import Rules
 from backend.network.manager import (
     rejoindre_room, room_est_pleine,
     couleur_du_joueur, supprimer_room, rooms,
@@ -75,6 +76,40 @@ async def rejoindre(sid, data):
 
 
 @sio.event
+async def deplacements_valides(sid, data):
+    """
+    Retourne les destinations valides pour une étoile.
+    data = { "row": r, "col": c }
+    """
+    code, couleur = couleur_du_joueur(sid)
+    if not code:
+        return
+
+    game = rooms[code]["game"]
+    row, col = data["row"], data["col"]
+
+    coups = Rules.deplacements_valides(
+        game.board, row, col, game.board.dernier_coup
+    )
+    destinations = [
+        [c[3], c[4]] for c in coups
+        if c[0] not in ("ejecter",)
+    ]
+    await sio.emit("coups_valides", {"destinations": destinations}, to=sid)
+
+
+@sio.event
+async def abandonner(sid):
+    """Un joueur abandonne volontairement la partie."""
+    code, _ = couleur_du_joueur(sid)
+    if code:
+        await sio.emit("adversaire_deconnecte", {
+            "message": "Ton adversaire a abandonné. Tu remportes la victoire !"
+        }, room=code)
+        supprimer_room(code)
+
+
+@sio.event
 async def jouer(sid, data):
     """
     Reçu quand un joueur joue un coup.
@@ -98,8 +133,25 @@ async def jouer(sid, data):
 
     if type_coup == "poser":
         ok, msg = game.jouer_poser(data["row"], data["col"])
+
     elif type_coup == "deplacement":
-        ok, msg = game.jouer_deplacement(tuple(data["coup"]))
+        from_r, from_c, to_r, to_c = data["coup"]
+
+        # Trouver le coup complet correspondant dans deplacements_valides
+        coups_possibles = Rules.deplacements_valides(
+            game.board, from_r, from_c, game.board.dernier_coup
+        )
+        coup = next(
+            (c for c in coups_possibles
+             if c[0] != "ejecter" and c[3] == to_r and c[4] == to_c),
+            None
+        )
+
+        if not coup:
+            await sio.emit("erreur", {"code": "ERR_ILLEGAL_MOVE", "msg": "Coup introuvable"}, to=sid)
+            return
+
+        ok, msg = game.jouer_deplacement(coup)
     else:
         await sio.emit("erreur", {"code": "ERR_INVALID_ACTION"}, to=sid)
         return

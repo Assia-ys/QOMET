@@ -13,12 +13,12 @@ def _generer_code():
             return code
 
 
-def creer_room(sid, prenom):
+def creer_room(prenom):
     code = _generer_code()
     rooms[code] = {
-        "game":        Game(prenom, "En attente"),
-        "joueurs":     {"clair": sid, "fonce": None},
-        "prenoms":     {"clair": prenom, "fonce": None},
+        "game":    Game(prenom, "En attente"),
+        "joueurs": {"clair": None, "fonce": None},
+        "prenoms": {"clair": prenom, "fonce": None},
     }
     return code
 
@@ -29,14 +29,19 @@ def rejoindre_room(sid, code, prenom):
 
     room = rooms[code]
 
-    if room["joueurs"]["fonce"] is not None:
+    # Remplit clair en premier, puis fonce
+    if room["joueurs"]["clair"] is None:
+        room["joueurs"]["clair"] = sid
+        room["prenoms"]["clair"] = prenom
+        room["game"].joueur1.nom = prenom
+        return True, "OK"
+    elif room["joueurs"]["fonce"] is None:
+        room["joueurs"]["fonce"] = sid
+        room["prenoms"]["fonce"] = prenom
+        room["game"].joueur2.nom = prenom
+        return True, "OK"
+    else:
         return False, "ERR_ROOM_FULL"
-
-    room["joueurs"]["fonce"]  = sid
-    room["prenoms"]["fonce"]  = prenom
-    room["game"].joueur2.nom  = prenom
-
-    return True, "OK"
 
 
 def room_est_pleine(code):

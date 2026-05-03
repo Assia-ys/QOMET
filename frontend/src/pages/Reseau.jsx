@@ -1,5 +1,7 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import useSocket, { getSocket } from '../hooks/useSocket'
+import useGameStore from '../store/useGameStore'
 
 const C = {
   bg: '#0f172a',
@@ -17,11 +19,6 @@ const C = {
   inputBg: '#0f172a',
   inputBorder: '#475569',
   inputFocus: '#7c3aed',
-}
-
-function genererCode() {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
-  return Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
 }
 
 // ─── Vue principale ────────────────────────────────────────────────────────────
@@ -289,25 +286,75 @@ function EcranErreur({ onReessayer, onRetour }) {
 
 // ─── Page principale ───────────────────────────────────────────────────────────
 
+const SERVER_URL = 'http://127.0.0.1:7777'
+
 export default function Reseau() {
-  const [vue, setVue] = useState('accueil') // 'accueil' | 'attente' | 'erreur'
+  const navigate   = useNavigate()
+  const socket     = useSocket()
+  const { setMaCouleur, reinitialiser, setPrenomJoueur } = useGameStore()
+
+  const [vue, setVue]             = useState('accueil')
   const [codePartie, setCodePartie] = useState('')
   const [prenomHote, setPrenomHote] = useState('')
 
-  function handleCreer(prenom) {
-    const code = genererCode()
-    setCodePartie(code)
-    setPrenomHote(prenom)
-    setVue('attente')
+  // Navigation automatique quand la partie démarre
+  useEffect(() => {
+    const s = getSocket()
+    s.on('partie_demarree', () => navigate('/jeu'))
+    return () => s.off('partie_demarree')
+  }, [])
+
+  async function handleCreer(prenom) {
+    try {
+      // 1. Créer la room côté serveur via HTTP
+      const res  = await fetch(`${SERVER_URL}/parties`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ prenom }),
+      })
+      const data = await res.json()
+      const code = data.code
+
+      // 2. Préparer le store AVANT d'émettre
+      reinitialiser()
+      setMaCouleur('clair')
+      setPrenomJoueur(prenom)
+
+      // 3. Se connecter à la room via Socket.io
+      socket.emit('rejoindre', { code, prenom })
+      setCodePartie(code)
+      setPrenomHote(prenom)
+      setVue('attente')
+
+    } catch {
+      setVue('erreur')
+    }
   }
 
-  function handleRejoindre(prenom, code) {
-    // Pas de backend : toujours ERR_ROOM_NOT_FOUND pour l'instant
-    setVue('erreur')
+  async function handleRejoindre(prenom, code) {
+    try {
+      // 1. Vérifier que la room existe via HTTP
+      const res  = await fetch(`${SERVER_URL}/parties/${code}`)
+      if (!res.ok) { setVue('erreur'); return }
+
+      const data = await res.json()
+      if (data.pleine) { setVue('erreur'); return }
+
+      // 2. Préparer le store AVANT d'émettre
+      reinitialiser()
+      setMaCouleur('fonce')
+      setPrenomJoueur(prenom)
+
+      // 3. Rejoindre la room via Socket.io
+      socket.emit('rejoindre', { code, prenom })
+
+    } catch {
+      setVue('erreur')
+    }
   }
 
   if (vue === 'attente') return <SalleAttente code={codePartie} prenom={prenomHote} onAnnuler={() => setVue('accueil')} />
-  if (vue === 'erreur') return <EcranErreur onReessayer={() => setVue('accueil')} onRetour={() => setVue('accueil')} />
+  if (vue === 'erreur')  return <EcranErreur  onReessayer={() => setVue('accueil')} onRetour={() => setVue('accueil')} />
 
   return <VueAccueil onCreer={handleCreer} onRejoindre={handleRejoindre} />
 }
