@@ -1,7 +1,7 @@
 /**
  * boardGeometry.js
  * Source unique pour la géométrie du plateau QOMET.
- * Utilisé par Board.jsx (affichage) et rulesClient.js (règles mock).
+ * Utilisé par Board.jsx (affichage) et Game.jsx (heuristique IA).
  */
 
 import { CASES_JOUABLES } from '../data/mockData'

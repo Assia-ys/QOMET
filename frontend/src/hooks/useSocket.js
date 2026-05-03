@@ -4,13 +4,17 @@ import useGameStore from '../store/useGameStore'
 
 const SERVER_URL = 'http://127.0.0.1:7777'
 
-let socket = null
+let socket   = null
+let socketIA = null
 
 export function getSocket() {
-  if (!socket) {
-    socket = io(SERVER_URL, { autoConnect: false })
-  }
+  if (!socket) socket = io(SERVER_URL, { autoConnect: false })
   return socket
+}
+
+export function getSocketIA() {
+  if (!socketIA) socketIA = io(SERVER_URL, { autoConnect: false })
+  return socketIA
 }
 
 export default function useSocket() {
@@ -20,24 +24,17 @@ export default function useSocket() {
     const s = getSocket()
     if (!s.connected) s.connect()
 
-    function onEtat(data)               { setEtatServeur(data) }
-    function onPartieDemarree(data)     { setEtatServeur(data); setCodeRoom(data.code); setEtatPartie('en_cours') }
-    function onRoomRejointe(data)       { setCodeRoom(data.code) }
-    function onFinPartie(data)          { setGagnant({ nom: data.gagnant }); setEtatPartie('terminee') }
-    function onCoupsValides(data) {
-
-      setCoupsValides(data.destinations || [])
-    }
-
+    function onEtat(data)           { setEtatServeur(data) }
+    function onPartieDemarree(data) { setEtatServeur(data); setCodeRoom(data.code); setEtatPartie('en_cours') }
+    function onRoomRejointe(data)   { setCodeRoom(data.code) }
+    function onFinPartie(data)      { setGagnant({ nom: data.gagnant }); setEtatPartie('terminee') }
+    function onCoupsValides(data)   { setCoupsValides(data.destinations || []) }
     function onAdversaireDeconnecte() {
       const { prenomJoueur } = useGameStore.getState()
       setGagnant({ nom: prenomJoueur, forfait: true })
       setEtatPartie('terminee')
     }
-
-    function onErreur(data) {
-      console.error('[Socket] Erreur :', data.code, data.msg || '')
-    }
+    function onErreur(data) { console.error('[Socket] Erreur :', data.code, data.msg || '') }
 
     s.on('etat',                  onEtat)
     s.on('partie_demarree',       onPartieDemarree)

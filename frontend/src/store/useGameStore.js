@@ -9,7 +9,6 @@ const etatInitial = {
   gagnant:          null,
   selectionne:      null,
   coupsValides:     [],
-  dernierCoup:      null,
   niveauIA:         'facile',
   prenomJoueur:     '',
   codeRoom:         null,
@@ -24,20 +23,18 @@ const useGameStore = create((set, get) => ({
   selectionnerCase: (row, col) =>
     set({ selectionne: row === null ? null : [row, col] }),
 
-  setCoupsValides: (coups) => set({ coupsValides: coups }),
-  setPlateau:       (plateau) => set({ plateau }),
-  setEtatPartie:    (etat) => set({ etatPartie: etat }),
-  setCodeRoom:      (code) => set({ codeRoom: code }),
+  setCoupsValides:  (coups)   => set({ coupsValides: coups }),
+  setEtatPartie:    (etat)    => set({ etatPartie: etat }),
+  setCodeRoom:      (code)    => set({ codeRoom: code }),
   setMaCouleur:     (couleur) => set({ maCouleur: couleur }),
-  setPrenomJoueur:  (prenom) => set({ prenomJoueur: prenom }),
+  setPrenomJoueur:  (prenom)  => set({ prenomJoueur: prenom }),
 
   setGagnant: (gagnant) =>
     set({ gagnant, etatPartie: 'terminee' }),
 
-  // Appelée par useSocket quand le serveur envoie "etat" ou "partie_demarree"
+  // Mise à jour complète depuis le serveur (événement "etat" ou "partie_demarree")
   setEtatServeur: (data) =>
     set((state) => {
-      // Plateau : convertit dict serveur {"r,c": val} → tableau 2D
       let plateau = state.plateau
       if (data.plateau) {
         plateau = Array.from({ length: 7 }, () => Array(7).fill(null))
@@ -47,7 +44,6 @@ const useGameStore = create((set, get) => ({
         }
       }
 
-      // Joueurs : données structurées depuis le serveur
       const joueurs = data.joueurs
         ? data.joueurs.map((j, i) => ({
             ...state.joueurs[i],
@@ -70,28 +66,6 @@ const useGameStore = create((set, get) => ({
         coupsValides:     [],
       }
     }),
-
-  changerTour: () =>
-    set((state) => ({
-      indexJoueurActif: state.indexJoueurActif === 0 ? 1 : 0,
-      selectionne:      null,
-      coupsValides:     [],
-      dernierCoup:      state.selectionne,
-    })),
-
-  poserEtoile: (indexJoueur) =>
-    set((state) => ({
-      joueurs: state.joueurs.map((j, i) =>
-        i === indexJoueur ? { ...j, en_main: j.en_main - 1, sur_plateau: j.sur_plateau + 1 } : j
-      ),
-    })),
-
-  recupererEtoile: (couleur) =>
-    set((state) => ({
-      joueurs: state.joueurs.map(j =>
-        j.couleur === couleur ? { ...j, en_main: j.en_main + 1, sur_plateau: j.sur_plateau - 1 } : j
-      ),
-    })),
 
   setConfigIA: (niveau, prenom) =>
     set((state) => ({

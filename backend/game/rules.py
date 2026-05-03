@@ -1,15 +1,23 @@
 from backend.game.board import CASES_JOUABLES, TAILLE, CASE_HORS_PLATEAU
 
-DIRECTIONS = [
-    (0, 1),   # droite
+DIRECTIONS_BASE = [
+    (0,  1),  # droite
     (0, -1),  # gauche
-    (1, 0),   # bas
+    (1,  0),  # bas
     (-1, 0),  # haut
-    (1, 1),   # diagonale bas-droite
-    (-1, -1), # diagonale haut-gauche
-    (1, -1),  # diagonale bas-gauche
-    (-1, 1),  # diagonale haut-droite
 ]
+
+DIAG_PRINCIPALE  = [(1, 1), (-1, -1)]  # valide seulement si r == c
+DIAG_SECONDAIRE  = [(1, -1), (-1, 1)]  # valide seulement si r + c == 6
+
+def _directions_pour(row, col):
+    """Retourne les directions accessibles depuis (row, col) selon les lignes du plateau."""
+    dirs = list(DIRECTIONS_BASE)
+    if row == col:
+        dirs += DIAG_PRINCIPALE
+    if row + col == 6:
+        dirs += DIAG_SECONDAIRE
+    return dirs
 
 class Rules:
 
@@ -41,7 +49,7 @@ class Rules:
         if board.get(row, col) is None:
             return []
 
-        for dr, dc in DIRECTIONS:
+        for dr, dc in _directions_pour(row, col):
             cible = Rules.prochaine_case_jouable(board, row, col, dr, dc)
 
             # --- Pas de case jouable dans cette direction → éjection ---
@@ -84,15 +92,27 @@ class Rules:
         """
         Vérifie si le coup annule exactement le coup précédent.
         Ex: glisser A→B puis B→A = annulation interdite.
+        Ex: pousser A→B→C puis pousser C→B→A = annulation interdite.
         """
         if dernier_coup is None:
             return False
+
+        # glisser A→B puis B→A
         if coup[0] == "glisser" and dernier_coup[0] == "glisser":
-            # coup[1:3] = départ actuel, coup[3:5] = arrivée actuelle
-            # dernier_coup[1:3] = départ précédent, dernier_coup[3:5] = arrivée précédente
             if (coup[1], coup[2]) == (dernier_coup[3], dernier_coup[4]) and \
                (coup[3], coup[4]) == (dernier_coup[1], dernier_coup[2]):
                 return True
+
+        # pousser A→B→C puis pousser C→B→A (remet les deux étoiles à leur place)
+        # dernier_coup: ("pousser", r1,c1, r2,c2, r3,c3, dr,dc)
+        #   → actif allait de r1,c1 à r2,c2 ; adverse poussé de r2,c2 à r3,c3
+        # coup annulant: ("pousser", r3,c3, r2,c2, r1,c1, -dr,-dc)
+        if coup[0] == "pousser" and dernier_coup[0] == "pousser":
+            if coup[1:3] == dernier_coup[5:7] and \
+               coup[3:5] == dernier_coup[3:5] and \
+               coup[5:7] == dernier_coup[1:3]:
+                return True
+
         return False
 
     @staticmethod

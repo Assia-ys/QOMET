@@ -4,10 +4,17 @@ import Board from '../components/Board'
 import PlayerInfo from '../components/PlayerInfo'
 import ModalFinPartie from '../components/ModalFinPartie'
 import useGameStore from '../store/useGameStore'
-import useSocket from '../hooks/useSocket'
-import { getCasesAccessibles, appliquerMouvement, detecterCarreGagnant } from '../utils/rulesClient'
+import useSocket, { getSocketIA } from '../hooks/useSocket'
 import { estValide, estJouable } from '../utils/boardGeometry'
 import { CASES_JOUABLES } from '../data/mockData'
+
+// Simulation approximative pour l'heuristique IA (ignore les effets de poussée)
+function simMove(plateau, fr, fc, tr, tc) {
+  const sim = plateau.map(r => [...r])
+  sim[tr][tc] = sim[fr][fc]
+  sim[fr][fc] = null
+  return sim
+}
 
 // Heuristique : compte les carrés partiels sans pièces adverses
 function evaluerPlateau(plateau, couleur) {
@@ -36,154 +43,127 @@ export default function Game() {
   const {
     plateau, joueurs, indexJoueurActif, niveauIA,
     selectionne, coupsValides, gagnant, codeRoom, maCouleur,
-    selectionnerCase, setCoupsValides, setPlateau, changerTour,
-    poserEtoile, recupererEtoile, setGagnant,
+    selectionnerCase, setCoupsValides, setGagnant,
   } = useGameStore()
 
-  const [phase, setPhase]                         = useState('pose')
-  const [pauseVisible, setPauseVisible]           = useState(false)
-  const [abandonVisible, setAbandonVisible]       = useState(false)
-  const [cellulesGagnantes, setCellulesGagnantes] = useState(new Set())
-  const [startTime]                               = useState(Date.now())
-  const [dureePartie, setDureePartie]             = useState('')
+  const [phase, setPhase]           = useState('pose')
+  const [pauseVisible, setPauseVisible]     = useState(false)
+  const [abandonVisible, setAbandonVisible] = useState(false)
+  const [startTime]                 = useState(Date.now())
+  const [dureePartie, setDureePartie]       = useState('')
 
-  const joueurActif  = joueurs[indexJoueurActif]
-  const modeIA       = joueurs[1]?.nom === 'IA'
-  const modeReseau   = !!codeRoom && !modeIA
-  const estTourIA    = modeIA && indexJoueurActif === 1
-  const estMonTour   = !modeReseau || joueurActif?.couleur === maCouleur
+  const joueurActif = joueurs[indexJoueurActif]
+  const modeIA      = joueurs[1]?.nom === 'IA'
+  const estTourIA   = modeIA && indexJoueurActif === 1
+  const estMonTour  = !codeRoom || joueurActif?.couleur === maCouleur
 
-  // ── Détection victoire ────────────────────────────────────────────────────────
+  // ── Durée de partie ──────────────────────────────────────────────────────────
   useEffect(() => {
-    if (gagnant) return
-    const resultat = detecterCarreGagnant(plateau)
-    if (!resultat) return
-    const vainqueur = joueurs.find(j => j.couleur === resultat.couleur)
-    setCellulesGagnantes(new Set(resultat.cellules.map(([r,c]) => `${r},${c}`)))
-    const s = Math.floor((Date.now() - startTime) / 1000)
-    setDureePartie(`${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`)
-    setGagnant(vainqueur)
-  }, [plateau])
+    if (gagnant && !dureePartie) {
+      const s = Math.floor((Date.now() - startTime) / 1000)
+      setDureePartie(`${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`)
+    }
+  }, [gagnant])
 
-  // ── Auto-switch pose → déplacement ───────────────────────────────────────────
+  // ── Auto-switch pose → déplacement ──────────────────────────────────────────
   useEffect(() => {
     if (phase === 'pose' && joueurs[0].en_main === 0 && joueurs[1].en_main === 0) {
       setPhase('deplacement')
     }
   }, [joueurs])
 
-  // ── Tour de l'IA ──────────────────────────────────────────────────────────────
+  // ── Tour de l'IA (via socketIA — le backend applique les mêmes règles) ───────
   useEffect(() => {
     if (!estTourIA || gagnant) return
 
     const couleurIA  = joueurs[1].couleur
     const couleurHum = joueurs[0].couleur
-    const delay = { facile: 600, moyen: 900, difficile: 1300 }[niveauIA] ?? 700
+    const delay      = { facile: 600, moyen: 900, difficile: 1300 }[niveauIA] ?? 700
+    const sIA        = getSocketIA()
 
     const timer = setTimeout(() => {
 
       if (phase === 'pose' && joueurs[1].en_main > 0) {
-        const vides = CASES_JOUABLES.filter(([r,c]) => plateau[r][c] === null)
+        // Phase de pose : choisir une case vide
+        const vides = CASES_JOUABLES.filter(([r, c]) => plateau[r][c] === null)
         if (!vides.length) return
 
         let choix = vides[Math.floor(Math.random() * vides.length)]
         if (niveauIA !== 'facile') {
           let best = -1
-          for (const [r,c] of vides) {
+          for (const [r, c] of vides) {
             const sim = plateau.map(row => [...row])
             sim[r][c] = couleurIA
             const s = evaluerPlateau(sim, couleurIA)
-            if (s > best) { best = s; choix = [r,c] }
+            if (s > best) { best = s; choix = [r, c] }
           }
         }
-        const nouveau = plateau.map(row => [...row])
-        nouveau[choix[0]][choix[1]] = couleurIA
-        setPlateau(nouveau)
-        poserEtoile(1)
-        changerTour()
+        sIA.emit('jouer', { type: 'poser', row: choix[0], col: choix[1] })
 
       } else if (phase === 'deplacement') {
-        const moves = []
-        for (const [r,c] of CASES_JOUABLES) {
-          if (plateau[r][c] !== couleurIA) continue
-          for (const dest of getCasesAccessibles(plateau, r, c))
-            moves.push({ from: [r,c], to: dest })
-        }
-        if (!moves.length) { changerTour(); return }
+        // Phase de déplacement : interroger le backend pour chaque pièce IA,
+        // collecter tous les coups valides, puis jouer le meilleur.
+        const pieces = CASES_JOUABLES.filter(([r, c]) => plateau[r][c] === couleurIA)
+        const allMoves = []
+        let idx = 0
 
-        let choix = moves[Math.floor(Math.random() * moves.length)]
-        if (niveauIA !== 'facile') {
-          let best = -Infinity
-          for (const m of moves) {
-            const { nouveauPlateau } = appliquerMouvement(plateau, m.from[0], m.from[1], m.to[0], m.to[1])
-            const s    = evaluerPlateau(nouveauPlateau, couleurIA)
-            const sAdv = niveauIA === 'difficile' ? evaluerPlateau(nouveauPlateau, couleurHum) : 0
-            const total = s - sAdv * 0.8
-            if (total > best) { best = total; choix = m }
+        function processNext() {
+          if (idx >= pieces.length) {
+            if (!allMoves.length) return
+
+            let choix = allMoves[Math.floor(Math.random() * allMoves.length)]
+            if (niveauIA !== 'facile') {
+              let best = -Infinity
+              for (const [fr, fc, tr, tc] of allMoves) {
+                const sim  = simMove(plateau, fr, fc, tr, tc)
+                const s    = evaluerPlateau(sim, couleurIA)
+                const sAdv = niveauIA === 'difficile' ? evaluerPlateau(sim, couleurHum) * 0.8 : 0
+                if (s - sAdv > best) { best = s - sAdv; choix = [fr, fc, tr, tc] }
+              }
+            }
+            sIA.emit('jouer', { type: 'deplacement', coup: choix })
+            return
           }
-        }
-        const { nouveauPlateau, etoileEjectee } = appliquerMouvement(
-          plateau, choix.from[0], choix.from[1], choix.to[0], choix.to[1]
-        )
-        setPlateau(nouveauPlateau)
-        if (etoileEjectee) recupererEtoile(etoileEjectee)
-        selectionnerCase(null, null)
-        setCoupsValides([])
-        changerTour()
-      }
 
+          const [pr, pc] = pieces[idx++]
+          sIA.once('coups_valides', (data) => {
+            ;(data.destinations || []).forEach(([tr, tc]) => allMoves.push([pr, pc, tr, tc]))
+            processNext()
+          })
+          sIA.emit('deplacements_valides', { row: pr, col: pc })
+        }
+
+        processNext()
+      }
     }, delay)
 
     return () => clearTimeout(timer)
   }, [indexJoueurActif, phase, gagnant])
 
-  // ── Interactions humain ───────────────────────────────────────────────────────
+  // ── Interactions humain (tout via socket — backend valide) ────────────────────
   function handleCellClick(r, c) {
     if (estTourIA || gagnant || !estMonTour) return
     const valeur = plateau[r][c]
 
-    if (selectionne && coupsValides.some(([vr,vc]) => vr === r && vc === c)) {
-      if (modeReseau) {
-        // Mode réseau : envoyer le coup au serveur
-        socket.emit('jouer', { type: 'deplacement', coup: [selectionne[0], selectionne[1], r, c] })
-        selectionnerCase(null, null)
-        setCoupsValides([])
-      } else {
-        const { nouveauPlateau, etoileEjectee } = appliquerMouvement(
-          plateau, selectionne[0], selectionne[1], r, c
-        )
-        setPlateau(nouveauPlateau)
-        if (etoileEjectee) recupererEtoile(etoileEjectee)
-        selectionnerCase(null, null)
-        setCoupsValides([])
-        changerTour()
-      }
+    // Déplacer vers une case valide sélectionnée
+    if (selectionne && coupsValides.some(([vr, vc]) => vr === r && vc === c)) {
+      socket.emit('jouer', { type: 'deplacement', coup: [selectionne[0], selectionne[1], r, c] })
+      selectionnerCase(null, null)
+      setCoupsValides([])
       return
     }
 
-    if (valeur === joueurActif.couleur && phase === 'deplacement') {
+    // Sélectionner une pièce → demander les coups valides au backend
+    if (valeur === joueurActif?.couleur && phase === 'deplacement') {
       selectionnerCase(r, c)
       setCoupsValides([])
-
-      if (modeReseau) {
-        socket.emit('deplacements_valides', { row: r, col: c })
-      } else {
-        setCoupsValides(getCasesAccessibles(plateau, r, c))
-      }
+      socket.emit('deplacements_valides', { row: r, col: c })
       return
     }
 
-    if (phase === 'pose' && !valeur && joueurActif.en_main > 0) {
-      if (modeReseau) {
-        // Mode réseau : envoyer la pose au serveur
-        socket.emit('jouer', { type: 'poser', row: r, col: c })
-      } else {
-        const nouveau = plateau.map(row => [...row])
-        nouveau[r][c] = joueurActif.couleur
-        setPlateau(nouveau)
-        poserEtoile(indexJoueurActif)
-        changerTour()
-      }
+    // Poser une étoile
+    if (phase === 'pose' && !valeur && joueurActif?.en_main > 0) {
+      socket.emit('jouer', { type: 'poser', row: r, col: c })
       return
     }
 
@@ -222,16 +202,16 @@ export default function Game() {
       )}
 
       <div style={styles.zoneJeu}>
-        <PlayerInfo joueur={joueurs[0]} estActif={indexJoueurActif === 0} estMoi={!modeReseau || maCouleur === 'clair'} />
+        <PlayerInfo joueur={joueurs[0]} estActif={indexJoueurActif === 0} estMoi={!modeIA || maCouleur === 'clair'} />
         <Board
           plateau={plateau}
           selectionne={selectionne}
           coupsValides={coupsValides}
           onCellClick={handleCellClick}
           phase={phase}
-          cellulesGagnantes={cellulesGagnantes}
+          cellulesGagnantes={new Set()}
         />
-        <PlayerInfo joueur={joueurs[1]} estActif={indexJoueurActif === 1} estMoi={!modeReseau || maCouleur === 'fonce'} />
+        <PlayerInfo joueur={joueurs[1]} estActif={indexJoueurActif === 1} estMoi={modeIA ? false : maCouleur === 'fonce'} />
       </div>
 
       <div style={styles.actions}>
@@ -263,9 +243,7 @@ export default function Game() {
           <div style={{ display: 'flex', gap: 12 }}>
             <BoutonAction label="Annuler"    couleur="#374151" onClick={() => setAbandonVisible(false)} />
             <BoutonAction label="Abandonner" couleur="#dc2626" onClick={() => {
-              if (modeReseau) {
-                socket.emit('abandonner')
-              }
+              socket.emit('abandonner')
               navigate('/')
             }} />
           </div>
