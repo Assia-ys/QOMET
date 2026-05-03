@@ -5,9 +5,10 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from config.settings import HOST, PORT
 from backend.network.manager import (
-    creer_room, rejoindre_room, room_est_pleine,
+    rejoindre_room, room_est_pleine,
     couleur_du_joueur, supprimer_room, rooms,
 )
+from backend.api.routes import router as parties_router
 
 # ── Socket.io ──────────────────────────────────────────────────────────────────
 sio = socketio.AsyncServer(
@@ -26,6 +27,8 @@ app.add_middleware(
 )
 
 socket_app = socketio.ASGIApp(sio, other_asgi_app=app)
+
+app.include_router(parties_router)
 
 # ── Événements Socket.io ───────────────────────────────────────────────────────
 
@@ -48,33 +51,27 @@ async def disconnect(sid):
 @sio.event
 async def rejoindre(sid, data):
     """
-    Reçu quand un joueur veut rejoindre ou créer une room.
-    data = { "action": "creer"|"rejoindre", "prenom": "Alice", "code": "AS58" }
+    Reçu quand un joueur veut rejoindre une room existante.
+    data = { "code": "AS58", "prenom": "Bob" }
+    La room doit avoir été créée via POST /parties au préalable.
     """
     prenom = data.get("prenom", "Joueur")
-    action = data.get("action")
+    code   = data.get("code", "").upper().strip()
 
-    if action == "creer":
-        code = creer_room(sid, prenom)
-        await sio.enter_room(sid, code)
-        await sio.emit("room_creee", {"code": code}, to=sid)
+    ok, msg = rejoindre_room(sid, code, prenom)
 
-    elif action == "rejoindre":
-        code = data.get("code", "").upper().strip()
-        ok, msg = rejoindre_room(sid, code, prenom)
+    if not ok:
+        await sio.emit("erreur", {"code": msg}, to=sid)
+        return
 
-        if not ok:
-            await sio.emit("erreur", {"code": msg}, to=sid)
-            return
+    await sio.enter_room(sid, code)
+    await sio.emit("room_rejointe", {"code": code}, to=sid)
 
-        await sio.enter_room(sid, code)
-        await sio.emit("room_rejointe", {"code": code}, to=sid)
-
-        if room_est_pleine(code):
-            game  = rooms[code]["game"]
-            etat  = game.etat()
-            etat["code"] = code
-            await sio.emit("partie_demarree", etat, room=code)
+    if room_est_pleine(code):
+        game = rooms[code]["game"]
+        etat = game.etat()
+        etat["code"] = code
+        await sio.emit("partie_demarree", etat, room=code)
 
 
 @sio.event
