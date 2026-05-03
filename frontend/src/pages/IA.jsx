@@ -67,6 +67,7 @@ export default function IA() {
       {/* Bouton */}
       <button
         style={{ ...styles.bouton, opacity: prenom.trim() ? 1 : 0.5, cursor: prenom.trim() ? 'pointer' : 'not-allowed',}}
+        onClick={() => navigate('/jeu')}
         onClick={commencer}
         disabled={!prenom.trim()}
       >
@@ -118,4 +119,5 @@ const styles = {
   input:   { background: '#1e293b', border: '1px solid #334155', borderRadius: 8, padding: '10px 14px', color: '#fff', fontSize: 15, outline: 'none' },
   bouton:  { background: '#6366f1', color: '#fff', border: 'none', borderRadius: 10, padding: '14px 40px', fontSize: 16, fontWeight: 600, width: 400 },
   retour: { position: 'absolute', top: 24, left: 24, background: 'transparent', border: '1px solid #334155', borderRadius: 8, padding: '8px 16px', color: '#94a3b8', fontSize: 14, cursor: 'pointer' },
+
 }

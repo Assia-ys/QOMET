@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { SET_JOUABLES, EDGES } from '../utils/boardGeometry'
 
 const CELL = 54
@@ -30,7 +30,43 @@ function cellCentre(r, c) {
   }
 }
 
-export default function Board({ plateau, selectionne, coupsValides = [], onCellClick, phase = 'pose' }) {
+export default function Board({ plateau, selectionne, coupsValides = [], onCellClick, phase = 'pose', cellulesGagnantes = new Set() }) {
+  const prevPlateauRef = useRef(plateau)
+  const [animIn, setAnimIn]         = useState(new Set())
+  const [ghostStars, setGhostStars] = useState({})
+
+  useEffect(() => {
+    const prev = prevPlateauRef.current
+    if (prev === plateau) return
+
+    const newIn     = new Set()
+    const newGhosts = {}
+
+    for (const key of SET_JOUABLES) {
+      const [r, c] = key.split(',').map(Number)
+      const prevVal = prev?.[r]?.[c] ?? null
+      const currVal = plateau?.[r]?.[c] ?? null
+      if (prevVal === null && currVal !== null) newIn.add(key)
+      if (prevVal !== null && currVal === null) newGhosts[key] = prevVal
+    }
+
+    prevPlateauRef.current = plateau
+
+    const cleanups = []
+    if (newIn.size > 0) {
+      setAnimIn(newIn)
+      const t = setTimeout(() => setAnimIn(new Set()), 400)
+      cleanups.push(() => clearTimeout(t))
+    }
+    if (Object.keys(newGhosts).length > 0) {
+      setGhostStars(newGhosts)
+      const t = setTimeout(() => setGhostStars({}), 400)
+      cleanups.push(() => clearTimeout(t))
+    }
+
+    return () => cleanups.forEach(fn => fn())
+  }, [plateau])
+
   const estJouable     = (r, c) => SET_JOUABLES.has(`${r},${c}`)
   const estSelectionne = (r, c) => selectionne?.[0] === r && selectionne?.[1] === c
   const estCoupValide  = (r, c) => coupsValides.some(([vr, vc]) => vr === r && vc === c)
@@ -62,6 +98,7 @@ export default function Board({ plateau, selectionne, coupsValides = [], onCellC
           <div key={r} style={styles.ligne}>
             {Array.from({ length: TAILLE }, (_, c) => {
               if (!estJouable(r, c)) return <div key={c} style={styles.invisible} />
+              const key = `${r},${c}`
               return (
                 <Cellule
                   key={c}
@@ -70,21 +107,55 @@ export default function Board({ plateau, selectionne, coupsValides = [], onCellC
                   coupValide={estCoupValide(r, c)}
                   phase={phase}
                   onClick={() => onCellClick?.(r, c)}
+                  animIn={animIn.has(key)}
+                  estGagnante={cellulesGagnantes.has(key)}
                 />
               )
             })}
           </div>
         ))}
 
+        {Object.entries(ghostStars).map(([key, color]) => {
+          const [r, c] = key.split(',').map(Number)
+          const fill   = color === 'clair' ? C.clair  : C.fonce
+          const stroke = color === 'clair' ? '#fde68a' : '#fca5a5'
+          const glow   = color === 'clair' ? C.clairGlow : C.fonceGlow
+          return (
+            <div
+              key={key}
+              style={{
+                position: 'absolute',
+                top:  PADDING + r * (CELL + GAP),
+                left: PADDING + c * (CELL + GAP),
+                width: CELL, height: CELL,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                animation: 'starOut 0.4s ease-out forwards',
+                filter: `drop-shadow(0 0 10px ${glow})`,
+                pointerEvents: 'none',
+                zIndex: 10,
+              }}
+            >
+              <EtoileSVG fill={fill} stroke={stroke} strokeWidth={1.5} innerFill="#fff" />
+            </div>
+          )
+        })}
+
       </div>
     </div>
   )
 }
 
-function Cellule({ valeur, selectionne, coupValide, phase, onClick }) {
+function Cellule({ valeur, selectionne, coupValide, phase, onClick, animIn = false, estGagnante = false }) {
   const [survol, setSurvol] = useState(false)
   const config = getConfig(valeur, selectionne, coupValide, phase, survol)
-  const scale = selectionne ? 1.18 : survol && config.cursor === 'pointer' ? 1.1 : 1
+  const scale  = selectionne ? 1.18 : survol && config.cursor === 'pointer' ? 1.1 : 1
+
+  const outerFilter = (estGagnante && valeur) ? 'none' : (config.glow ? `drop-shadow(0 0 8px ${config.glow})` : 'none')
+
+  const innerAnim =
+    animIn                  ? 'starPop 0.35s ease-out forwards' :
+    (estGagnante && valeur) ? 'winPulse 1.2s ease-in-out infinite' :
+    undefined
 
   return (
     <div
@@ -96,12 +167,14 @@ function Cellule({ valeur, selectionne, coupValide, phase, onClick }) {
         cursor: config.cursor,
         transform: `scale(${scale})`,
         transition: 'transform 0.15s ease, filter 0.15s ease',
-        filter: config.glow ? `drop-shadow(0 0 8px ${config.glow})` : 'none',
+        filter: outerFilter,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         position: 'relative', zIndex: 1,
       }}
     >
-      <EtoileSVG fill={config.fill} stroke={config.stroke} strokeWidth={config.strokeWidth} innerFill={config.innerFill} />
+      <div style={innerAnim ? { animation: innerAnim } : undefined}>
+        <EtoileSVG fill={config.fill} stroke={config.stroke} strokeWidth={config.strokeWidth} innerFill={config.innerFill} />
+      </div>
     </div>
   )
 }
@@ -148,7 +221,7 @@ const styles = {
     border: '1px solid rgba(124,58,237,0.3)',
     background: 'radial-gradient(ellipse at center, #1e1320ff 0%, #180a1eff 100%)',
   },
-  svg: { position: 'absolute', top: 0, left: 0, pointerEvents: 'none' },
-  ligne: { display: 'flex', gap: GAP },
+  svg:       { position: 'absolute', top: 0, left: 0, pointerEvents: 'none' },
+  ligne:     { display: 'flex', gap: GAP },
   invisible: { width: CELL, height: CELL },
 }
