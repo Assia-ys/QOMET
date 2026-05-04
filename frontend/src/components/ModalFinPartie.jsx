@@ -125,7 +125,7 @@ const styles = {
   btnFermer:  { position: 'absolute', top: 12, right: 12, background: '#334155', border: 'none', borderRadius: 8, color: '#94a3b8', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px' },
   emoji:      { background: '#0f172a', borderRadius: '50%', width: 90, height: 90, display: 'flex', alignItems: 'center', justifyContent: 'center' },
   etoiles:    { display: 'flex', gap: 8 },
-  titre:      { fontSize: 24, fontWeight: 700, margin: 0 },
+  titre:      { fontSize: 24, fontWeight: 700, margin: 0, textAlign: 'center' },
   sous:       { color: '#94a3b8', fontSize: 13, textAlign: 'center', margin: 0 },
   badge:      { background: 'rgba(127,29,29,0.5)', color: '#fca5a5', fontSize: 11, fontFamily: 'monospace', fontWeight: 700, padding: '5px 14px', borderRadius: 99, border: '1px solid #7f1d1d', letterSpacing: 1 },
   dureeBox:   { background: '#0f172a', borderRadius: 10, padding: '10px 32px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 },
