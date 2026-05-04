@@ -8,8 +8,8 @@ g.jouer_poser(1, 1)  # Bob pose
 g.jouer_poser(0, 2)  # Alice pose
 g.jouer_poser(1, 3)  # Bob pose
 g.board.afficher()
-print("Joueurs:", g.etat()["j1"])
-print("Joueurs:", g.etat()["j2"])
+print("Joueurs:", g.etat()["joueurs"][0])
+print("Joueurs:", g.etat()["joueurs"][1])
 print()
 
 print("=== TEST 2 : Détection victoire ===")

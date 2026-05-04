@@ -45,7 +45,7 @@ export default function Game() {
   const {
     plateau, joueurs, indexJoueurActif, niveauIA,
     selectionne, coupsValides, gagnant, codeRoom, maCouleur,
-    adversaireEnPause,
+    adversaireEnPause, cellulesGagnantes,
     selectionnerCase, setCoupsValides,
   } = useGameStore()
 
@@ -60,6 +60,15 @@ export default function Game() {
   const modeIA      = joueurs[1]?.nom === 'IA'
   const estTourIA   = modeIA && indexJoueurActif === 1
   const estMonTour  = !codeRoom || joueurActif?.couleur === maCouleur
+
+  // ── Redirection si pas de partie active (refresh page) ──────────────────────
+  useEffect(() => {
+    const { etatPartie, joueurs } = useGameStore.getState()
+    const modeIAActif = joueurs[1]?.nom === 'IA'
+    if (etatPartie === 'en_attente' && !modeIAActif) {
+      navigate('/')
+    }
+  }, [])
 
   // ── Timer de partie ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -241,7 +250,7 @@ export default function Game() {
           coupsValides={coupsValides}
           onCellClick={handleCellClick}
           phase={phase}
-          cellulesGagnantes={new Set()}
+          cellulesGagnantes={new Set(cellulesGagnantes.map(([r,c]) => `${r},${c}`))}
         />
         <PlayerInfo joueur={joueurs[1]} estActif={indexJoueurActif === 1} estMoi={joueurs[1].couleur === maCouleur} />
       </div>

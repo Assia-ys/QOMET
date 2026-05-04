@@ -71,10 +71,9 @@ class Game:
             for (r, c) in CASES_JOUABLES
         }
         return {
-            "plateau":      plateau,
-            "joueur_actif": self.joueur_actif.nom,
-            "j1":           str(self.joueur1),
-            "j2":           str(self.joueur2),
+            "plateau":        plateau,
+            "joueur_actif":   self.joueur_actif.nom,
+            "couleur_active": self.joueur_actif.couleur,
             "joueurs": [
                 {
                     "nom":         self.joueur1.nom,

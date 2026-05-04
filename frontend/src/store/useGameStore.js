@@ -14,6 +14,7 @@ const etatInitial = {
   codeRoom:          null,
   maCouleur:         null,
   adversaireEnPause: false,
+  cellulesGagnantes: [],
 }
 
 const useGameStore = create((set, get) => ({
@@ -30,6 +31,7 @@ const useGameStore = create((set, get) => ({
   setMaCouleur:        (couleur) => set({ maCouleur: couleur }),
   setPrenomJoueur:     (prenom)  => set({ prenomJoueur: prenom }),
   setAdversaireEnPause:(val)     => set({ adversaireEnPause: val }),
+  setCellulesGagnantes:(cellules) => set({ cellulesGagnantes: cellules }),
 
   setGagnant: (gagnant) =>
     set({ gagnant, etatPartie: 'terminee' }),
@@ -56,7 +58,10 @@ const useGameStore = create((set, get) => ({
           }))
         : state.joueurs
 
-      const indexActif = joueurs.findIndex(j => j.nom === data.joueur_actif)
+      // Utilise couleur_active pour identifier le joueur actif (robuste même si les noms sont identiques)
+      const indexActif = data.couleur_active
+        ? joueurs.findIndex(j => j.couleur === data.couleur_active)
+        : joueurs.findIndex(j => j.nom === data.joueur_actif)
 
       return {
         plateau,

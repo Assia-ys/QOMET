@@ -18,7 +18,7 @@ export function getSocketIA() {
 }
 
 export default function useSocket() {
-  const { setEtatServeur, setCodeRoom, setEtatPartie, setGagnant, setCoupsValides, setAdversaireEnPause } = useGameStore()
+  const { setEtatServeur, setCodeRoom, setEtatPartie, setGagnant, setCoupsValides, setAdversaireEnPause, setCellulesGagnantes } = useGameStore()
 
   useEffect(() => {
     const s = getSocket()
@@ -27,6 +27,7 @@ export default function useSocket() {
     function onEtat(data)           { setEtatServeur(data) }
     function onPartieDemarree(data) { setEtatServeur(data); setCodeRoom(data.code); setEtatPartie('en_cours') }
     function onRoomRejointe(data)   { setCodeRoom(data.code) }
+    function onCarreGagnant(data)   { setCellulesGagnantes(data.cellules || []) }
     function onFinPartie(data)      { setGagnant({ nom: data.gagnant }); setEtatPartie('terminee') }
     function onCoupsValides(data)   { setCoupsValides(data.destinations || []) }
     function onAdversaireDeconnecte() {
@@ -41,6 +42,7 @@ export default function useSocket() {
     s.on('etat',                  onEtat)
     s.on('partie_demarree',       onPartieDemarree)
     s.on('room_rejointe',         onRoomRejointe)
+    s.on('carre_gagnant',         onCarreGagnant)
     s.on('fin_partie',            onFinPartie)
     s.on('coups_valides',         onCoupsValides)
     s.on('adversaire_deconnecte', onAdversaireDeconnecte)
@@ -52,6 +54,7 @@ export default function useSocket() {
       s.off('etat',                  onEtat)
       s.off('partie_demarree',       onPartieDemarree)
       s.off('room_rejointe',         onRoomRejointe)
+      s.off('carre_gagnant',         onCarreGagnant)
       s.off('fin_partie',            onFinPartie)
       s.off('coups_valides',         onCoupsValides)
       s.off('adversaire_deconnecte', onAdversaireDeconnecte)

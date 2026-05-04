@@ -1,3 +1,4 @@
+import asyncio
 import uvicorn
 import socketio
 from fastapi import FastAPI
@@ -179,8 +180,14 @@ async def jouer(sid, data):
     # Broadcast le nouvel état aux 2 joueurs
     await sio.emit("etat", game.etat(), room=code)
 
-    # Fin de partie
+    # Fin de partie : envoie les cellules gagnantes puis le modal
     if game.termine:
+        carre = Rules.trouver_carre_gagnant(game.board)
+        if carre:
+            await sio.emit("carre_gagnant", {
+                "cellules": carre["cellules"],
+                "gagnant":  game.gagnant.nom if game.gagnant else None,
+            }, room=code)
         await sio.emit("fin_partie", {
             "gagnant": game.gagnant.nom if game.gagnant else None
         }, room=code)
