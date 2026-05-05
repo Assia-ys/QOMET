@@ -64,7 +64,7 @@ function VueAccueil({ onCreer, onRejoindre, isLoading }) {
         onMouseEnter={e => e.currentTarget.style.color = '#f1f5f9'}
         onMouseLeave={e => e.currentTarget.style.color = C.textSub}
       >
-        ← Menu
+        ← Retour
       </button>
       <h1 style={{ fontSize: 30, fontWeight: 800, color: '#f1f5f9', marginBottom: 6, textAlign: 'center' }}>
         Multijoueur sur réseau local

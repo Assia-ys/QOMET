@@ -6,17 +6,18 @@ import { Trophy, Frown, Star, RotateCcw, Home, UserX, Eye } from 'lucide-react'
 
 export default function ModalFinPartie({ gagnant, duree }) {
   const navigate = useNavigate()
-  const { reinitialiser, prenomJoueur, codeRoom } = useGameStore()
+  const { reinitialiser, prenomJoueur, codeRoom, joueurs } = useGameStore()
   const [forfaitAccepte, setForfaitAccepte] = useState(false)
   const [minimise, setMinimise]             = useState(false)
 
-  const estForfait = !!gagnant?.forfait && !forfaitAccepte
-  const aGagne     = !!gagnant?.forfait || gagnant?.nom === prenomJoueur
+  const modeIA      = joueurs[1]?.nom === 'IA'
+  const estForfait  = !!gagnant?.forfait && !forfaitAccepte
+  const aGagne      = !!gagnant?.forfait || gagnant?.nom === prenomJoueur
 
   function rejouer() {
-    const etaitReseau = !!codeRoom
     reinitialiser()
-    if (etaitReseau) navigate('/reseau')
+    if (modeIA) navigate('/ia')
+    else if (codeRoom) navigate('/reseau')
   }
 
   function menu() {

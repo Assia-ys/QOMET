@@ -5,8 +5,11 @@ const COULEURS = {
   fonce: { fill: '#dc2626', stroke: '#fca5a5' },
 }
 
-export default function PlayerInfo({ joueur, estActif, estMoi = true }) {
+const NIVEAU_COULEUR = { facile: '#22c55e', moyen: '#eab308', difficile: '#ef4444' }
+
+export default function PlayerInfo({ joueur, estActif, estMoi = true, niveauIA }) {
   const { fill, stroke } = COULEURS[joueur.couleur]
+  const estIA = joueur.nom === 'IA'
 
   return (
     <div style={{
@@ -31,6 +34,18 @@ export default function PlayerInfo({ joueur, estActif, estMoi = true }) {
         <span style={{ color: 'white', fontWeight: 'bold', fontSize: 16 }}>
           {joueur.nom}
         </span>
+        {estIA && niveauIA && (
+          <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <span style={{
+              width: 8, height: 8, borderRadius: '50%',
+              background: NIVEAU_COULEUR[niveauIA] ?? '#94a3b8',
+              display: 'inline-block', flexShrink: 0,
+            }} />
+            <span style={{ color: NIVEAU_COULEUR[niveauIA] ?? '#94a3b8', fontSize: 11, fontWeight: 600 }}>
+              {niveauIA.charAt(0).toUpperCase() + niveauIA.slice(1)}
+            </span>
+          </span>
+        )}
       </div>
 
       <Compteur label="EN MAIN"       count={joueur.en_main}      fill={fill} stroke={stroke} />

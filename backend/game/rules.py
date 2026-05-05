@@ -105,10 +105,11 @@ class Rules:
                         resultats.append(coup)
 
                 elif cible2 is None:
-                    # pousse l'étoile hors du plateau
-                    coup = ("pousser_ejecter", row, col, r2, c2, dr, dc)
-                    if not Rules._est_annulation(coup, dernier_coup):
-                        resultats.append(coup)
+                    # pousser hors plateau uniquement si la case poussée est physiquement au bord
+                    if not board.est_valide(r2 + dr, c2 + dc):
+                        coup = ("pousser_ejecter", row, col, r2, c2, dr, dc)
+                        if not Rules._est_annulation(coup, dernier_coup):
+                            resultats.append(coup)
 
                 # si cible2 est occupée → on ne peut pas pousser 2 étoiles
 
