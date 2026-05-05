@@ -46,13 +46,18 @@ def _coups_deplacement(board, couleur):
     return coups
 
 
-def _generer_coups(game):
-    """Coups jouables pour le joueur actif.
-    En phase de pose : uniquement les cases stratégiques (carrés viables).
-    En phase de déplacement : tous les coups valides."""
+def _generer_coups(game, complet=False):
+    """
+    complet=False (Moyen)    : pose OU déplacement selon la phase.
+    complet=True  (Difficile): pose + déplacement toujours — détecte les
+                               victoires par déplacement pendant la pose.
+    """
     joueur = game.joueur_actif
     if joueur.peut_poser():
-        return [("poser", r, c) for (r, c) in _cases_strategiques(game.board, joueur.couleur)]
+        coups = [("poser", r, c) for (r, c) in _cases_strategiques(game.board, joueur.couleur)]
+        if complet:
+            coups += _coups_deplacement(game.board, joueur.couleur)
+        return coups
     return _coups_deplacement(game.board, joueur.couleur)
 
 
@@ -118,7 +123,7 @@ def _trier_coups(game, coups, maximise, couleur_ia):
     return sorted(coups, key=score, reverse=maximise)
 
 
-def _minimax(game, profondeur, maximise, alpha, beta, couleur_ia):
+def _minimax(game, profondeur, maximise, alpha, beta, couleur_ia, complet=False):
     """
     Minimax avec élagage alpha-bêta + tri des coups (move ordering).
     Utilisé pour Moyen (profondeur=2) et Difficile (profondeur=4).
@@ -130,7 +135,7 @@ def _minimax(game, profondeur, maximise, alpha, beta, couleur_ia):
         adv = "fonce" if couleur_ia == "clair" else "clair"
         return evaluer(game.board, couleur_ia) - evaluer(game.board, adv)
 
-    coups = _generer_coups(game)
+    coups = _generer_coups(game, complet)
     if not coups:
         return 0
 
@@ -142,7 +147,7 @@ def _minimax(game, profondeur, maximise, alpha, beta, couleur_ia):
         valeur = -INF
         for coup in coups:
             enfant = _appliquer(game, coup)
-            valeur = max(valeur, _minimax(enfant, profondeur - 1, False, alpha, beta, couleur_ia))
+            valeur = max(valeur, _minimax(enfant, profondeur - 1, False, alpha, beta, couleur_ia, complet))
             alpha  = max(alpha, valeur)
             if beta <= alpha:
                 break  # coupure bêta
@@ -151,7 +156,7 @@ def _minimax(game, profondeur, maximise, alpha, beta, couleur_ia):
         valeur = INF
         for coup in coups:
             enfant = _appliquer(game, coup)
-            valeur = min(valeur, _minimax(enfant, profondeur - 1, True, alpha, beta, couleur_ia))
+            valeur = min(valeur, _minimax(enfant, profondeur - 1, True, alpha, beta, couleur_ia, complet))
             beta   = min(beta, valeur)
             if beta <= alpha:
                 break  # coupure alpha
@@ -161,16 +166,18 @@ def _minimax(game, profondeur, maximise, alpha, beta, couleur_ia):
 def coup_minimax(game, profondeur):
     """
     Choisit le meilleur coup avec Minimax + alpha-bêta.
-    profondeur=2 → Moyen  |  profondeur=4 → Difficile
+    profondeur=2 → Moyen    (pose OU déplacement selon phase)
+    profondeur=4 → Difficile (pose + déplacement, détecte menaces par déplacement)
 
     Profondeur adaptative :
     - Phase de pose       → depth=2 max (branching élevé même avec filtrage)
-    - Phase de déplacement → depth=profondeur complet (7 pièces × 3-5 moves → rapide)
+    - Phase de déplacement → depth=profondeur complet
     """
-    couleur_ia    = game.joueur_actif.couleur
-    prof_eff      = min(profondeur, 2) if game.joueur_actif.peut_poser() else profondeur
+    couleur_ia = game.joueur_actif.couleur
+    complet    = (profondeur >= 4)
+    prof_eff   = min(profondeur, 2) if game.joueur_actif.peut_poser() else profondeur
 
-    coups = _generer_coups(game)
+    coups = _generer_coups(game, complet)
     if not coups:
         return None
 
@@ -179,7 +186,7 @@ def coup_minimax(game, profondeur):
 
     for coup in coups:
         enfant = _appliquer(game, coup)
-        score  = _minimax(enfant, prof_eff - 1, False, -INF, INF, couleur_ia)
+        score  = _minimax(enfant, prof_eff - 1, False, -INF, INF, couleur_ia, complet)
         if score > meilleur_score:
             meilleur_score = score
             meilleur_coup  = coup
