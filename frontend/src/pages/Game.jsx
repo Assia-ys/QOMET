@@ -107,15 +107,8 @@ export default function Game() {
     if (adversaireEnPause) setPauseVisible(true)
     else if (!adversaireEnPause && pauseVisible) setPauseVisible(false)
   }, [adversaireEnPause])
-  const phase = joueurActif?.en_main > 0 ? 'pose' : 'deplacement'
 
-  // ── Durée de partie ──────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (gagnant && !dureePartie) {
-      const s = Math.floor((Date.now() - startTime) / 1000)
-      setDureePartie(`${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`)
-    }
-  }, [gagnant])
+  const phase = joueurActif?.en_main > 0 ? 'pose' : 'deplacement'
 
   // ── Tour de l'IA (via socketIA — le backend applique les mêmes règles) ───────
   useEffect(() => {

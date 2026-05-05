@@ -1,4 +1,4 @@
-from backend.game.board import Board
+from backend.game.board import Board, CASES_JOUABLES
 from backend.game.player import Player
 from backend.game.rules import Rules
 
@@ -65,7 +65,6 @@ class Game:
         self.termine = True
 
     def etat(self):
-        from backend.game.board import CASES_JOUABLES
         plateau = {
             f"{r},{c}": self.board.get(r, c)
             for (r, c) in CASES_JOUABLES
