@@ -23,9 +23,23 @@ def creer_room(prenom):
     return code
 
 
+def quitter_room(sid):
+    """Retire un joueur de la room dans laquelle il se trouve, sans supprimer la room."""
+    for room in rooms.values():
+        if room["joueurs"]["clair"] == sid:
+            room["joueurs"]["clair"] = None
+            return
+        if room["joueurs"]["fonce"] == sid:
+            room["joueurs"]["fonce"] = None
+            return
+
+
 def rejoindre_room(sid, code, prenom):
     if code not in rooms:
         return False, "ERR_ROOM_NOT_FOUND"
+
+    # Évite qu'un même sid soit présent dans plusieurs rooms simultanément
+    quitter_room(sid)
 
     room = rooms[code]
 

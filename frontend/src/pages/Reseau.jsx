@@ -23,7 +23,7 @@ const C = {
 
 // ─── Vue principale ────────────────────────────────────────────────────────────
 
-function VueAccueil({ onCreer, onRejoindre }) {
+function VueAccueil({ onCreer, onRejoindre, isLoading }) {
   const navigate = useNavigate()
   const [prenomCreateur, setPrenomCreateur] = useState('')
   const [prenomRejoignant, setPrenomRejoignant] = useState('')
@@ -104,12 +104,12 @@ function VueAccueil({ onCreer, onRejoindre }) {
           </div>
 
           <button
-            onClick={() => prenomCreateur.trim() && onCreer(prenomCreateur.trim())}
-            style={{ width: '100%', background: prenomCreateur.trim() ? C.violet : '#4c4580', color: '#fff', border: 'none', borderRadius: 14, padding: '13px', fontWeight: 600, fontSize: 15, cursor: prenomCreateur.trim() ? 'pointer' : 'default', transition: 'background 0.2s' }}
-            onMouseEnter={e => { if (prenomCreateur.trim()) e.currentTarget.style.background = C.violetHover }}
-            onMouseLeave={e => { if (prenomCreateur.trim()) e.currentTarget.style.background = C.violet }}
+            onClick={() => !isLoading && prenomCreateur.trim() && onCreer(prenomCreateur.trim())}
+            style={{ width: '100%', background: isLoading || !prenomCreateur.trim() ? '#4c4580' : C.violet, color: '#fff', border: 'none', borderRadius: 14, padding: '13px', fontWeight: 600, fontSize: 15, cursor: isLoading || !prenomCreateur.trim() ? 'default' : 'pointer', opacity: isLoading ? 0.7 : 1, transition: 'background 0.2s' }}
+            onMouseEnter={e => { if (!isLoading && prenomCreateur.trim()) e.currentTarget.style.background = C.violetHover }}
+            onMouseLeave={e => { if (!isLoading && prenomCreateur.trim()) e.currentTarget.style.background = C.violet }}
           >
-            Créer une partie
+            {isLoading ? 'Création…' : 'Créer une partie'}
           </button>
         </div>
 
@@ -162,14 +162,15 @@ function VueAccueil({ onCreer, onRejoindre }) {
 
           <button
             onClick={() => {
+              if (isLoading) return
               const code = codeInput.join('')
               if (code.length === 4 && prenomRejoignant.trim()) onRejoindre(prenomRejoignant.trim(), code)
             }}
-            style={{ width: '100%', background: C.violet, color: '#fff', border: 'none', borderRadius: 14, padding: '13px', fontWeight: 600, fontSize: 15, cursor: 'pointer', transition: 'background 0.2s' }}
-            onMouseEnter={e => e.currentTarget.style.background = C.violetHover}
-            onMouseLeave={e => e.currentTarget.style.background = C.violet}
+            style={{ width: '100%', background: isLoading ? '#4c4580' : C.violet, color: '#fff', border: 'none', borderRadius: 14, padding: '13px', fontWeight: 600, fontSize: 15, cursor: isLoading ? 'default' : 'pointer', opacity: isLoading ? 0.7 : 1, transition: 'background 0.2s' }}
+            onMouseEnter={e => { if (!isLoading) e.currentTarget.style.background = C.violetHover }}
+            onMouseLeave={e => { if (!isLoading) e.currentTarget.style.background = C.violet }}
           >
-            Rejoindre
+            {isLoading ? 'Connexion…' : 'Rejoindre'}
           </button>
         </div>
       </div>
@@ -186,6 +187,11 @@ function VueAccueil({ onCreer, onRejoindre }) {
 
 function SalleAttente({ code, prenom, onAnnuler }) {
   const navigate = useNavigate()
+
+  function handleAnnuler() {
+    getSocket().emit('quitter')
+    onAnnuler()
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 16px' }}>
@@ -224,7 +230,7 @@ function SalleAttente({ code, prenom, onAnnuler }) {
 
       <div style={{ display: 'flex', gap: 12 }}>
         <button
-          onClick={onAnnuler}
+          onClick={handleAnnuler}
           style={{ background: C.card, color: '#f1f5f9', border: `1.5px solid ${C.cardBorder}`, borderRadius: 14, padding: '12px 24px', fontWeight: 600, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, transition: 'background 0.2s' }}
           onMouseEnter={e => e.currentTarget.style.background = '#334155'}
           onMouseLeave={e => e.currentTarget.style.background = C.card}
@@ -296,22 +302,29 @@ export default function Reseau() {
   const [vue, setVue]             = useState('accueil')
   const [codePartie, setCodePartie] = useState('')
   const [prenomHote, setPrenomHote] = useState('')
+  const [isLoading, setIsLoading]   = useState(false)
 
   // Navigation automatique quand la partie démarre
   useEffect(() => {
     const s = getSocket()
-    s.on('partie_demarree', () => navigate('/jeu'))
-    return () => s.off('partie_demarree')
+    const handler = () => navigate('/jeu')
+    s.on('partie_demarree', handler)
+    return () => s.off('partie_demarree', handler)
   }, [])
 
   async function handleCreer(prenom) {
+    if (isLoading) return
+    setIsLoading(true)
     try {
-      // 1. Créer la room côté serveur via HTTP
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), 5000)
       const res  = await fetch(`${SERVER_URL}/parties`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ prenom }),
+        signal:  controller.signal,
       })
+      clearTimeout(timer)
       const data = await res.json()
       const code = data.code
 
@@ -328,13 +341,19 @@ export default function Reseau() {
 
     } catch {
       setVue('erreur')
+    } finally {
+      setIsLoading(false)
     }
   }
 
   async function handleRejoindre(prenom, code) {
+    if (isLoading) return
+    setIsLoading(true)
     try {
-      // 1. Vérifier que la room existe via HTTP
-      const res  = await fetch(`${SERVER_URL}/parties/${code}`)
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), 5000)
+      const res  = await fetch(`${SERVER_URL}/parties/${code}`, { signal: controller.signal })
+      clearTimeout(timer)
       if (!res.ok) { setVue('erreur'); return }
 
       const data = await res.json()
@@ -350,11 +369,13 @@ export default function Reseau() {
 
     } catch {
       setVue('erreur')
+    } finally {
+      setIsLoading(false)
     }
   }
 
   if (vue === 'attente') return <SalleAttente code={codePartie} prenom={prenomHote} onAnnuler={() => setVue('accueil')} />
   if (vue === 'erreur')  return <EcranErreur  onReessayer={() => setVue('accueil')} onRetour={() => setVue('accueil')} />
 
-  return <VueAccueil onCreer={handleCreer} onRejoindre={handleRejoindre} />
+  return <VueAccueil onCreer={handleCreer} onRejoindre={handleRejoindre} isLoading={isLoading} />
 }

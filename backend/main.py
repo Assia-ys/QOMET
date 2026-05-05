@@ -8,7 +8,7 @@ from config.settings import HOST, PORT
 from backend.game.rules import Rules
 from backend.network.manager import (
     rejoindre_room, room_est_pleine,
-    couleur_du_joueur, supprimer_room, rooms,
+    couleur_du_joueur, supprimer_room, quitter_room, rooms,
 )
 from backend.api.routes import router as parties_router
 
@@ -74,6 +74,12 @@ async def rejoindre(sid, data):
         etat = game.etat()
         etat["code"] = code
         await sio.emit("partie_demarree", etat, room=code)
+
+
+@sio.event
+async def quitter(sid):
+    """Le joueur quitte sa room volontairement (ex : annuler depuis la salle d'attente)."""
+    quitter_room(sid)
 
 
 @sio.event
