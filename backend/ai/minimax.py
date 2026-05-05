@@ -1,0 +1,187 @@
+import random
+from backend.game.board import CASES_JOUABLES
+from backend.game.rules import Rules, CARRES_POSSIBLES
+from backend.ai.evaluator import evaluer
+
+INF = float('inf')
+
+# ── Utilitaires partagés ───────────────────────────────────────────────────────
+
+def _cases_vides(board):
+    return [(r, c) for (r, c) in CASES_JOUABLES if board.est_libre(r, c)]
+
+
+def _cases_strategiques(board, couleur):
+    """
+    Cases vides stratégiques pour la phase de pose :
+    - Offensif : coins de carrés sans adversaire
+    - Défensif : coins de carrés où l'adversaire a 2+ pièces (bloquer même si on y est déjà)
+    Si aucune case trouvée, retourne toutes les cases vides (fallback).
+    """
+    couleur_adverse = "fonce" if couleur == "clair" else "clair"
+    offensif  = set()
+    defensif  = set()
+
+    for coins in CARRES_POSSIBLES:
+        enemy = sum(1 for p in coins if board.get(*p) == couleur_adverse)
+        vides = [p for p in coins if board.est_libre(*p)]
+
+        if enemy == 0 and vides:
+            for p in vides:
+                offensif.add(p)
+
+        if enemy >= 2 and vides:
+            for p in vides:
+                defensif.add(p)
+
+    interessantes = offensif | defensif
+    return list(interessantes) if interessantes else _cases_vides(board)
+
+
+def _coups_deplacement(board, couleur):
+    coups = []
+    for (r, c) in CASES_JOUABLES:
+        if board.get(r, c) == couleur:
+            coups += Rules.deplacements_valides(board, r, c, board.dernier_coup)
+    return coups
+
+
+def _generer_coups(game):
+    """Coups jouables pour le joueur actif.
+    En phase de pose : uniquement les cases stratégiques (carrés viables).
+    En phase de déplacement : tous les coups valides."""
+    joueur = game.joueur_actif
+    if joueur.peut_poser():
+        return [("poser", r, c) for (r, c) in _cases_strategiques(game.board, joueur.couleur)]
+    return _coups_deplacement(game.board, joueur.couleur)
+
+
+def _appliquer(game, coup):
+    """Applique un coup sur une copie du jeu et retourne la copie."""
+    copie = game.copier()
+    if coup[0] == "poser":
+        copie.jouer_poser(coup[1], coup[2])
+    else:
+        copie.jouer_deplacement(coup)
+    return copie
+
+
+def _score_terminal(game, couleur_ia):
+    """Score quand la partie est finie : +inf si IA gagne, -inf si elle perd."""
+    if game.gagnant and game.gagnant.couleur == couleur_ia:
+        return INF
+    return -INF
+
+
+# ── Niveau Facile ──────────────────────────────────────────────────────────────
+
+def coup_facile(game):
+    """Coup entièrement aléatoire."""
+    coups = _generer_coups(game)
+    return random.choice(coups) if coups else None
+
+
+# ── Niveaux Moyen et Difficile — Minimax + alpha-bêta ─────────────────────────
+
+def _appliquer_board(board, coup, couleur_actif):
+    """Applique un coup sur une copie légère du board seul (sans overhead Player/Game)."""
+    b = board.copier()
+    t = coup[0]
+    if t == "poser":
+        b.grille[coup[1]][coup[2]] = couleur_actif
+    elif t == "glisser":
+        _, r1, c1, r2, c2, *_ = coup
+        b.grille[r2][c2] = b.grille[r1][c1]
+        b.grille[r1][c1] = None
+    elif t == "pousser":
+        _, r1, c1, r2, c2, r3, c3, *_ = coup
+        b.grille[r3][c3] = b.grille[r2][c2]
+        b.grille[r2][c2] = b.grille[r1][c1]
+        b.grille[r1][c1] = None
+    elif t == "pousser_ejecter":
+        _, r1, c1, r2, c2, *_ = coup
+        b.grille[r2][c2] = b.grille[r1][c1]
+        b.grille[r1][c1] = None
+    elif t == "ejecter":
+        _, r1, c1, *_ = coup
+        b.grille[r1][c1] = None
+    return b
+
+
+def _trier_coups(game, coups, maximise, couleur_ia):
+    """Trie les coups par score superficiel (copie board seul) : meilleurs en tête."""
+    adv    = "fonce" if couleur_ia == "clair" else "clair"
+    actif  = game.joueur_actif.couleur
+    def score(coup):
+        b = _appliquer_board(game.board, coup, actif)
+        return evaluer(b, couleur_ia) - evaluer(b, adv)
+    return sorted(coups, key=score, reverse=maximise)
+
+
+def _minimax(game, profondeur, maximise, alpha, beta, couleur_ia):
+    """
+    Minimax avec élagage alpha-bêta + tri des coups (move ordering).
+    Utilisé pour Moyen (profondeur=2) et Difficile (profondeur=4).
+    """
+    if game.termine:
+        return _score_terminal(game, couleur_ia)
+
+    if profondeur <= 0:
+        adv = "fonce" if couleur_ia == "clair" else "clair"
+        return evaluer(game.board, couleur_ia) - evaluer(game.board, adv)
+
+    coups = _generer_coups(game)
+    if not coups:
+        return 0
+
+    # Tri superficiel pour maximiser les coupures alpha-bêta
+    if profondeur >= 2:
+        coups = _trier_coups(game, coups, maximise, couleur_ia)
+
+    if maximise:
+        valeur = -INF
+        for coup in coups:
+            enfant = _appliquer(game, coup)
+            valeur = max(valeur, _minimax(enfant, profondeur - 1, False, alpha, beta, couleur_ia))
+            alpha  = max(alpha, valeur)
+            if beta <= alpha:
+                break  # coupure bêta
+        return valeur
+    else:
+        valeur = INF
+        for coup in coups:
+            enfant = _appliquer(game, coup)
+            valeur = min(valeur, _minimax(enfant, profondeur - 1, True, alpha, beta, couleur_ia))
+            beta   = min(beta, valeur)
+            if beta <= alpha:
+                break  # coupure alpha
+        return valeur
+
+
+def coup_minimax(game, profondeur):
+    """
+    Choisit le meilleur coup avec Minimax + alpha-bêta.
+    profondeur=2 → Moyen  |  profondeur=4 → Difficile
+
+    Profondeur adaptative :
+    - Phase de pose       → depth=2 max (branching élevé même avec filtrage)
+    - Phase de déplacement → depth=profondeur complet (7 pièces × 3-5 moves → rapide)
+    """
+    couleur_ia    = game.joueur_actif.couleur
+    prof_eff      = min(profondeur, 2) if game.joueur_actif.peut_poser() else profondeur
+
+    coups = _generer_coups(game)
+    if not coups:
+        return None
+
+    meilleur_coup  = None
+    meilleur_score = -INF
+
+    for coup in coups:
+        enfant = _appliquer(game, coup)
+        score  = _minimax(enfant, prof_eff - 1, False, -INF, INF, couleur_ia)
+        if score > meilleur_score:
+            meilleur_score = score
+            meilleur_coup  = coup
+
+    return meilleur_coup if meilleur_coup is not None else coups[0]

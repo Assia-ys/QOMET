@@ -5,37 +5,6 @@ import PlayerInfo from '../components/PlayerInfo'
 import ModalFinPartie from '../components/ModalFinPartie'
 import useGameStore from '../store/useGameStore'
 import useSocket, { getSocketIA } from '../hooks/useSocket'
-import { estValide, estJouable } from '../utils/boardGeometry'
-import { CASES_JOUABLES } from '../data/mockData'
-
-// Simulation approximative pour l'heuristique IA (ignore les effets de poussée)
-function simMove(plateau, fr, fc, tr, tc) {
-  const sim = plateau.map(r => [...r])
-  sim[tr][tc] = sim[fr][fc]
-  sim[fr][fc] = null
-  return sim
-}
-
-// Heuristique : compte les carrés partiels sans pièces adverses
-function evaluerPlateau(plateau, couleur) {
-  let score = 0
-  for (let i = 0; i < CASES_JOUABLES.length; i++) {
-    for (let j = i + 1; j < CASES_JOUABLES.length; j++) {
-      const [r1, c1] = CASES_JOUABLES[i]
-      const [r2, c2] = CASES_JOUABLES[j]
-      const dr = r2 - r1, dc = c2 - c1
-      const r3 = r1 + dc, c3 = c1 - dr
-      const r4 = r2 + dc, c4 = c2 - dr
-      if (!estValide(r3, c3) || !estJouable(r3, c3)) continue
-      if (!estValide(r4, c4) || !estJouable(r4, c4)) continue
-      const cells = [[r1,c1],[r2,c2],[r3,c3],[r4,c4]]
-      const friendly = cells.filter(([r,c]) => plateau[r][c] === couleur).length
-      const enemy    = cells.filter(([r,c]) => plateau[r][c] !== null && plateau[r][c] !== couleur).length
-      if (enemy === 0 && friendly > 0) score += friendly * friendly
-    }
-  }
-  return score
-}
 
 const DUREE_MAX_PAUSE = 60 // secondes
 
@@ -107,81 +76,17 @@ export default function Game() {
     if (adversaireEnPause) setPauseVisible(true)
     else if (!adversaireEnPause && pauseVisible) setPauseVisible(false)
   }, [adversaireEnPause])
+
   const phase = joueurActif?.en_main > 0 ? 'pose' : 'deplacement'
 
-  // ── Durée de partie ──────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (gagnant && !dureePartie) {
-      const s = Math.floor((Date.now() - startTime) / 1000)
-      setDureePartie(`${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`)
-    }
-  }, [gagnant])
-
-  // ── Tour de l'IA (via socketIA — le backend applique les mêmes règles) ───────
+  // ── Tour de l'IA — délègue entièrement au backend (minimax ou aléatoire) ──────
   useEffect(() => {
     if (!estTourIA || gagnant) return
-
-    const couleurIA  = joueurs[1].couleur
-    const couleurHum = joueurs[0].couleur
-    const delay      = { facile: 600, moyen: 900, difficile: 1300 }[niveauIA] ?? 700
-    const sIA        = getSocketIA()
-
+    const delay = { facile: 600, moyen: 900, difficile: 1300 }[niveauIA] ?? 700
+    const sIA   = getSocketIA()
     const timer = setTimeout(() => {
-
-      if (phase === 'pose' && joueurs[1].en_main > 0) {
-        // Phase de pose : choisir une case vide
-        const vides = CASES_JOUABLES.filter(([r, c]) => plateau[r][c] === null)
-        if (!vides.length) return
-
-        let choix = vides[Math.floor(Math.random() * vides.length)]
-        if (niveauIA !== 'facile') {
-          let best = -1
-          for (const [r, c] of vides) {
-            const sim = plateau.map(row => [...row])
-            sim[r][c] = couleurIA
-            const s = evaluerPlateau(sim, couleurIA)
-            if (s > best) { best = s; choix = [r, c] }
-          }
-        }
-        sIA.emit('jouer', { type: 'poser', row: choix[0], col: choix[1] })
-
-      } else if (phase === 'deplacement') {
-        // Phase de déplacement : interroger le backend pour chaque pièce IA,
-        // collecter tous les coups valides, puis jouer le meilleur.
-        const pieces = CASES_JOUABLES.filter(([r, c]) => plateau[r][c] === couleurIA)
-        const allMoves = []
-        let idx = 0
-
-        function processNext() {
-          if (idx >= pieces.length) {
-            if (!allMoves.length) return
-
-            let choix = allMoves[Math.floor(Math.random() * allMoves.length)]
-            if (niveauIA !== 'facile') {
-              let best = -Infinity
-              for (const [fr, fc, tr, tc] of allMoves) {
-                const sim  = simMove(plateau, fr, fc, tr, tc)
-                const s    = evaluerPlateau(sim, couleurIA)
-                const sAdv = niveauIA === 'difficile' ? evaluerPlateau(sim, couleurHum) * 0.8 : 0
-                if (s - sAdv > best) { best = s - sAdv; choix = [fr, fc, tr, tc] }
-              }
-            }
-            sIA.emit('jouer', { type: 'deplacement', coup: choix })
-            return
-          }
-
-          const [pr, pc] = pieces[idx++]
-          sIA.once('coups_valides', (data) => {
-            ;(data.destinations || []).forEach(([tr, tc]) => allMoves.push([pr, pc, tr, tc]))
-            processNext()
-          })
-          sIA.emit('deplacements_valides', { row: pr, col: pc })
-        }
-
-        processNext()
-      }
+      sIA.emit('coup_ia', { niveau: niveauIA })
     }, delay)
-
     return () => clearTimeout(timer)
   }, [indexJoueurActif, gagnant, joueurs])
 

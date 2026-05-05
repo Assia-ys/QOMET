@@ -19,6 +19,29 @@ def _directions_pour(row, col):
         dirs += DIAG_SECONDAIRE
     return dirs
 
+def _calculer_carres():
+    """Pré-calcule les 15 carrés possibles du plateau une seule fois."""
+    vus = set()
+    carres = []
+    cases = list(CASES_JOUABLES)
+    for i, (r1, c1) in enumerate(cases):
+        for r2, c2 in cases[i+1:]:
+            if r1 != r2:
+                continue
+            hauteur = abs(c2 - c1)
+            for sens in [1, -1]:
+                r3, r4 = r1 + hauteur * sens, r2 + hauteur * sens
+                c3, c4 = c1, c2
+                if (r3, c3) in CASES_JOUABLES and (r4, c4) in CASES_JOUABLES:
+                    carre = tuple(sorted([(r1,c1),(r1,c2),(r3,c3),(r4,c4)]))
+                    if carre not in vus:
+                        vus.add(carre)
+                        carres.append(((r1,c1),(r1,c2),(r3,c3),(r4,c4)))
+    return carres
+
+CARRES_POSSIBLES = _calculer_carres()
+
+
 class Rules:
 
     @staticmethod
@@ -161,46 +184,22 @@ class Rules:
 
     @staticmethod
     def verifier_victoire(board):
-        """
-        Cherche si un carré parfait est formé par 4 étoiles de même couleur.
-        Retourne un set des couleurs gagnantes (peut contenir 0, 1 ou 2).
-        """
+        """Retourne un set des couleurs gagnantes (peut contenir 0, 1 ou 2)."""
         gagnants = set()
-        cases = list(CASES_JOUABLES)
-        for i, (r1, c1) in enumerate(cases):
-            for r2, c2 in cases[i+1:]:
-                if r1 != r2:
-                    continue
-                hauteur = abs(c2 - c1)
-                for sens in [1, -1]:
-                    r3, r4 = r1 + hauteur * sens, r2 + hauteur * sens
-                    c3, c4 = c1, c2
-                    if (r3, c3) in CASES_JOUABLES and (r4, c4) in CASES_JOUABLES:
-                        coins = [board.get(r1,c1), board.get(r1,c2), board.get(r3,c3), board.get(r4,c4)]
-                        if (None not in coins and CASE_HORS_PLATEAU not in coins and len(set(coins)) == 1):
-                            gagnants.add(coins[0])
+        for (p1, p2, p3, p4) in CARRES_POSSIBLES:
+            coins = [board.get(*p) for p in (p1, p2, p3, p4)]
+            if None not in coins and CASE_HORS_PLATEAU not in coins and len(set(coins)) == 1:
+                gagnants.add(coins[0])
         return gagnants
 
     @staticmethod
     def trouver_carre_gagnant(board):
-        """
-        Retourne { couleur, cellules: [[r,c]×4] } du premier carré gagnant trouvé,
-        ou None si aucun carré.
-        """
-        cases = list(CASES_JOUABLES)
-        for i, (r1, c1) in enumerate(cases):
-            for r2, c2 in cases[i+1:]:
-                if r1 != r2:
-                    continue
-                hauteur = abs(c2 - c1)
-                for sens in [1, -1]:
-                    r3, r4 = r1 + hauteur * sens, r2 + hauteur * sens
-                    c3, c4 = c1, c2
-                    if (r3, c3) in CASES_JOUABLES and (r4, c4) in CASES_JOUABLES:
-                        coins = [board.get(r1,c1), board.get(r1,c2), board.get(r3,c3), board.get(r4,c4)]
-                        if (None not in coins and CASE_HORS_PLATEAU not in coins and len(set(coins)) == 1):
-                            return {
-                                "couleur":  coins[0],
-                                "cellules": [[r1,c1],[r1,c2],[r3,c3],[r4,c4]],
-                            }
+        """Retourne { couleur, cellules: [[r,c]×4] } du premier carré gagnant, ou None."""
+        for (p1, p2, p3, p4) in CARRES_POSSIBLES:
+            coins = [board.get(*p) for p in (p1, p2, p3, p4)]
+            if None not in coins and CASE_HORS_PLATEAU not in coins and len(set(coins)) == 1:
+                return {
+                    "couleur":  coins[0],
+                    "cellules": [list(p) for p in (p1, p2, p3, p4)],
+                }
         return None
