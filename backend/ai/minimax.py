@@ -14,8 +14,8 @@ def _cases_vides(board):
 def _cases_strategiques(board, couleur):
     """
     Cases vides stratégiques pour la phase de pose :
-    - Offensif : coins de carrés purs (sans adversaire)
-    - Défensif : coins de carrés où l'adversaire a 2+ pièces (à bloquer en priorité)
+    - Offensif : coins de carrés sans adversaire
+    - Défensif : coins de carrés où l'adversaire a 2+ pièces (bloquer même si on y est déjà)
     Si aucune case trouvée, retourne toutes les cases vides (fallback).
     """
     couleur_adverse = "fonce" if couleur == "clair" else "clair"
@@ -24,16 +24,15 @@ def _cases_strategiques(board, couleur):
 
     for coins in CARRES_POSSIBLES:
         enemy = sum(1 for p in coins if board.get(*p) == couleur_adverse)
-        amis  = sum(1 for p in coins if board.get(*p) == couleur)
         vides = [p for p in coins if board.est_libre(*p)]
 
         if enemy == 0 and vides:
             for p in vides:
-                offensif.add(p)  # carré pur → opportunité offensive
+                offensif.add(p)
 
-        if amis == 0 and enemy >= 2 and vides:
+        if enemy >= 2 and vides:
             for p in vides:
-                defensif.add(p)  # adversaire avance → bloquer
+                defensif.add(p)
 
     interessantes = offensif | defensif
     return list(interessantes) if interessantes else _cases_vides(board)
@@ -52,11 +51,9 @@ def _generer_coups(game):
     En phase de pose : uniquement les cases stratégiques (carrés viables).
     En phase de déplacement : tous les coups valides."""
     joueur = game.joueur_actif
-    coups = []
     if joueur.peut_poser():
-        coups += [("poser", r, c) for (r, c) in _cases_strategiques(game.board, joueur.couleur)]
-    coups += _coups_deplacement(game.board, joueur.couleur)
-    return coups
+        return [("poser", r, c) for (r, c) in _cases_strategiques(game.board, joueur.couleur)]
+    return _coups_deplacement(game.board, joueur.couleur)
 
 
 def _appliquer(game, coup):
@@ -86,21 +83,60 @@ def coup_facile(game):
 
 # ── Niveaux Moyen et Difficile — Minimax + alpha-bêta ─────────────────────────
 
+def _appliquer_board(board, coup, couleur_actif):
+    """Applique un coup sur une copie légère du board seul (sans overhead Player/Game)."""
+    b = board.copier()
+    t = coup[0]
+    if t == "poser":
+        b.grille[coup[1]][coup[2]] = couleur_actif
+    elif t == "glisser":
+        _, r1, c1, r2, c2, *_ = coup
+        b.grille[r2][c2] = b.grille[r1][c1]
+        b.grille[r1][c1] = None
+    elif t == "pousser":
+        _, r1, c1, r2, c2, r3, c3, *_ = coup
+        b.grille[r3][c3] = b.grille[r2][c2]
+        b.grille[r2][c2] = b.grille[r1][c1]
+        b.grille[r1][c1] = None
+    elif t == "pousser_ejecter":
+        _, r1, c1, r2, c2, *_ = coup
+        b.grille[r2][c2] = b.grille[r1][c1]
+        b.grille[r1][c1] = None
+    elif t == "ejecter":
+        _, r1, c1, *_ = coup
+        b.grille[r1][c1] = None
+    return b
+
+
+def _trier_coups(game, coups, maximise, couleur_ia):
+    """Trie les coups par score superficiel (copie board seul) : meilleurs en tête."""
+    adv    = "fonce" if couleur_ia == "clair" else "clair"
+    actif  = game.joueur_actif.couleur
+    def score(coup):
+        b = _appliquer_board(game.board, coup, actif)
+        return evaluer(b, couleur_ia) - evaluer(b, adv)
+    return sorted(coups, key=score, reverse=maximise)
+
+
 def _minimax(game, profondeur, maximise, alpha, beta, couleur_ia):
     """
-    Minimax avec élagage alpha-bêta.
+    Minimax avec élagage alpha-bêta + tri des coups (move ordering).
     Utilisé pour Moyen (profondeur=2) et Difficile (profondeur=4).
     """
     if game.termine:
         return _score_terminal(game, couleur_ia)
 
     if profondeur <= 0:
-        couleur_adverse = "fonce" if couleur_ia == "clair" else "clair"
-        return evaluer(game.board, couleur_ia) - evaluer(game.board, couleur_adverse)
+        adv = "fonce" if couleur_ia == "clair" else "clair"
+        return evaluer(game.board, couleur_ia) - evaluer(game.board, adv)
 
     coups = _generer_coups(game)
     if not coups:
         return 0
+
+    # Tri superficiel pour maximiser les coupures alpha-bêta
+    if profondeur >= 2:
+        coups = _trier_coups(game, coups, maximise, couleur_ia)
 
     if maximise:
         valeur = -INF

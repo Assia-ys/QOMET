@@ -11,6 +11,7 @@ from backend.network.manager import (
     couleur_du_joueur, supprimer_room, quitter_room, rooms,
 )
 from backend.api.routes import router as parties_router
+from backend.ai.minimax import coup_facile, coup_minimax
 
 # ── Socket.io ──────────────────────────────────────────────────────────────────
 sio = socketio.AsyncServer(
@@ -35,7 +36,7 @@ app.include_router(parties_router)
 # ── Événements Socket.io ───────────────────────────────────────────────────────
 
 @sio.event
-async def connect(sid, environ):
+async def connect(sid, _environ):
     print(f"[WS] Connecté : {sid}")
 
 
@@ -88,7 +89,7 @@ async def deplacements_valides(sid, data):
     Retourne les destinations valides pour une étoile.
     data = { "row": r, "col": c }
     """
-    code, couleur = couleur_du_joueur(sid)
+    code, _ = couleur_du_joueur(sid)
     if not code:
         return
 
@@ -130,6 +131,57 @@ async def reprendre(sid):
     code, _ = couleur_du_joueur(sid)
     if code:
         await sio.emit("adversaire_a_repris", {}, room=code, skip_sid=sid)
+
+
+@sio.event
+async def coup_ia(sid, data):
+    """
+    Calcule et joue le meilleur coup pour le joueur IA.
+    data = { "niveau": "facile"|"moyen"|"difficile" }
+    Le coup est appliqué côté serveur puis l'état est diffusé à tous.
+    """
+    code, couleur = couleur_du_joueur(sid)
+    if not code:
+        return
+
+    game = rooms[code]["game"]
+    if couleur != game.joueur_actif.couleur:
+        return
+
+    niveau = data.get("niveau", "moyen")
+
+    if niveau == "facile":
+        coup = await asyncio.to_thread(coup_facile, game)
+    elif niveau == "difficile":
+        coup = await asyncio.to_thread(coup_minimax, game, 4)
+    else:
+        coup = await asyncio.to_thread(coup_minimax, game, 2)
+
+    if coup is None:
+        return
+
+    if coup[0] == "poser":
+        ok, msg = game.jouer_poser(coup[1], coup[2])
+    else:
+        ok, msg = game.jouer_deplacement(coup)
+
+    if not ok:
+        await sio.emit("erreur", {"code": "ERR_IA_MOVE_FAILED", "msg": msg}, to=sid)
+        return
+
+    await sio.emit("etat", game.etat(), room=code)
+
+    if game.termine:
+        carre = Rules.trouver_carre_gagnant(game.board)
+        if carre:
+            await sio.emit("carre_gagnant", {
+                "cellules": carre["cellules"],
+                "gagnant":  game.gagnant.nom if game.gagnant else None,
+            }, room=code)
+        await sio.emit("fin_partie", {
+            "gagnant": game.gagnant.nom if game.gagnant else None
+        }, room=code)
+        supprimer_room(code)
 
 
 @sio.event
