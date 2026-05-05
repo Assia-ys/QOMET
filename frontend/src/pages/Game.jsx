@@ -13,9 +13,9 @@ export default function Game() {
   const socket   = useSocket()
   const {
     plateau, joueurs, indexJoueurActif, niveauIA,
-    selectionne, coupsValides, gagnant, codeRoom, maCouleur,
+    selectionne, coupsValides, peutEjecter, gagnant, codeRoom, maCouleur,
     adversaireEnPause, cellulesGagnantes,
-    selectionnerCase, setCoupsValides,
+    selectionnerCase, setCoupsValides, setPeutEjecter,
   } = useGameStore()
 
   const [pauseVisible, setPauseVisible]     = useState(false)
@@ -107,6 +107,7 @@ export default function Game() {
     if (selectionne && selectionne[0] === r && selectionne[1] === c) {
       selectionnerCase(null, null)
       setCoupsValides([])
+      setPeutEjecter(false)
       return
     }
 
@@ -114,6 +115,7 @@ export default function Game() {
     if (valeur === joueurActif?.couleur) {
       selectionnerCase(r, c)
       setCoupsValides([])
+      setPeutEjecter(false)
       socket.emit('deplacements_valides', { row: r, col: c })
       return
     }
@@ -159,6 +161,19 @@ export default function Game() {
         />
         <PlayerInfo joueur={joueurs[1]} estActif={indexJoueurActif === 1} estMoi={joueurs[1].couleur === maCouleur} />
       </div>
+
+      {selectionne && peutEjecter && estMonTour && !estTourIA && (
+        <div style={styles.ejecterBandeau}>
+          <button style={styles.ejecterBtn} onClick={() => {
+            socket.emit('jouer', { type: 'ejecter', row: selectionne[0], col: selectionne[1] })
+            selectionnerCase(null, null)
+            setCoupsValides([])
+            setPeutEjecter(false)
+          }}>
+            Sortir du plateau (récupérer en main)
+          </button>
+        </div>
+      )}
 
       <div style={styles.actions}>
         <BoutonAction label="← Retour"     couleur="#374151" onClick={() => { socket.emit('abandonner'); navigate('/') }} />
@@ -260,6 +275,12 @@ const styles = {
   },
   bandeau:      { display: 'flex', alignItems: 'center', gap: 16 },
   bandeauTexte: { color: '#94a3b8', fontSize: '0.9rem' },
+  ejecterBandeau: { display: 'flex', justifyContent: 'center', marginTop: -8 },
+  ejecterBtn: {
+    background: '#7c3aed', color: '#fff', border: 'none',
+    borderRadius: 8, padding: '8px 18px', cursor: 'pointer',
+    fontSize: '0.85rem', fontWeight: 600,
+  },
   iaThink: {
     color: '#a78bfa', fontSize: '0.85rem', margin: '-8px 0 0',
     display: 'flex', alignItems: 'center', gap: 8,

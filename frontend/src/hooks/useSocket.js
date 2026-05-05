@@ -18,7 +18,7 @@ export function getSocketIA() {
 }
 
 export default function useSocket() {
-  const { setEtatServeur, setCodeRoom, setEtatPartie, setGagnant, setCoupsValides, setAdversaireEnPause, setCellulesGagnantes } = useGameStore()
+  const { setEtatServeur, setCodeRoom, setEtatPartie, setGagnant, setCoupsValides, setPeutEjecter, setAdversaireEnPause, setCellulesGagnantes } = useGameStore()
 
   useEffect(() => {
     const s = getSocket()
@@ -29,7 +29,7 @@ export default function useSocket() {
     function onRoomRejointe(data)   { setCodeRoom(data.code) }
     function onCarreGagnant(data)   { setCellulesGagnantes(data.cellules || []) }
     function onFinPartie(data)      { setGagnant({ nom: data.gagnant }); setEtatPartie('terminee') }
-    function onCoupsValides(data)   { setCoupsValides(data.destinations || []) }
+    function onCoupsValides(data)   { setCoupsValides(data.destinations || []); setPeutEjecter(data.peut_ejecter || false) }
     function onAdversaireDeconnecte() {
       const { prenomJoueur } = useGameStore.getState()
       setGagnant({ nom: prenomJoueur, forfait: true })

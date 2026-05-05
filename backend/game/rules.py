@@ -1,5 +1,8 @@
 from backend.game.board import CASES_JOUABLES, TAILLE, CASE_HORS_PLATEAU
 
+# Cases du carré extérieur : les seules depuis lesquelles on peut s'éjecter volontairement
+CASES_CARRE_EXTERIEUR = {(0,0), (0,3), (0,6), (3,0), (3,6), (6,0), (6,3), (6,6)}
+
 DIRECTIONS_BASE = [
     (0,  1),  # droite
     (0, -1),  # gauche
@@ -75,11 +78,12 @@ class Rules:
         for dr, dc in _directions_pour(row, col):
             cible = Rules.prochaine_case_jouable(board, row, col, dr, dc)
 
-            # --- Pas de case jouable dans cette direction → éjection ---
+            # --- Pas de case jouable dans cette direction → éjection volontaire ---
             if cible is None:
-                coup = ("ejecter", row, col, dr, dc)
-                if not Rules._est_annulation(coup, dernier_coup):
-                    resultats.append(coup)
+                if (row, col) in CASES_CARRE_EXTERIEUR:
+                    coup = ("ejecter", row, col, dr, dc)
+                    if not Rules._est_annulation(coup, dernier_coup):
+                        resultats.append(coup)
                 continue
 
             r2, c2 = cible

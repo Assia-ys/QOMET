@@ -103,7 +103,8 @@ async def deplacements_valides(sid, data):
         [c[3], c[4]] for c in coups
         if c[0] not in ("ejecter",)
     ]
-    await sio.emit("coups_valides", {"destinations": destinations}, to=sid)
+    peut_ejecter = any(c[0] == "ejecter" for c in coups)
+    await sio.emit("coups_valides", {"destinations": destinations, "peut_ejecter": peut_ejecter}, to=sid)
 
 
 @sio.event
@@ -208,6 +209,17 @@ async def jouer(sid, data):
 
     if type_coup == "poser":
         ok, msg = game.jouer_poser(data["row"], data["col"])
+
+    elif type_coup == "ejecter":
+        from_r, from_c = data["row"], data["col"]
+        coups_possibles = Rules.deplacements_valides(
+            game.board, from_r, from_c, game.board.dernier_coup
+        )
+        coup = next((c for c in coups_possibles if c[0] == "ejecter"), None)
+        if not coup:
+            await sio.emit("erreur", {"code": "ERR_ILLEGAL_MOVE", "msg": "Éjection impossible"}, to=sid)
+            return
+        ok, msg = game.jouer_deplacement(coup)
 
     elif type_coup == "deplacement":
         from_r, from_c, to_r, to_c = data["coup"]

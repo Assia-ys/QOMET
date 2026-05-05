@@ -9,6 +9,7 @@ const etatInitial = {
   gagnant:           null,
   selectionne:       null,
   coupsValides:      [],
+  peutEjecter:       false,
   niveauIA:          'facile',
   prenomJoueur:      '',
   codeRoom:          null,
@@ -26,6 +27,7 @@ const useGameStore = create((set, get) => ({
     set({ selectionne: row === null ? null : [row, col] }),
 
   setCoupsValides:  (coups)   => set({ coupsValides: coups }),
+  setPeutEjecter:   (val)     => set({ peutEjecter: val }),
   setEtatPartie:    (etat)    => set({ etatPartie: etat }),
   setCodeRoom:         (code)    => set({ codeRoom: code }),
   setMaCouleur:        (couleur) => set({ maCouleur: couleur }),
