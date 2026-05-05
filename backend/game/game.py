@@ -12,6 +12,23 @@ class Game:
         self.termine = False
         self.gagnant = None
 
+    def copier(self):
+        """Crée une copie indépendante du jeu pour le Minimax."""
+        g = Game.__new__(Game)
+        g.board = self.board.copier()
+        # Copie manuelle des joueurs (plus rapide que deepcopy)
+        g.joueur1 = Player(self.joueur1.nom, self.joueur1.couleur)
+        g.joueur1.etoiles_en_main    = self.joueur1.etoiles_en_main
+        g.joueur1.etoiles_sur_plateau = self.joueur1.etoiles_sur_plateau
+        g.joueur2 = Player(self.joueur2.nom, self.joueur2.couleur)
+        g.joueur2.etoiles_en_main    = self.joueur2.etoiles_en_main
+        g.joueur2.etoiles_sur_plateau = self.joueur2.etoiles_sur_plateau
+        g.joueur_actif   = g.joueur1 if self.joueur_actif  is self.joueur1 else g.joueur2
+        g.joueur_adverse = g.joueur2 if self.joueur_actif  is self.joueur1 else g.joueur1
+        g.termine = self.termine
+        g.gagnant = (g.joueur1 if self.gagnant is self.joueur1 else g.joueur2) if self.gagnant else None
+        return g
+
     def changer_tour(self):
         self.joueur_actif, self.joueur_adverse = (
             self.joueur_adverse, self.joueur_actif
