@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import useGameStore from '../store/useGameStore'
 import { getSocket } from '../hooks/useSocket'
-import { Trophy, Frown, Star, RotateCcw, Home, UserX, Eye } from 'lucide-react'
+import { Trophy, Frown, Star, RotateCcw, UserX, Eye } from 'lucide-react'
+import BoutonMenu from './BoutonMenu'
 
 export default function ModalFinPartie({ gagnant, duree }) {
   const navigate = useNavigate()
@@ -36,12 +37,10 @@ export default function ModalFinPartie({ gagnant, duree }) {
         <button style={styles.btnBarre} onClick={() => setMinimise(false)}>
           Voir le résultat
         </button>
-        <button style={styles.btnBarreMenu} onClick={rejouer}>
+        <button style={{ background: '#374151', color: '#94a3b8', border: 'none', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }} onClick={rejouer}>
           <RotateCcw size={14} /> Rejouer
         </button>
-        <button style={styles.btnBarreMenu} onClick={menu}>
-          <Home size={14} /> Menu
-        </button>
+        <BoutonMenu onClick={menu} label="Menu" taille="petit" />
       </div>
     )
   }
@@ -62,9 +61,7 @@ export default function ModalFinPartie({ gagnant, duree }) {
           <button style={styles.btnVictoire} onClick={() => setForfaitAccepte(true)}>
             ✓ Accepter la victoire
           </button>
-          <button style={styles.btnMenu} onClick={menu}>
-            <Home size={18} /> Menu principal
-          </button>
+          <BoutonMenu onClick={menu} label="Menu" fullWidth />
         </div>
       </div>
     )
@@ -111,9 +108,7 @@ export default function ModalFinPartie({ gagnant, duree }) {
         <button style={styles.btnRejouer} onClick={rejouer}>
           <RotateCcw size={18} /> Rejouer
         </button>
-        <button style={styles.btnMenu} onClick={menu}>
-          <Home size={18} /> Menu principal
-        </button>
+        <BoutonMenu onClick={menu} label="Menu" fullWidth />
 
       </div>
     </div>
@@ -134,8 +129,6 @@ const styles = {
   dureeVal:   { color: '#fff', fontSize: 22, fontWeight: 700 },
   btnRejouer: { width: '100%', background: 'linear-gradient(90deg,#6366f1,#8b5cf6)', color: '#fff', border: 'none', borderRadius: 10, padding: '12px', fontSize: 15, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 },
   btnVictoire:{ width: '100%', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 10, padding: '12px', fontSize: 15, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  btnMenu:    { width: '100%', background: '#334155', color: '#fff', border: 'none', borderRadius: 10, padding: '12px', fontSize: 15, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 },
   barre:      { position: 'fixed', bottom: 20, left: '50%', transform: 'translateX(-50%)', background: '#1e293b', border: '1px solid #334155', borderRadius: 14, padding: '10px 20px', display: 'flex', alignItems: 'center', gap: 12, zIndex: 100, boxShadow: '0 8px 30px rgba(0,0,0,0.5)' },
   btnBarre:   { background: '#7c3aed', color: '#fff', border: 'none', borderRadius: 8, padding: '6px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer' },
-  btnBarreMenu:{ background: '#374151', color: '#94a3b8', border: 'none', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 },
 }

@@ -5,6 +5,8 @@ import PlayerInfo from '../components/PlayerInfo'
 import ModalFinPartie from '../components/ModalFinPartie'
 import useGameStore from '../store/useGameStore'
 import useSocket, { getSocketIA } from '../hooks/useSocket'
+import BoutonRetour from '../components/BoutonRetour'
+import BoutonMenu from '../components/BoutonMenu'
 
 const DUREE_MAX_PAUSE = 60 // secondes
 
@@ -136,9 +138,7 @@ export default function Game() {
 
       {gagnant && <ModalFinPartie gagnant={gagnant} duree={dureePartie} />}
 
-      <button style={styles.btnMenu} onClick={() => { socket.emit('abandonner'); navigate(modeIA ? '/ia' : '/reseau') }}>
-        ← Retour
-      </button>
+      <BoutonRetour onClick={() => { socket.emit('abandonner'); navigate(modeIA ? '/ia' : '/reseau') }} />
 
       <div style={styles.bandeau}>
         <span style={styles.bandeauTexte}>
@@ -180,7 +180,7 @@ export default function Game() {
       )}
 
       <div style={styles.actions}>
-        <BoutonAction label="⌂ Menu" couleur="#374151" onClick={() => { socket.emit('abandonner'); navigate('/') }} />
+        <BoutonMenu onClick={() => { socket.emit('abandonner'); navigate('/') }} label="Menu" />
         {!modeIA && <BoutonAction label="⏸ Pause" couleur="#1e40af" onClick={() => {
           setPauseVisible(true)
           if (codeRoom) socket.emit('pause')
@@ -209,7 +209,7 @@ export default function Game() {
               if (codeRoom) socket.emit('reprendre')
             }} />
           )}
-          <BoutonAction label="← Menu principal" couleur="#374151" onClick={() => { socket.emit('abandonner'); navigate('/') }} />
+          <BoutonMenu onClick={() => { socket.emit('abandonner'); navigate('/') }} />
         </Modale>
       )}
 
@@ -278,12 +278,6 @@ const styles = {
     gap: 20, padding: 20, position: 'relative',
   },
   bandeau:      { display: 'flex', alignItems: 'center', gap: 16 },
-  btnMenu: {
-    position: 'absolute', top: 20, left: 24,
-    background: 'transparent', border: 'none',
-    color: '#94a3b8', fontSize: '0.9rem', fontWeight: 600,
-    cursor: 'pointer', padding: '6px 10px', borderRadius: 8,
-  },
   bandeauTexte: { color: '#94a3b8', fontSize: '0.9rem' },
   ejecterBandeau: { display: 'flex', justifyContent: 'center', marginTop: -8 },
   ejecterBtn: {
