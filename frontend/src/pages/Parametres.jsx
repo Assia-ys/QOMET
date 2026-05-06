@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Music, Globe, Monitor } from 'lucide-react'
 import BoutonRetour from '../components/BoutonRetour'
+import { setEffectsVolume } from '../hooks/useSounds'
 
 export default function Parametres() {
   const navigate = useNavigate()
@@ -27,7 +28,7 @@ export default function Parametres() {
       {/* ── Audio ── */}
       <Section icone={<Music size={24} color="#6366f1" />} label="Audio">
         <SliderChamp label="Volume de la musique" valeur={volumeMusique} onChange={setVolumeMusique}/>
-        <SliderChamp label="Volume des effets sonores" valeur={volumeEffets} onChange={setVolumeEffets}/>
+        <SliderChamp label="Volume des effets sonores" valeur={volumeEffets} onChange={v => { setVolumeEffets(v); setEffectsVolume(v) }}/>
       </Section>
 
       {/* ── Réseau ── */}

@@ -7,6 +7,7 @@ import useGameStore from '../store/useGameStore'
 import useSocket, { getSocketIA } from '../hooks/useSocket'
 import BoutonRetour from '../components/BoutonRetour'
 import BoutonMenu from '../components/BoutonMenu'
+import { playWin, playLose } from '../hooks/useSounds'
 
 const DUREE_MAX_PAUSE = 60 // secondes
 
@@ -16,7 +17,7 @@ export default function Game() {
   const {
     plateau, joueurs, indexJoueurActif, niveauIA,
     selectionne, coupsValides, peutEjecter, gagnant, codeRoom, maCouleur,
-    adversaireEnPause, cellulesGagnantes,
+    adversaireEnPause, cellulesGagnantes, prenomJoueur,
     selectionnerCase, setCoupsValides, setPeutEjecter,
   } = useGameStore()
 
@@ -51,9 +52,13 @@ export default function Game() {
     return () => clearInterval(interval)
   }, [gagnant, pauseVisible, adversaireEnPause])
 
-  // ── Durée finale à la fin de partie ─────────────────────────────────────────
+  // ── Durée finale + son victoire/défaite ─────────────────────────────────────
   useEffect(() => {
-    if (gagnant && !dureePartie) setDureePartie(tempsJeu)
+    if (!gagnant) return
+    if (!dureePartie) setDureePartie(tempsJeu)
+    const aGagne = !!gagnant.forfait || gagnant.nom === prenomJoueur
+    const t = setTimeout(() => aGagne ? playWin() : playLose(), 250)
+    return () => clearTimeout(t)
   }, [gagnant])
 
   // ── Compte à rebours de pause ────────────────────────────────────────────────

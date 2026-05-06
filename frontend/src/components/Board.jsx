@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { SET_JOUABLES, EDGES } from '../utils/boardGeometry'
+import { playPlace, playSlide, playPush, playEject } from '../hooks/useSounds'
 
 const CELL = 54
 const GAP = 14
@@ -81,6 +82,12 @@ export default function Board({ plateau, selectionne, coupsValides = [], onCellC
       for (let i = n; i < srcs.length; i++) ghosts[srcs[i].key] = { color, r: srcs[i].r, c: srcs[i].c }
       for (let i = n; i < dsts.length; i++) popKeys.add(dsts[i].key)
     }
+
+    // ── Sons selon le type de coup ─────────────────────────────────────────
+    if (Object.keys(ghosts).length > 0)                                        playEject()
+    else if (moves.length >= 2)                                                 playPush()
+    else if (moves.length === 1)                                                playSlide()
+    if (popKeys.size > 0 && moves.length === 0 && Object.keys(ghosts).length === 0) playPlace()
 
     const cleanups = []
 
