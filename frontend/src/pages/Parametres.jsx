@@ -2,6 +2,7 @@ import PagePlaceholder from '../components/PagePlaceholder'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Music, Globe, Monitor } from 'lucide-react'
+import BoutonRetour from '../components/BoutonRetour'
 
 export default function Parametres() {
   const navigate = useNavigate()
@@ -18,7 +19,7 @@ export default function Parametres() {
 
   return (
     <div style={styles.page}>
-      <button onClick={() => navigate('/')} style={styles.retour}>← Retour</button>
+      <BoutonRetour onClick={() => navigate('/')} />
 
       <h1 style={styles.titre}>Paramètres</h1>
       <p style={styles.sous}>Configurez votre expérience de jeu</p>
@@ -109,7 +110,6 @@ function Toggle({ actif, onChange }) {
 
 const styles = {
   page:         { minHeight: '100vh', background: '#0f172a', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '2rem', color: '#fff', position: 'relative' },
-  retour:       { position: 'absolute', top: 24, left: 24, background: 'transparent', border: '1px solid #334155', borderRadius: 8, padding: '8px 16px', color: '#94a3b8', fontSize: 14, cursor: 'pointer' },
   titre:        { fontSize: 32, fontWeight: 700, marginBottom: 4 },
   sous:         { color: '#94a3b8', marginBottom: 32 },
   section:      { background: '#1e293b', borderRadius: 16, padding: '1.5rem', width: '100%', maxWidth: 560, marginBottom: 16 },

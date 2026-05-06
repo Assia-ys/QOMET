@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import useSocket, { getSocket } from '../hooks/useSocket'
 import useGameStore from '../store/useGameStore'
+import BoutonRetour from '../components/BoutonRetour'
 
 const C = {
   bg: '#0f172a',
@@ -58,14 +59,7 @@ function VueAccueil({ onCreer, onRejoindre, isLoading }) {
 
   return (
     <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 16px' }}>
-      <button
-        onClick={() => navigate('/')}
-        style={{ position: 'absolute', top: 24, left: 24, background: 'transparent', border: 'none', color: C.textSub, fontSize: 14, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
-        onMouseEnter={e => e.currentTarget.style.color = '#f1f5f9'}
-        onMouseLeave={e => e.currentTarget.style.color = C.textSub}
-      >
-        ← Retour
-      </button>
+      <BoutonRetour onClick={() => navigate('/')} />
       <h1 style={{ fontSize: 30, fontWeight: 800, color: '#f1f5f9', marginBottom: 6, textAlign: 'center' }}>
         Multijoueur sur réseau local
       </h1>

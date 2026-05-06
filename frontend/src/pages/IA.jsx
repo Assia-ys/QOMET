@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import useGameStore from '../store/useGameStore'
 import { getSocket, getSocketIA } from '../hooks/useSocket'
 import { Sparkles, Zap, Flame } from 'lucide-react'
+import BoutonRetour from '../components/BoutonRetour'
 
 const SERVER_URL = 'http://127.0.0.1:7777'
 
@@ -87,7 +88,7 @@ export default function IA() {
 
   return (
     <div style={styles.page}>
-      <button onClick={() => navigate('/')} style={styles.retour}>← Retour</button>
+      <BoutonRetour onClick={() => navigate('/')} />
       <h1 style={styles.titre}>Niveau de difficulté</h1>
       <p style={styles.sous}>Choisissez le niveau de l'intelligence artificielle</p>
 
@@ -145,5 +146,4 @@ const styles = {
   label:   { color: '#94a3b8', fontSize: 14 },
   input:   { background: '#1e293b', border: '1px solid #334155', borderRadius: 8, padding: '10px 14px', color: '#fff', fontSize: 15, outline: 'none' },
   bouton:  { background: '#6366f1', color: '#fff', border: 'none', borderRadius: 10, padding: '14px 40px', fontSize: 16, fontWeight: 600, width: 400 },
-  retour:  { position: 'absolute', top: 24, left: 24, background: 'transparent', border: '1px solid #334155', borderRadius: 8, padding: '8px 16px', color: '#94a3b8', fontSize: 14, cursor: 'pointer' },
 }
