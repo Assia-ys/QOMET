@@ -4,9 +4,12 @@ import useGameStore from '../store/useGameStore'
 import { getSocket } from '../hooks/useSocket'
 import { Trophy, Frown, Star, RotateCcw, UserX, Eye } from 'lucide-react'
 import BoutonMenu from './BoutonMenu'
+import { useLangue } from '../hooks/useLangue'
 
 export default function ModalFinPartie({ gagnant, duree }) {
   const navigate = useNavigate()
+  const { t } = useLangue()
+  const m = t.modal
   const { reinitialiser, prenomJoueur, codeRoom, joueurs } = useGameStore()
   const [forfaitAccepte, setForfaitAccepte] = useState(false)
   const [minimise, setMinimise]             = useState(false)
@@ -27,25 +30,23 @@ export default function ModalFinPartie({ gagnant, duree }) {
     navigate('/')
   }
 
-  // ── Modal minimisée → barre flottante en bas ─────────────────────────────────
   if (minimise) {
     return (
       <div style={styles.barre}>
         <span style={{ color: aGagne ? '#a78bfa' : '#94a3b8', fontWeight: 700, fontSize: 14 }}>
-          {aGagne ? '🏆 Tu as gagné !' : '😔 Tu as perdu...'}
+          {aGagne ? `🏆 ${m.gagne}` : `😔 ${m.perdu}`}
         </span>
         <button style={styles.btnBarre} onClick={() => setMinimise(false)}>
-          Voir le résultat
+          {m.voir_resultat}
         </button>
         <button style={{ background: '#374151', color: '#94a3b8', border: 'none', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }} onClick={rejouer}>
-          <RotateCcw size={14} /> Rejouer
+          <RotateCcw size={14} /> {m.rejouer}
         </button>
-        <BoutonMenu onClick={menu} label="Menu" taille="petit" />
+        <BoutonMenu onClick={menu} taille="petit" />
       </div>
     )
   }
 
-  // ── Écran adversaire déconnecté ─────────────────────────────────────────────
   if (estForfait) {
     return (
       <div style={styles.overlay}>
@@ -53,28 +54,26 @@ export default function ModalFinPartie({ gagnant, duree }) {
           <div style={{ ...styles.emoji, background: 'rgba(127,29,29,0.4)', border: '2px solid #991b1b' }}>
             <UserX size={48} color="#ef4444" />
           </div>
-          <h2 style={{ ...styles.titre, color: '#ef4444' }}>Adversaire déconnecté</h2>
+          <h2 style={{ ...styles.titre, color: '#ef4444' }}>{m.adversaire_deco}</h2>
           <p style={styles.sous}>
-            Ton adversaire a quitté la partie.<br />Tu remportes la victoire par forfait !
+            {m.adversaire_msg.split('\n')[0]}<br />{m.adversaire_msg.split('\n')[1]}
           </p>
           <span style={styles.badge}>OPPONENT_DISCONNECTED</span>
           <button style={styles.btnVictoire} onClick={() => setForfaitAccepte(true)}>
-            ✓ Accepter la victoire
+            {m.accepter}
           </button>
-          <BoutonMenu onClick={menu} label="Menu" fullWidth />
+          <BoutonMenu onClick={menu} fullWidth />
         </div>
       </div>
     )
   }
 
-  // ── Écran victoire / défaite normal ─────────────────────────────────────────
   return (
     <div style={styles.overlay}>
       <div style={styles.modal}>
 
-        {/* Bouton fermer pour voir le plateau */}
-        <button style={styles.btnFermer} onClick={() => setMinimise(true)} title="Voir le plateau">
-          <Eye size={16} /> Voir le plateau
+        <button style={styles.btnFermer} onClick={() => setMinimise(true)} title={m.voir_plateau}>
+          <Eye size={16} /> {m.voir_plateau}
         </button>
 
         <div style={styles.emoji}>
@@ -91,24 +90,22 @@ export default function ModalFinPartie({ gagnant, duree }) {
         </div>
 
         <h2 style={{ ...styles.titre, color: aGagne ? '#a78bfa' : '#fff' }}>
-          {aGagne ? 'Tu as gagné !' : 'Tu as perdu...'}
+          {aGagne ? m.gagne : m.perdu}
         </h2>
 
         <p style={styles.sous}>
-          {aGagne
-            ? 'Félicitations, tu as formé un carré parfait !'
-            : 'Ton adversaire a formé un carré parfait.'}
+          {aGagne ? m.gagne_msg : m.perdu_msg}
         </p>
 
         <div style={styles.dureeBox}>
-          <span style={styles.dureeLabel}>Durée de la partie</span>
+          <span style={styles.dureeLabel}>{m.duree}</span>
           <span style={styles.dureeVal}>{duree || '--:--'}</span>
         </div>
 
         <button style={styles.btnRejouer} onClick={rejouer}>
-          <RotateCcw size={18} /> Rejouer
+          <RotateCcw size={18} /> {m.rejouer}
         </button>
-        <BoutonMenu onClick={menu} label="Menu" fullWidth />
+        <BoutonMenu onClick={menu} fullWidth />
 
       </div>
     </div>

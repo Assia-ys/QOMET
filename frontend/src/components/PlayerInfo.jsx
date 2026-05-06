@@ -1,4 +1,5 @@
 import { EtoileSVG } from './Board'
+import { useLangue } from '../hooks/useLangue'
 
 const COULEURS = {
   clair: { fill: '#f59e0b', stroke: '#fde68a' },
@@ -8,8 +9,15 @@ const COULEURS = {
 const NIVEAU_COULEUR = { facile: '#22c55e', moyen: '#eab308', difficile: '#ef4444' }
 
 export default function PlayerInfo({ joueur, estActif, estMoi = true, niveauIA }) {
+  const { t } = useLangue()
   const { fill, stroke } = COULEURS[joueur.couleur]
   const estIA = joueur.nom === 'IA'
+
+  const labelNiveau = {
+    facile:    t.ia.facile,
+    moyen:     t.ia.moyen,
+    difficile: t.ia.difficile,
+  }
 
   return (
     <div style={{
@@ -25,7 +33,7 @@ export default function PlayerInfo({ joueur, estActif, estMoi = true, niveauIA }
           padding: '3px 10px', borderRadius: 20,
           display: 'inline-block', marginBottom: 10, letterSpacing: 1,
         }}>
-          {estMoi ? 'TON TOUR' : 'SON TOUR'}
+          {estMoi ? t.game.ton_tour : t.game.son_tour}
         </div>
       )}
 
@@ -42,14 +50,14 @@ export default function PlayerInfo({ joueur, estActif, estMoi = true, niveauIA }
               display: 'inline-block', flexShrink: 0,
             }} />
             <span style={{ color: NIVEAU_COULEUR[niveauIA] ?? '#94a3b8', fontSize: 11, fontWeight: 600 }}>
-              {niveauIA.charAt(0).toUpperCase() + niveauIA.slice(1)}
+              {labelNiveau[niveauIA] ?? niveauIA}
             </span>
           </span>
         )}
       </div>
 
-      <Compteur label="EN MAIN"       count={joueur.en_main}      fill={fill} stroke={stroke} />
-      <Compteur label="SUR LE PLATEAU" count={joueur.sur_plateau}  fill={fill} stroke={stroke} />
+      <Compteur label={t.game.en_main}     count={joueur.en_main}     fill={fill} stroke={stroke} />
+      <Compteur label={t.game.sur_plateau} count={joueur.sur_plateau} fill={fill} stroke={stroke} />
 
     </div>
   )

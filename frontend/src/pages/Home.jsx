@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useLangue } from '../hooks/useLangue'
 
 export default function Home() {
   const [chargement, setChargement] = useState(true)
@@ -15,48 +16,30 @@ export default function Home() {
 }
 
 function EcranChargement() {
+  const { t } = useLangue()
   return (
     <div style={styles.page}>
       <h1 style={styles.titre}>QOMET</h1>
       <div style={styles.spinner} />
-      <p style={styles.texteChargement}>Chargement...</p>
-      <p style={styles.sousTexte}>● Initialisation des services...</p>
+      <p style={styles.texteChargement}>{t.home.chargement}</p>
+      <p style={styles.sousTexte}>{t.home.init}</p>
     </div>
   )
 }
 
 function MenuPrincipal({ navigate }) {
+  const { t } = useLangue()
   return (
     <div style={styles.page}>
       <div style={styles.menuContainer}>
         <h1 style={styles.titre}>QOMET</h1>
-        <p style={styles.sousTitre}>Menu Principal</p>
+        <p style={styles.sousTitre}>{t.home.menuPrincipal}</p>
 
         <div style={styles.boutons}>
-          <Bouton
-            icone="📶"
-            label="Jouer en réseau"
-            couleur="#7c3aed"
-            onClick={() => navigate('/reseau')}
-          />
-          <Bouton
-            icone="🤖"
-            label="Jouer contre IA"
-            couleur="#7c3aed"
-            onClick={() => navigate('/ia')}
-          />
-          <Bouton
-            icone="⚙️"
-            label="Paramètres"
-            couleur="#374151"
-            onClick={() => navigate('/parametres')}
-          />
-          <Bouton
-            icone="↩"
-            label="Quitter"
-            couleur="#dc2626"
-            onClick={() => window.close()}
-          />
+          <Bouton icone="📶" label={t.home.jouerReseau}  couleur="#7c3aed" onClick={() => navigate('/reseau')} />
+          <Bouton icone="🤖" label={t.home.jouerIA}      couleur="#7c3aed" onClick={() => navigate('/ia')} />
+          <Bouton icone="⚙️" label={t.home.parametres}   couleur="#374151" onClick={() => navigate('/parametres')} />
+          <Bouton icone="↩"  label={t.home.quitter}      couleur="#dc2626" onClick={() => window.close()} />
         </div>
       </div>
     </div>

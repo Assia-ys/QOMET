@@ -1,11 +1,10 @@
 import { useState } from 'react'
 import { Home } from 'lucide-react'
+import { useLangue } from '../hooks/useLangue'
 
-/**
- * taille: 'normal' (défaut) | 'petit'
- * fullWidth: true → width 100%
- */
-export default function BoutonMenu({ onClick, label = 'Menu principal', fullWidth = false, taille = 'normal' }) {
+export default function BoutonMenu({ onClick, label, fullWidth = false, taille = 'normal' }) {
+  const { t } = useLangue()
+  const texte = label ?? t.menu
   const [survol, setSurvol] = useState(false)
   const petit = taille === 'petit'
   return (
@@ -31,7 +30,7 @@ export default function BoutonMenu({ onClick, label = 'Menu principal', fullWidt
       }}
     >
       <Home size={petit ? 14 : 18} />
-      {label}
+      {texte}
     </button>
   )
 }

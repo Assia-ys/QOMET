@@ -8,12 +8,15 @@ import useSocket, { getSocketIA } from '../hooks/useSocket'
 import BoutonRetour from '../components/BoutonRetour'
 import BoutonMenu from '../components/BoutonMenu'
 import { playWin, playLose } from '../hooks/useSounds'
+import { useLangue } from '../hooks/useLangue'
 
 const DUREE_MAX_PAUSE = 60 // secondes
 
 export default function Game() {
   const navigate = useNavigate()
   const socket   = useSocket()
+  const { t }    = useLangue()
+  const g        = t.game
   const {
     plateau, joueurs, indexJoueurActif, niveauIA,
     selectionne, coupsValides, peutEjecter, gagnant, codeRoom, maCouleur,
@@ -147,14 +150,14 @@ export default function Game() {
 
       <div style={styles.bandeau}>
         <span style={styles.bandeauTexte}>
-          {joueurActif?.en_main > 0 ? 'Clique pour poser ou déplacer' : 'Déplace une étoile'}
+          {joueurActif?.en_main > 0 ? g.poser_ou_deplacer : g.deplacer}
         </span>
         <span style={{ color: '#475569', fontSize: '0.85rem', fontFamily: 'monospace' }}>⏱ {tempsJeu}</span>
       </div>
 
       {estTourIA && (
         <p style={styles.iaThink}>
-          <span style={styles.iaDot} /> L'IA réfléchit...
+          <span style={styles.iaDot} /> {g.ia_reflechit}
         </p>
       )}
 
@@ -179,29 +182,27 @@ export default function Game() {
             setCoupsValides([])
             setPeutEjecter(false)
           }}>
-            Sortir du plateau (récupérer en main)
+            {g.sortir_plateau}
           </button>
         </div>
       )}
 
       <div style={styles.actions}>
         <BoutonMenu onClick={() => { socket.emit('abandonner'); navigate('/') }} label="Menu" />
-        {!modeIA && <BoutonAction label="⏸ Pause" couleur="#1e40af" onClick={() => {
+        {!modeIA && <BoutonAction label={g.pause}      couleur="#1e40af" onClick={() => {
           setPauseVisible(true)
           if (codeRoom) socket.emit('pause')
         }} />}
-        <BoutonAction label="⚑ Abandonner" couleur="#dc2626" onClick={() => setAbandonVisible(true)} />
+        <BoutonAction label={g.abandonner} couleur="#dc2626" onClick={() => setAbandonVisible(true)} />
       </div>
 
       {pauseVisible && (
         <Modale>
           <div style={styles.modaleIcone}>II</div>
-          <h2 style={styles.modaleTitre}>Pause</h2>
+          <h2 style={styles.modaleTitre}>{g.pause_titre}</h2>
           <p style={styles.modaleSousTexte}>
-            {adversaireEnPause
-              ? 'Ton adversaire a mis la partie en pause.'
-              : 'La partie est en pause.'}
-            <br />Temps restant : <strong style={{ color: tempsPause <= 10 ? '#ef4444' : '#a78bfa' }}>{tempsPause}s</strong>
+            {adversaireEnPause ? g.pause_msg_adverse : g.pause_attente}
+            <br />{g.pause_reprise_auto} : <strong style={{ color: tempsPause <= 10 ? '#ef4444' : '#a78bfa' }}>{tempsPause}s</strong>
           </p>
           <div style={styles.modaleJoueurs}>
             <JoueurPause nom={joueurs[0].nom} label="Joueur 1" />
@@ -209,7 +210,7 @@ export default function Game() {
             <JoueurPause nom={joueurs[1].nom} label="Joueur 2" />
           </div>
           {!adversaireEnPause && (
-            <BoutonAction label="▶ Reprendre la partie" couleur="#7c3aed" onClick={() => {
+            <BoutonAction label={g.reprendre} couleur="#7c3aed" onClick={() => {
               setPauseVisible(false)
               if (codeRoom) socket.emit('reprendre')
             }} />
@@ -221,11 +222,11 @@ export default function Game() {
       {abandonVisible && (
         <Modale>
           <div style={{ fontSize: '2rem' }}>⚠</div>
-          <h2 style={styles.modaleTitre}>Abandonner la partie ?</h2>
-          <p style={styles.modaleSousTexte}>Es-tu sûr de vouloir quitter ?<br />Cette action sera comptée comme une <strong>défaite</strong>.</p>
+          <h2 style={styles.modaleTitre}>{g.abandon_titre}</h2>
+          <p style={styles.modaleSousTexte}>{g.abandon_msg.split('\n')[0]}<br />{g.abandon_msg.split('\n')[1]}</p>
           <div style={{ display: 'flex', gap: 12 }}>
-            <BoutonAction label="Annuler"    couleur="#374151" onClick={() => setAbandonVisible(false)} />
-            <BoutonAction label="Abandonner" couleur="#dc2626" onClick={() => {
+            <BoutonAction label={g.annuler}    couleur="#374151" onClick={() => setAbandonVisible(false)} />
+            <BoutonAction label={g.abandonner} couleur="#dc2626" onClick={() => {
               socket.emit('abandonner')
               navigate('/')
             }} />

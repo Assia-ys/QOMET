@@ -4,39 +4,21 @@ import useGameStore from '../store/useGameStore'
 import { getSocket, getSocketIA } from '../hooks/useSocket'
 import { Sparkles, Zap, Flame } from 'lucide-react'
 import BoutonRetour from '../components/BoutonRetour'
+import { useLangue } from '../hooks/useLangue'
 
 const SERVER_URL = 'http://127.0.0.1:7777'
 
-const NIVEAUX = [
-  {
-    id: 'facile',
-    label: 'Facile',
-    badge: 'Accessible à tous',
-    description: 'Parfait pour débuter et apprendre les mécaniques du jeu',
-    icon: <Sparkles size={32} />,
-    couleur: 'green',
-  },
-  {
-    id: 'moyen',
-    label: 'Moyen',
-    badge: 'Challenge modéré',
-    description: 'Un challenge équilibré pour les joueurs expérimentés',
-    icon: <Zap size={32} />,
-    couleur: 'orange',
-  },
-  {
-    id: 'difficile',
-    label: 'Difficile',
-    badge: 'Expert seulement',
-    description: "Une IA impitoyable qui ne vous fera aucun cadeau",
-    icon: <Flame size={32} />,
-    couleur: 'red',
-  },
-]
-
 export default function IA() {
   const navigate = useNavigate()
+  const { t } = useLangue()
+  const ia = t.ia
   const { reinitialiser, setConfigIA, setMaCouleur, setCodeRoom, setEtatServeur } = useGameStore()
+
+  const NIVEAUX = [
+    { id: 'facile',    label: ia.facile,    badge: ia.facile_badge,    description: ia.facile_desc,    icon: <Sparkles size={32} />, couleur: 'green'  },
+    { id: 'moyen',     label: ia.moyen,     badge: ia.moyen_badge,     description: ia.moyen_desc,     icon: <Zap     size={32} />, couleur: 'orange' },
+    { id: 'difficile', label: ia.difficile, badge: ia.difficile_badge, description: ia.difficile_desc, icon: <Flame   size={32} />, couleur: 'red'    },
+  ]
 
   const [niveauChoisi, setNiveauChoisi] = useState('facile')
   const [prenom, setPrenom]             = useState('')
@@ -89,8 +71,8 @@ export default function IA() {
   return (
     <div style={styles.page}>
       <BoutonRetour onClick={() => navigate('/')} />
-      <h1 style={styles.titre}>Niveau de difficulté</h1>
-      <p style={styles.sous}>Choisissez le niveau de l'intelligence artificielle</p>
+      <h1 style={styles.titre}>{ia.titre}</h1>
+      <p style={styles.sous}>{ia.sous}</p>
 
       <div style={styles.grille}>
         {NIVEAUX.map((n) => (
@@ -99,10 +81,10 @@ export default function IA() {
       </div>
 
       <div style={styles.champ}>
-        <label style={styles.label}>Ton prénom</label>
+        <label style={styles.label}>{ia.prenom}</label>
         <input
           style={styles.input}
-          placeholder="Ex: Alice"
+          placeholder={ia.prenom_placeholder}
           value={prenom}
           onChange={(e) => setPrenom(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && commencer()}
@@ -114,7 +96,7 @@ export default function IA() {
         onClick={commencer}
         disabled={!prenom.trim() || chargement}
       >
-        {chargement ? 'Connexion...' : 'Commencer la partie contre IA'}
+        {chargement ? ia.connexion : ia.commencer}
       </button>
     </div>
   )
