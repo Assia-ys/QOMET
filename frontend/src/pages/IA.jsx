@@ -57,22 +57,27 @@ export default function IA() {
       const data = await res.json()
       const code = data.code
 
-      setMaCouleur('clair')
-      setCodeRoom(code)
-
       const s   = getSocket()
       const sIA = getSocketIA()
       if (!s.connected)   s.connect()
       if (!sIA.connected) sIA.connect()
 
-      // Naviguer quand les deux joueurs ont rejoint et la partie démarre
+      const iaCommence = Math.random() < 0.5
+      setMaCouleur(iaCommence ? 'fonce' : 'clair')
+      setCodeRoom(code)
+
       s.once('partie_demarree', (d) => {
         setEtatServeur(d)
         navigate('/jeu')
       })
 
-      s.emit('rejoindre',  { code, prenom: prenom.trim() })
-      sIA.emit('rejoindre', { code, prenom: 'IA' })
+      if (iaCommence) {
+        sIA.emit('rejoindre', { code, prenom: 'IA' })
+        s.emit('rejoindre',   { code, prenom: prenom.trim() })
+      } else {
+        s.emit('rejoindre',   { code, prenom: prenom.trim() })
+        sIA.emit('rejoindre', { code, prenom: 'IA' })
+      }
 
     } catch (e) {
       console.error('Erreur création partie IA:', e)

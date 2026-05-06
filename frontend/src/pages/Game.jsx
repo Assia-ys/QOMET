@@ -26,8 +26,8 @@ export default function Game() {
   const [tempsPause, setTempsPause]         = useState(DUREE_MAX_PAUSE)
 
   const joueurActif = joueurs[indexJoueurActif]
-  const modeIA      = joueurs[1]?.nom === 'IA'
-  const estTourIA   = modeIA && indexJoueurActif === 1
+  const modeIA      = joueurs.some(j => j?.nom === 'IA')
+  const estTourIA   = modeIA && joueurActif?.nom === 'IA'
   const estMonTour  = !codeRoom || joueurActif?.couleur === maCouleur
 
   // ── Redirection si pas de partie active (refresh page) ──────────────────────
@@ -154,7 +154,7 @@ export default function Game() {
       )}
 
       <div style={styles.zoneJeu}>
-        <PlayerInfo joueur={joueurs[0]} estActif={indexJoueurActif === 0} estMoi={joueurs[0].couleur === maCouleur} />
+        <PlayerInfo joueur={joueurs[0]} estActif={indexJoueurActif === 0} estMoi={joueurs[0].couleur === maCouleur} niveauIA={joueurs[0]?.nom === 'IA' ? niveauIA : undefined} />
         <Board
           plateau={plateau}
           selectionne={selectionne}
@@ -163,7 +163,7 @@ export default function Game() {
           phase={phase}
           cellulesGagnantes={new Set(cellulesGagnantes.map(([r,c]) => `${r},${c}`))}
         />
-        <PlayerInfo joueur={joueurs[1]} estActif={indexJoueurActif === 1} estMoi={joueurs[1].couleur === maCouleur} niveauIA={modeIA ? niveauIA : undefined} />
+        <PlayerInfo joueur={joueurs[1]} estActif={indexJoueurActif === 1} estMoi={joueurs[1].couleur === maCouleur} niveauIA={joueurs[1]?.nom === 'IA' ? niveauIA : undefined} />
       </div>
 
       {selectionne && peutEjecter && estMonTour && !estTourIA && (
