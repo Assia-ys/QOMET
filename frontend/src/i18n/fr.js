@@ -101,7 +101,6 @@ const fr = {
     titre:        'Paramètres',
     sous:         'Configurez votre expérience de jeu',
     audio:        'Audio',
-    vol_musique:  'Volume de la musique',
     vol_effets:   'Volume des effets sonores',
     reseau:       'Réseau',
     port:         'Port du serveur',

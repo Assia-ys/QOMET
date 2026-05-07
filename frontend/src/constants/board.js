@@ -12,3 +12,12 @@ export const CASES_JOUABLES = [
 // Grille vide 7x7 (toutes les cases à null)
 export const GRILLE_VIDE = () =>
   Array.from({ length: 7 }, () => Array.from({ length: 7 }, () => null))
+
+// ── Géométrie du plateau ───────────────────────────────────────────────────
+export const CELL     = 54   // taille d'une cellule en px
+export const GAP      = 14   // espace entre cellules en px
+export const PADDING  = 36   // marge interne du plateau en px
+export const TAILLE   = 7    // nombre de rangées / colonnes
+export const SLIDE_MS = 340  // durée animation déplacement (ms)
+export const EJECT_MS = 600  // durée animation éjection (ms)
+export const SVG_SIZE = PADDING * 2 + TAILLE * CELL + (TAILLE - 1) * GAP
