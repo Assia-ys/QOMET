@@ -101,7 +101,6 @@ const en = {
     titre:        'Settings',
     sous:         'Configure your gaming experience',
     audio:        'Audio',
-    vol_musique:  'Music volume',
     vol_effets:   'Sound effects volume',
     reseau:       'Network',
     port:         'Server port',
