@@ -6,6 +6,7 @@ export const palette = {
   cardBorder:   '#334155',
   inputBg:      '#0f172a',
   inputBorder:  '#475569',
+  inputFocus:   '#7c3aed',
 
   // ── Violet (couleur primaire) ──────────────────────────────────────────
   violet:       '#7c3aed',

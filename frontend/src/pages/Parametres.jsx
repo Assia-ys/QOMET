@@ -4,6 +4,7 @@ import { Music, Globe, Monitor } from 'lucide-react'
 import BoutonRetour from '../components/BoutonRetour'
 import { setEffectsVolume } from '../hooks/useSounds'
 import { useLangue } from '../hooks/useLangue'
+import { palette } from '../styles/palette'
 
 export default function Parametres() {
   const navigate = useNavigate()
@@ -119,20 +120,20 @@ function Toggle({ actif, onChange }) {
 }
 
 const styles = {
-  page:         { minHeight: '100vh', background: '#0f172a', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '2rem', color: '#fff', position: 'relative' },
+  page:         { minHeight: '100vh', background: palette.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '2rem', color: '#fff', position: 'relative' },
   titre:        { fontSize: 32, fontWeight: 700, marginBottom: 4 },
-  sous:         { color: '#94a3b8', marginBottom: 32 },
-  section:      { background: '#1e293b', borderRadius: 16, padding: '1.5rem', width: '100%', maxWidth: 560, marginBottom: 16 },
+  sous:         { color: palette.textSub, marginBottom: 32 },
+  section:      { background: palette.card, borderRadius: 16, padding: '1.5rem', width: '100%', maxWidth: 560, marginBottom: 16 },
   sectionTitre: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20, fontSize: 16, fontWeight: 600 },
   rangee:       { display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
   champLabel:   { color: '#cbd5e1', fontSize: 14 },
-  hint:         { color: '#475569', fontSize: 12, margin: '4px 0 0' },
-  inputPetit:   { background: '#0f172a', border: '1px solid #334155', borderRadius: 6, padding: '6px 10px', color: '#fff', width: 80, fontSize: 13 },
-  slider:       { width: '100%', marginTop: 8, accentColor: '#6366f1' },
+  hint:         { color: palette.textDisabled, fontSize: 12, margin: '4px 0 0' },
+  inputPetit:   { background: palette.bg, border: `1px solid ${palette.cardBorder}`, borderRadius: 6, padding: '6px 10px', color: '#fff', width: 80, fontSize: 13 },
+  slider:       { width: '100%', marginTop: 8, accentColor: palette.violetFaded },
   langueOptions:{ display: 'flex', gap: 8 },
   toggle:       { width: 44, height: 24, borderRadius: 999, display: 'flex', alignItems: 'center', padding: '0 3px', cursor: 'pointer', transition: 'background .2s' },
   toggleBall:   { width: 18, height: 18, borderRadius: '50%', background: '#fff' },
   boutons:      { display: 'flex', gap: 12, width: '100%', maxWidth: 560, marginTop: 8 },
-  btnSave:      { flex: 1, background: 'linear-gradient(90deg,#6366f1,#8b5cf6)', color: '#fff', border: 'none', borderRadius: 10, padding: '13px', fontSize: 15, fontWeight: 600, cursor: 'pointer' },
-  btnAnnuler:   { background: '#334155', color: '#fff', border: 'none', borderRadius: 10, padding: '13px 24px', fontSize: 15, fontWeight: 600, cursor: 'pointer' },
+  btnSave:      { flex: 1, background: `linear-gradient(90deg,${palette.violetFaded},#8b5cf6)`, color: '#fff', border: 'none', borderRadius: 10, padding: '13px', fontSize: 15, fontWeight: 600, cursor: 'pointer' },
+  btnAnnuler:   { background: palette.cardBorder, color: '#fff', border: 'none', borderRadius: 10, padding: '13px 24px', fontSize: 15, fontWeight: 600, cursor: 'pointer' },
 }

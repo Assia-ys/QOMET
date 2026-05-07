@@ -5,24 +5,7 @@ import useGameStore from '../store/useGameStore'
 import BoutonRetour from '../components/BoutonRetour'
 import { useLangue } from '../hooks/useLangue'
 import { SERVER_URL } from '../config/config'
-
-const C = {
-  bg: '#0f172a',
-  card: '#1e293b',
-  cardBorder: '#334155',
-  violet: '#7c3aed',
-  violetHover: '#6d28d9',
-  violetLight: '#a78bfa',
-  green: '#22c55e',
-  red: '#ef4444',
-  redBg: 'rgba(127,29,29,0.4)',
-  redBorder: '#991b1b',
-  textMuted: '#64748b',
-  textSub: '#94a3b8',
-  inputBg: '#0f172a',
-  inputBorder: '#475569',
-  inputFocus: '#7c3aed',
-}
+import { palette as C } from '../styles/palette'
 
 // ─── Vue principale ────────────────────────────────────────────────────────────
 

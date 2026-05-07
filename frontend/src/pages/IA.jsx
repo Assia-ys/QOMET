@@ -6,6 +6,7 @@ import { Sparkles, Zap, Flame } from 'lucide-react'
 import BoutonRetour from '../components/BoutonRetour'
 import { useLangue } from '../hooks/useLangue'
 import { SERVER_URL } from '../config/config'
+import { palette } from '../styles/palette'
 
 export default function IA() {
   const navigate = useNavigate()
@@ -115,16 +116,16 @@ function CarteNiveau({ niveau, selectionne, onClick }) {
 }
 
 const styles = {
-  page:    { position: 'relative', minHeight: '100vh', background: '#0f172a', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem', color: '#fff' },
-  titre:   { fontSize: 36, fontWeight: 700, marginBottom: 4 },
-  sous:    { color: '#94a3b8', marginBottom: 40 },
-  grille:  { display: 'flex', gap: 24, marginBottom: 40, flexWrap: 'wrap', justifyContent: 'center' },
-  carte:   { background: '#1e293b', borderRadius: 16, padding: '2rem', width: 220, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, textAlign: 'center', transition: 'border .2s' },
-  coche:   { position: 'absolute', top: -12, right: -12, width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700 },
-  badge:   { borderRadius: 999, padding: '2px 12px', fontSize: 12, fontWeight: 600 },
-  desc:    { color: '#94a3b8', fontSize: 13, marginTop: 4 },
-  champ:   { display: 'flex', flexDirection: 'column', gap: 6, width: 400, marginBottom: 16 },
-  label:   { color: '#94a3b8', fontSize: 14 },
-  input:   { background: '#1e293b', border: '1px solid #334155', borderRadius: 8, padding: '10px 14px', color: '#fff', fontSize: 15, outline: 'none' },
-  bouton:  { background: '#6366f1', color: '#fff', border: 'none', borderRadius: 10, padding: '14px 40px', fontSize: 16, fontWeight: 600, width: 400 },
+  page:   { position: 'relative', minHeight: '100vh', background: palette.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem', color: '#fff' },
+  titre:  { fontSize: 36, fontWeight: 700, marginBottom: 4 },
+  sous:   { color: palette.textSub, marginBottom: 40 },
+  grille: { display: 'flex', gap: 24, marginBottom: 40, flexWrap: 'wrap', justifyContent: 'center' },
+  carte:  { background: palette.card, borderRadius: 16, padding: '2rem', width: 220, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, textAlign: 'center', transition: 'border .2s' },
+  coche:  { position: 'absolute', top: -12, right: -12, width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700 },
+  badge:  { borderRadius: 999, padding: '2px 12px', fontSize: 12, fontWeight: 600 },
+  desc:   { color: palette.textSub, fontSize: 13, marginTop: 4 },
+  champ:  { display: 'flex', flexDirection: 'column', gap: 6, width: 400, marginBottom: 16 },
+  label:  { color: palette.textSub, fontSize: 14 },
+  input:  { background: palette.card, border: `1px solid ${palette.cardBorder}`, borderRadius: 8, padding: '10px 14px', color: '#fff', fontSize: 15, outline: 'none' },
+  bouton: { background: palette.violetFaded, color: '#fff', border: 'none', borderRadius: 10, padding: '14px 40px', fontSize: 16, fontWeight: 600, width: 400 },
 }

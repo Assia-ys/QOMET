@@ -11,6 +11,7 @@ import Button from '../components/ui/Button'
 import Modal from '../components/ui/Modal'
 import { playWin, playLose } from '../hooks/useSounds'
 import { useLangue } from '../hooks/useLangue'
+import { palette } from '../styles/palette'
 
 const DUREE_MAX_PAUSE = 60 // secondes
 
@@ -252,36 +253,36 @@ function JoueurPause({ nom, label }) {
 
 const styles = {
   page: {
-    minHeight: '100vh', backgroundColor: '#0f172a',
+    minHeight: '100vh', backgroundColor: palette.bg,
     display: 'flex', flexDirection: 'column',
     alignItems: 'center', justifyContent: 'center',
     gap: 20, padding: 20, position: 'relative',
   },
   bandeau:      { display: 'flex', alignItems: 'center', gap: 16 },
-  bandeauTexte: { color: '#94a3b8', fontSize: '0.9rem' },
+  bandeauTexte: { color: palette.textSub, fontSize: '0.9rem' },
   ejecterBandeau: { display: 'flex', justifyContent: 'center', marginTop: -8 },
   ejecterBtn: {
-    background: '#7c3aed', color: '#fff', border: 'none',
+    background: palette.violet, color: '#fff', border: 'none',
     borderRadius: 8, padding: '8px 18px', cursor: 'pointer',
     fontSize: '0.85rem', fontWeight: 600,
   },
   iaThink: {
-    color: '#a78bfa', fontSize: '0.85rem', margin: '-8px 0 0',
+    color: palette.violetLight, fontSize: '0.85rem', margin: '-8px 0 0',
     display: 'flex', alignItems: 'center', gap: 8,
   },
   iaDot: {
     display: 'inline-block', width: 8, height: 8,
-    borderRadius: '50%', background: '#a78bfa',
+    borderRadius: '50%', background: palette.violetLight,
     animation: 'pulse 1s ease-in-out infinite',
   },
   zoneJeu:  { display: 'flex', alignItems: 'center', gap: 24 },
   actions:  { display: 'flex', gap: 12, marginTop: 8 },
-  modaleIcone:     { fontSize: '2rem', color: '#a78bfa', fontWeight: 'bold' },
-  modaleTitre:     { color: '#f1f5f9', fontSize: '1.4rem', fontWeight: 'bold' },
-  modaleSousTexte: { color: '#94a3b8', textAlign: 'center', lineHeight: 1.6, fontSize: '0.9rem' },
+  modaleIcone:     { fontSize: '2rem', color: palette.violetLight, fontWeight: 'bold' },
+  modaleTitre:     { color: palette.textPrimary, fontSize: '1.4rem', fontWeight: 'bold' },
+  modaleSousTexte: { color: palette.textSub, textAlign: 'center', lineHeight: 1.6, fontSize: '0.9rem' },
   modaleJoueurs: {
     display: 'flex', alignItems: 'center', gap: 24,
-    padding: '12px 24px', backgroundColor: '#0f172a',
+    padding: '12px 24px', backgroundColor: palette.bg,
     borderRadius: 12, width: '100%', justifyContent: 'center',
   },
 }
