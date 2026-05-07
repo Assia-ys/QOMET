@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
-import { SET_JOUABLES, EDGES } from '../utils/boardGeometry'
-import { playPlace, playSlide, playPush, playEject } from '../hooks/useSounds'
+import { SET_JOUABLES, EDGES } from '../../utils/boardGeometry'
+import { playPlace, playSlide, playPush, playEject } from '../../hooks/useSounds'
 
 const CELL = 54
 const GAP = 14

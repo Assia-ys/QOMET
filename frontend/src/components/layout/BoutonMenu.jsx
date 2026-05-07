@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Home } from 'lucide-react'
-import { useLangue } from '../hooks/useLangue'
+import { useLangue } from '../../hooks/useLangue'
 
 export default function BoutonMenu({ onClick, label, fullWidth = false, taille = 'normal' }) {
   const { t } = useLangue()

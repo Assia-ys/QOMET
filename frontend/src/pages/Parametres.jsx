@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Music, Globe, Monitor } from 'lucide-react'
-import BoutonRetour from '../components/BoutonRetour'
+import BoutonRetour from '../components/layout/BoutonRetour'
 import { setEffectsVolume } from '../hooks/useSounds'
 import { useLangue } from '../hooks/useLangue'
 import { palette } from '../styles/palette'

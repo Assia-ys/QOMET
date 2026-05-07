@@ -1,5 +1,5 @@
 import { EtoileSVG } from './Board'
-import { useLangue } from '../hooks/useLangue'
+import { useLangue } from '../../hooks/useLangue'
 
 const COULEURS = {
   clair: { fill: '#f59e0b', stroke: '#fde68a' },

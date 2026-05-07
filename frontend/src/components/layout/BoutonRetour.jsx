@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useLangue } from '../hooks/useLangue'
+import { useLangue } from '../../hooks/useLangue'
 
 export default function BoutonRetour({ onClick, label }) {
   const { t } = useLangue()

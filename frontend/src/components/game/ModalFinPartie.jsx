@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import useGameStore from '../store/useGameStore'
-import { getSocket } from '../hooks/useSocket'
+import useGameStore from '../../store/useGameStore'
+import { getSocket } from '../../hooks/useSocket'
 import { Trophy, Frown, Star, RotateCcw, UserX, Eye } from 'lucide-react'
-import BoutonMenu from './BoutonMenu'
-import { useLangue } from '../hooks/useLangue'
+import BoutonMenu from '../layout/BoutonMenu'
+import { useLangue } from '../../hooks/useLangue'
 
 export default function ModalFinPartie({ gagnant, duree }) {
   const navigate = useNavigate()
