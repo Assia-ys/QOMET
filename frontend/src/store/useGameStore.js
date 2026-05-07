@@ -70,7 +70,7 @@ const useGameStore = create((set, get) => ({
         plateau,
         joueurs,
         indexJoueurActif: indexActif >= 0 ? indexActif : state.indexJoueurActif,
-        gagnant:          data.gagnant || null,
+        gagnant:          data.gagnant ? { nom: data.gagnant } : null,
         etatPartie:       data.termine ? 'terminee' : 'en_cours',
         selectionne:      null,
         coupsValides:     [],

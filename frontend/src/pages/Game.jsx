@@ -63,8 +63,8 @@ export default function Game() {
     if (!gagnant) return
     if (!dureePartie) setDureePartie(tempsJeu)
     const aGagne = !!gagnant.forfait || gagnant.nom === prenomJoueur
-    const t = setTimeout(() => aGagne ? playWin() : playLose(), 250)
-    return () => clearTimeout(t)
+    const timer = setTimeout(() => aGagne ? playWin() : playLose(), 250)
+    return () => clearTimeout(timer)
   }, [gagnant])
 
   // ── Compte à rebours de pause ────────────────────────────────────────────────

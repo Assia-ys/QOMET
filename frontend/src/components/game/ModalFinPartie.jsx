@@ -14,9 +14,9 @@ export default function ModalFinPartie({ gagnant, duree }) {
   const [forfaitAccepte, setForfaitAccepte] = useState(false)
   const [minimise, setMinimise]             = useState(false)
 
-  const modeIA      = joueurs.some(j => j?.nom === 'IA')
-  const estForfait  = !!gagnant?.forfait && !forfaitAccepte
-  const aGagne      = !!gagnant?.forfait || gagnant?.nom === prenomJoueur
+  const modeIA     = joueurs.some(j => j?.nom === 'IA')
+  const estForfait = !!gagnant?.forfait && !forfaitAccepte
+  const aGagne     = !!gagnant?.forfait || gagnant?.nom === prenomJoueur
 
   function rejouer() {
     reinitialiser()

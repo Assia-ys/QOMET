@@ -44,11 +44,20 @@ async def connect(sid, _environ):
 async def disconnect(sid):
     print(f"[WS] Déconnecté : {sid}")
     code, _ = couleur_du_joueur(sid)
-    if code:
+    if not code:
+        return
+    game = rooms[code]["game"]
+    # Ne supprimer la room que si la partie était déjà en cours (les deux joueurs présents)
+    # En salle d'attente, une déconnexion temporaire ne doit pas tuer la room
+    if room_est_pleine(code) or game.termine:
         await sio.emit("adversaire_deconnecte", {
             "message": "Ton adversaire a quitté la partie. Tu remportes la victoire !"
         }, room=code)
         supprimer_room(code)
+    else:
+        # Salle d'attente : libère juste la place du joueur déconnecté
+        quitter_room(sid)
+ 
 
 
 @sio.event
