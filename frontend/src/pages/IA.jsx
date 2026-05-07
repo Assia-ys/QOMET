@@ -5,8 +5,7 @@ import { getSocket, getSocketIA } from '../hooks/useSocket'
 import { Sparkles, Zap, Flame } from 'lucide-react'
 import BoutonRetour from '../components/BoutonRetour'
 import { useLangue } from '../hooks/useLangue'
-
-const SERVER_URL = 'http://127.0.0.1:7777'
+import { SERVER_URL } from '../config/config'
 
 export default function IA() {
   const navigate = useNavigate()

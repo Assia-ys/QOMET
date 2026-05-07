@@ -1,8 +1,7 @@
 import { useEffect } from 'react'
 import { io } from 'socket.io-client'
 import useGameStore from '../store/useGameStore'
-
-const SERVER_URL = 'http://127.0.0.1:7777'
+import { SERVER_URL } from '../config/config'
 
 let socket   = null
 let socketIA = null

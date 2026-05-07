@@ -4,6 +4,7 @@ import useSocket, { getSocket } from '../hooks/useSocket'
 import useGameStore from '../store/useGameStore'
 import BoutonRetour from '../components/BoutonRetour'
 import { useLangue } from '../hooks/useLangue'
+import { SERVER_URL } from '../config/config'
 
 const C = {
   bg: '#0f172a',
@@ -286,8 +287,6 @@ function EcranErreur({ onReessayer, onRetour }) {
 }
 
 // ─── Page principale ───────────────────────────────────────────────────────────
-
-const SERVER_URL = 'http://127.0.0.1:7777'
 
 export default function Reseau() {
   const navigate   = useNavigate()

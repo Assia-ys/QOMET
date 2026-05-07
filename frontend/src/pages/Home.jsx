@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useLangue } from '../hooks/useLangue'
+import { closeApp } from '../config/config'
 
 export default function Home() {
   const [chargement, setChargement] = useState(true)
@@ -39,7 +40,7 @@ function MenuPrincipal({ navigate }) {
           <Bouton icone="📶" label={t.home.jouerReseau}  couleur="#7c3aed" onClick={() => navigate('/reseau')} />
           <Bouton icone="🤖" label={t.home.jouerIA}      couleur="#7c3aed" onClick={() => navigate('/ia')} />
           <Bouton icone="⚙️" label={t.home.parametres}   couleur="#374151" onClick={() => navigate('/parametres')} />
-          <Bouton icone="↩"  label={t.home.quitter}      couleur="#dc2626" onClick={() => window.close()} />
+          <Bouton icone="↩"  label={t.home.quitter}      couleur="#dc2626" onClick={closeApp} />
         </div>
       </div>
     </div>

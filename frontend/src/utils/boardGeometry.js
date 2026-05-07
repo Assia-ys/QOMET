@@ -4,7 +4,7 @@
  * Utilisé par Board.jsx (affichage) et Game.jsx (heuristique IA).
  */
 
-import { CASES_JOUABLES } from '../data/mockData'
+import { CASES_JOUABLES } from '../constants/board'
 
 export const TAILLE = 7
 

@@ -1,9 +1,10 @@
 import { create } from 'zustand'
-import { GRILLE_VIDE, JOUEUR_1_MOCK, JOUEUR_2_MOCK } from '../data/mockData'
+import { GRILLE_VIDE } from '../constants/board'
+import { joueurInitial } from '../constants/game'
 
 const etatInitial = {
-  plateau:           GRILLE_VIDE,
-  joueurs:           [{ ...JOUEUR_1_MOCK }, { ...JOUEUR_2_MOCK }],
+  plateau:           GRILLE_VIDE(),
+  joueurs:           [joueurInitial('Joueur 1', 'clair'), joueurInitial('Joueur 2', 'fonce')],
   indexJoueurActif:  0,
   etatPartie:        'en_attente',
   gagnant:           null,
@@ -86,7 +87,11 @@ const useGameStore = create((set, get) => ({
       ],
     })),
 
-  reinitialiser: () => set({ ...etatInitial }),
+  reinitialiser: () => set({
+    ...etatInitial,
+    plateau: GRILLE_VIDE(),
+    joueurs: [joueurInitial('Joueur 1', 'clair'), joueurInitial('Joueur 2', 'fonce')],
+  }),
 }))
 
 export default useGameStore
