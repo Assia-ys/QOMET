@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useLangue } from '../hooks/useLangue'
 import { closeApp } from '../config/config'
+import Button from '../components/ui/Button'
 
 export default function Home() {
   const [chargement, setChargement] = useState(true)
@@ -37,33 +38,13 @@ function MenuPrincipal({ navigate }) {
         <p style={styles.sousTitre}>{t.home.menuPrincipal}</p>
 
         <div style={styles.boutons}>
-          <Bouton icone="📶" label={t.home.jouerReseau}  couleur="#7c3aed" onClick={() => navigate('/reseau')} />
-          <Bouton icone="🤖" label={t.home.jouerIA}      couleur="#7c3aed" onClick={() => navigate('/ia')} />
-          <Bouton icone="⚙️" label={t.home.parametres}   couleur="#374151" onClick={() => navigate('/parametres')} />
-          <Bouton icone="↩"  label={t.home.quitter}      couleur="#dc2626" onClick={closeApp} />
+          <Button icone="📶" label={t.home.jouerReseau}  couleur="#7c3aed" onClick={() => navigate('/reseau')} fullWidth />
+          <Button icone="🤖" label={t.home.jouerIA}      couleur="#7c3aed" onClick={() => navigate('/ia')} fullWidth />
+          <Button icone="⚙️" label={t.home.parametres}   couleur="#374151" onClick={() => navigate('/parametres')} fullWidth />
+          <Button icone="↩"  label={t.home.quitter}      couleur="#dc2626" onClick={closeApp} fullWidth />
         </div>
       </div>
     </div>
-  )
-}
-
-function Bouton({ icone, label, couleur, onClick }) {
-  const [survol, setSurvol] = useState(false)
-
-  return (
-    <button
-      onClick={onClick}
-      onMouseEnter={() => setSurvol(true)}
-      onMouseLeave={() => setSurvol(false)}
-      style={{
-        ...styles.bouton,
-        backgroundColor: survol ? couleur : couleur + 'cc',
-        transform: survol ? 'scale(1.02)' : 'scale(1)',
-      }}
-    >
-      <span style={styles.icone}>{icone}</span>
-      {label}
-    </button>
   )
 }
 
@@ -101,24 +82,6 @@ const styles = {
     flexDirection: 'column',
     gap: '12px',
     width: '280px',
-  },
-  bouton: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '10px',
-    padding: '14px 24px',
-    borderRadius: '8px',
-    border: 'none',
-    color: '#fff',
-    fontSize: '1rem',
-    fontWeight: '600',
-    cursor: 'pointer',
-    transition: 'all 0.15s ease',
-    width: '100%',
-  },
-  icone: {
-    fontSize: '1.1rem',
   },
   spinner: {
     width: '40px',

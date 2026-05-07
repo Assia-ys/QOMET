@@ -7,6 +7,8 @@ import useGameStore from '../store/useGameStore'
 import useSocket, { getSocketIA } from '../hooks/useSocket'
 import BoutonRetour from '../components/BoutonRetour'
 import BoutonMenu from '../components/BoutonMenu'
+import Button from '../components/ui/Button'
+import Modal from '../components/ui/Modal'
 import { playWin, playLose } from '../hooks/useSounds'
 import { useLangue } from '../hooks/useLangue'
 
@@ -189,15 +191,15 @@ export default function Game() {
 
       <div style={styles.actions}>
         <BoutonMenu onClick={() => { socket.emit('abandonner'); navigate('/') }} label="Menu" />
-        {!modeIA && <BoutonAction label={g.pause}      couleur="#1e40af" onClick={() => {
+        {!modeIA && <Button label={g.pause}      couleur="#1e40af" onClick={() => {
           setPauseVisible(true)
           if (codeRoom) socket.emit('pause')
         }} />}
-        <BoutonAction label={g.abandonner} couleur="#dc2626" onClick={() => setAbandonVisible(true)} />
+        <Button label={g.abandonner} couleur="#dc2626" onClick={() => setAbandonVisible(true)} />
       </div>
 
       {pauseVisible && (
-        <Modale>
+        <Modal>
           <div style={styles.modaleIcone}>II</div>
           <h2 style={styles.modaleTitre}>{g.pause_titre}</h2>
           <p style={styles.modaleSousTexte}>
@@ -210,62 +212,34 @@ export default function Game() {
             <JoueurPause nom={joueurs[1].nom} label="Joueur 2" />
           </div>
           {!adversaireEnPause && (
-            <BoutonAction label={g.reprendre} couleur="#7c3aed" onClick={() => {
+            <Button label={g.reprendre} couleur="#7c3aed" onClick={() => {
               setPauseVisible(false)
               if (codeRoom) socket.emit('reprendre')
             }} />
           )}
           <BoutonMenu onClick={() => { socket.emit('abandonner'); navigate('/') }} />
-        </Modale>
+        </Modal>
       )}
 
       {abandonVisible && (
-        <Modale>
+        <Modal>
           <div style={{ fontSize: '2rem' }}>⚠</div>
           <h2 style={styles.modaleTitre}>{g.abandon_titre}</h2>
           <p style={styles.modaleSousTexte}>{g.abandon_msg.split('\n')[0]}<br />{g.abandon_msg.split('\n')[1]}</p>
           <div style={{ display: 'flex', gap: 12 }}>
-            <BoutonAction label={g.annuler}    couleur="#374151" onClick={() => setAbandonVisible(false)} />
-            <BoutonAction label={g.abandonner} couleur="#dc2626" onClick={() => {
+            <Button label={g.annuler}    couleur="#374151" onClick={() => setAbandonVisible(false)} />
+            <Button label={g.abandonner} couleur="#dc2626" onClick={() => {
               socket.emit('abandonner')
               navigate('/')
             }} />
           </div>
-        </Modale>
+        </Modal>
       )}
 
     </div>
   )
 }
 
-
-function BoutonAction({ label, couleur, onClick }) {
-  const [survol, setSurvol] = useState(false)
-  return (
-    <button
-      onClick={onClick}
-      onMouseEnter={() => setSurvol(true)}
-      onMouseLeave={() => setSurvol(false)}
-      style={{
-        padding: '10px 22px', borderRadius: 8, border: 'none',
-        backgroundColor: survol ? couleur : couleur + 'cc',
-        color: '#fff', fontWeight: '600', fontSize: '0.9rem',
-        cursor: 'pointer', transition: 'all 0.15s',
-        transform: survol ? 'scale(1.03)' : 'scale(1)',
-      }}
-    >
-      {label}
-    </button>
-  )
-}
-
-function Modale({ children }) {
-  return (
-    <div style={styles.overlay}>
-      <div style={styles.modale}>{children}</div>
-    </div>
-  )
-}
 
 function JoueurPause({ nom, label }) {
   return (
@@ -302,16 +276,6 @@ const styles = {
   },
   zoneJeu:  { display: 'flex', alignItems: 'center', gap: 24 },
   actions:  { display: 'flex', gap: 12, marginTop: 8 },
-  overlay:  {
-    position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)',
-    display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100,
-  },
-  modale: {
-    backgroundColor: '#1e293b', border: '1px solid #334155',
-    borderRadius: 16, padding: 36,
-    display: 'flex', flexDirection: 'column', alignItems: 'center',
-    gap: 16, minWidth: 320, boxShadow: '0 25px 60px rgba(0,0,0,0.5)',
-  },
   modaleIcone:     { fontSize: '2rem', color: '#a78bfa', fontWeight: 'bold' },
   modaleTitre:     { color: '#f1f5f9', fontSize: '1.4rem', fontWeight: 'bold' },
   modaleSousTexte: { color: '#94a3b8', textAlign: 'center', lineHeight: 1.6, fontSize: '0.9rem' },
