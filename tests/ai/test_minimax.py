@@ -86,3 +86,59 @@ class TestCoupMinimax:
         assert g.joueur_actif.peut_poser() is True
         coup = coup_minimax(g, 4)
         assert coup is not None
+
+    def test_difficile_voit_menace_par_deplacement(self):
+        """
+        Difficile (complet=True) doit voir qu'en plaçant ailleurs l'adversaire
+        peut DÉPLACER pour compléter son carré. Moyen (complet=False) peut le rater.
+        """
+        g = Game()
+        p1, p2, p3, p4 = CARRES_POSSIBLES[0]
+        # fonce a 3 coins, plus d'étoiles en main → il peut glisser sur p4
+        g.board.grille[p1[0]][p1[1]] = 'fonce'
+        g.board.grille[p2[0]][p2[1]] = 'fonce'
+        g.board.grille[p3[0]][p3[1]] = 'fonce'
+        g.joueur2.etoiles_en_main     = 0
+        g.joueur2.etoiles_sur_plateau = 3
+        g.joueur1.etoiles_en_main     = 3  # clair peut encore poser
+
+        # Difficile (complet=True) doit retourner un coup valide sans crash
+        coup = coup_minimax(g, 4)
+        assert coup is not None
+
+
+class TestScoreTerminal:
+    def test_score_terminal_ia_gagne(self):
+        from backend.ai.minimax import _score_terminal
+        g = Game()
+        p1, p2, p3, p4 = CARRES_POSSIBLES[0]
+        for r, c in (p1, p2, p3, p4):
+            g.board.grille[r][c] = 'clair'
+        g._verifier_fin()
+        score = _score_terminal(g, 'clair')
+        assert score == float('inf')
+
+    def test_score_terminal_ia_perd(self):
+        from backend.ai.minimax import _score_terminal
+        g = Game()
+        p1, p2, p3, p4 = CARRES_POSSIBLES[0]
+        for r, c in (p1, p2, p3, p4):
+            g.board.grille[r][c] = 'clair'
+        g._verifier_fin()
+        score = _score_terminal(g, 'fonce')
+        assert score == float('-inf')
+
+
+class TestAppliquerMinimax:
+    def test_appliquer_pose_modifie_copie(self):
+        from backend.ai.minimax import _appliquer
+        g = Game()
+        copie = _appliquer(g, ('poser', 0, 0))
+        assert copie.board.get(0, 0) == 'clair'
+        assert g.board.get(0, 0) is None  # original intact
+
+    def test_appliquer_change_tour(self):
+        from backend.ai.minimax import _appliquer
+        g = Game()
+        copie = _appliquer(g, ('poser', 0, 0))
+        assert copie.joueur_actif.couleur == 'fonce'

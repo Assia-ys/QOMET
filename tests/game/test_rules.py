@@ -167,3 +167,117 @@ class TestVerifierVictoire:
         gagnants = Rules.verifier_victoire(b)
         assert 'clair' in gagnants
         assert 'fonce' in gagnants
+
+
+# ── Appliquer coup ────────────────────────────────────────────────────────────
+
+class TestAppliquerCoup:
+    def _joueurs(self):
+        from backend.game.player import Player
+        j1 = Player('Alice', 'clair')
+        j2 = Player('Bob',   'fonce')
+        j1.etoiles_en_main -= 3; j1.etoiles_sur_plateau += 3
+        j2.etoiles_en_main -= 2; j2.etoiles_sur_plateau += 2
+        return j1, j2
+
+    def test_glisser_deplace_etoile(self):
+        b = Board(); j1, j2 = self._joueurs()
+        b.grille[3][3] = 'clair'
+        coup = ('glisser', 3, 3, 3, 4, 0, 1)
+        b2 = Rules.appliquer_coup(b, coup, j1, j2)
+        assert b2.get(3, 3) is None
+        assert b2.get(3, 4) == 'clair'
+
+    def test_glisser_ne_modifie_pas_original(self):
+        b = Board(); j1, j2 = self._joueurs()
+        b.grille[3][3] = 'clair'
+        Rules.appliquer_coup(b, ('glisser', 3, 3, 3, 4, 0, 1), j1, j2)
+        assert b.get(3, 3) == 'clair'  # original inchangé
+
+    def test_pousser_deplace_deux_etoiles(self):
+        b = Board(); j1, j2 = self._joueurs()
+        b.grille[3][3] = 'clair'; b.grille[3][4] = 'fonce'
+        coup = ('pousser', 3, 3, 3, 4, 3, 5, 0, 1)
+        b2 = Rules.appliquer_coup(b, coup, j1, j2)
+        assert b2.get(3, 3) is None
+        assert b2.get(3, 4) == 'clair'
+        assert b2.get(3, 5) == 'fonce'
+
+    def test_pousser_ejecter_retourne_etoile_joueur(self):
+        b = Board(); j1, j2 = self._joueurs()
+        b.grille[3][0] = 'clair'; b.grille[3][1] = 'fonce'
+        coup = ('pousser_ejecter', 3, 1, 3, 0, 0, -1)
+        j1_avant = j1.etoiles_en_main
+        Rules.appliquer_coup(b, coup, j2, j1)  # j2 pousse clair hors
+        assert j1.etoiles_en_main == j1_avant + 1
+
+    def test_ejecter_retire_etoile_et_retourne_en_main(self):
+        b = Board(); j1, j2 = self._joueurs()
+        b.grille[0][0] = 'clair'
+        coup = ('ejecter', 0, 0, -1, 0)
+        j1_avant = j1.etoiles_en_main
+        b2 = Rules.appliquer_coup(b, coup, j1, j2)
+        assert b2.get(0, 0) is None
+        assert j1.etoiles_en_main == j1_avant + 1
+
+
+# ── Trouver carré gagnant ─────────────────────────────────────────────────────
+
+class TestTrouverCarreGagnant:
+    def test_retourne_none_si_pas_de_carre(self):
+        b = Board()
+        assert Rules.trouver_carre_gagnant(b) is None
+
+    def test_retourne_carre_et_couleur(self):
+        b = Board()
+        p1, p2, p3, p4 = CARRES_POSSIBLES[0]
+        for r, c in (p1, p2, p3, p4):
+            b.grille[r][c] = 'clair'
+        result = Rules.trouver_carre_gagnant(b)
+        assert result is not None
+        assert result['couleur'] == 'clair'
+        assert len(result['cellules']) == 4
+
+
+# ── Mouvements diagonaux ──────────────────────────────────────────────────────
+
+class TestMouvementsDiagonaux:
+    def test_diagonale_principale_sur_r_egal_c(self):
+        """Case (1,1) : r==c → diagonale (1,1)/(-1,-1) disponible."""
+        b = Board(); b.grille[1][1] = 'clair'
+        coups = Rules.deplacements_valides(b, 1, 1, None)
+        dirs = {(c[5], c[6]) if c[0] == 'glisser' else None for c in coups}
+        dirs.discard(None)
+        assert (1, 1) in dirs or (-1, -1) in dirs
+
+    def test_diagonale_secondaire_sur_r_plus_c_egal_6(self):
+        """Case (1,5) : r+c==6 → diagonale (1,-1)/(-1,1) disponible."""
+        b = Board(); b.grille[1][5] = 'clair'
+        coups = Rules.deplacements_valides(b, 1, 5, None)
+        dirs = {(c[5], c[6]) if c[0] == 'glisser' else None for c in coups}
+        dirs.discard(None)
+        assert (1, -1) in dirs or (-1, 1) in dirs
+
+    def test_pas_diagonale_sur_case_normale(self):
+        """Case (1,3) : r!=c et r+c!=6 → pas de diagonale."""
+        b = Board(); b.grille[1][3] = 'clair'
+        coups = Rules.deplacements_valides(b, 1, 3, None)
+        dirs = {(c[5], c[6]) if c[0] == 'glisser' else None for c in coups}
+        dirs.discard(None)
+        assert (1, 1) not in dirs
+        assert (1, -1) not in dirs
+
+
+# ── Impossible pousser 2 étoiles ──────────────────────────────────────────────
+
+class TestPousserDeuxEtoiles:
+    def test_ne_peut_pas_pousser_si_cible2_occupee(self):
+        """A→B→C : si C est occupé, le coup pousser A→B ne doit pas exister."""
+        b = Board()
+        b.grille[3][3] = 'clair'  # A
+        b.grille[3][4] = 'fonce'  # B
+        b.grille[3][5] = 'clair'  # C occupé
+        coups = Rules.deplacements_valides(b, 3, 3, None)
+        # Aucun coup pousser vers (3,4) car (3,5) est occupé
+        poussers = [c for c in coups if c[0] == 'pousser' and c[3] == 3 and c[4] == 4]
+        assert len(poussers) == 0
