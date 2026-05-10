@@ -67,8 +67,8 @@
       "gatekeeperAssess": false
     },
     "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+      "oneClick": true,
+      "runAfterFinish": true
     }
   }
 }
