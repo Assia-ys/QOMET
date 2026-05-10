@@ -50,7 +50,7 @@ function checkPort(ip, port, timeout = 300) {
 function fetchInfo(ip) {
   return new Promise((resolve) => {
     const req = http.get(
-      { hostname: ip, port: PORT, path: '/info', timeout: 1000 },
+      { hostname: ip, port: PORT, path: '/health', timeout: 1000 },
       (res) => {
         let data = ''
         res.on('data', d => data += d)
@@ -74,7 +74,7 @@ async function scanSubnet(subnet) {
       const ouvert = await checkPort(ip, PORT, 500)
       if (!ouvert) return null
       const info = await fetchInfo(ip)
-      if (info?.app === 'QOMET') return { ip, ...info }
+      if (info?.status === 'ok') return { ip, hostname: ip, ...info }
       return null
     })
     const trouves = (await Promise.all(checks)).filter(Boolean)
