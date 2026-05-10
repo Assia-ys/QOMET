@@ -8,9 +8,9 @@ function withTimeout(promise, ms = TIMEOUT_MS) {
   return promise(controller.signal).finally(() => clearTimeout(timer))
 }
 
-export async function creerPartie(prenom) {
+export async function creerPartie(prenom, baseURL = SERVER_URL) {
   return withTimeout(signal =>
-    fetch(`${SERVER_URL}/parties`, {
+    fetch(`${baseURL}/parties`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ prenom }),
@@ -22,9 +22,9 @@ export async function creerPartie(prenom) {
   )
 }
 
-export async function verifierPartie(code) {
+export async function verifierPartie(code, baseURL = SERVER_URL) {
   return withTimeout(signal =>
-    fetch(`${SERVER_URL}/parties/${code}`, { signal }).then(res => {
+    fetch(`${baseURL}/parties/${code}`, { signal }).then(res => {
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       return res.json()
     })

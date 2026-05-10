@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import useSocket, { getSocket } from '../../hooks/useSocket'
+import useSocket, { getSocket, resetSocketToServer } from '../../hooks/useSocket'
 import useGameStore from '../../store/useGameStore'
 import { creerPartie, verifierPartie } from '../../api/parties'
+import { getServerURL } from '../../config/config'
 import VueAccueil from './VueAccueil'
 import SalleAttente from './SalleAttente'
 import EcranErreur from './EcranErreur'
@@ -12,12 +13,11 @@ export default function Reseau() {
   const socket   = useSocket()
   const { setMaCouleur, reinitialiser, setPrenomJoueur } = useGameStore()
 
-  const [vue,         setVue]         = useState('accueil')
-  const [codePartie,  setCodePartie]  = useState('')
-  const [prenomHote,  setPrenomHote]  = useState('')
-  const [isLoading,   setIsLoading]   = useState(false)
+  const [vue,        setVue]       = useState('accueil')
+  const [codePartie, setCodePartie] = useState('')
+  const [prenomHote, setPrenomHote] = useState('')
+  const [isLoading,  setIsLoading]  = useState(false)
 
-  // Navigation automatique quand la partie démarre
   useEffect(() => {
     const s       = getSocket()
     const handler = () => navigate('/jeu')
@@ -44,16 +44,24 @@ export default function Reseau() {
     }
   }
 
-  async function handleRejoindre(prenom, code) {
+  async function handleRejoindre(prenom, code, serverURL) {
     if (isLoading) return
     setIsLoading(true)
     try {
-      const data = await verifierPartie(code)
+      // Si un serveur distant est choisi, recrée le socket vers ce serveur
+      const url = serverURL || getServerURL()
+      const s   = url !== 'http://127.0.0.1:7777'
+        ? resetSocketToServer(url)
+        : getSocket()
+
+      const data = await verifierPartie(code, url)
       if (data.pleine) { setVue('erreur'); return }
+
       reinitialiser()
       setMaCouleur('fonce')
       setPrenomJoueur(prenom)
-      socket.emit('rejoindre', { code, prenom })
+      if (!s.connected) s.connect()
+      s.emit('rejoindre', { code, prenom })
     } catch {
       setVue('erreur')
     } finally {

@@ -16,6 +16,31 @@ export default function VueAccueil({ onCreer, onRejoindre, isLoading }) {
   const [focusCreer,       setFocusCreer]       = useState(false)
   const [focusRejoindre,   setFocusRejoindre]   = useState(false)
   const [focusCode,        setFocusCode]        = useState(null)
+
+  // ── Découverte réseau ──────────────────────────────────────────────────────
+  const [scanning,         setScanning]         = useState(false)
+  const [serveurs,         setServeurs]          = useState([])
+  const [serveurChoisi,    setServeurChoisi]     = useState(null) // { ip, hostname }
+  const isElectron = typeof window !== 'undefined' && !!window.electronAPI
+
+  async function lancerScan() {
+    setScanning(true)
+    setServeurs([])
+    setServeurChoisi(null)
+    try {
+      const resultats = await window.electronAPI.scanReseau()
+      setServeurs(resultats || [])
+    } catch (e) {
+      console.error('Scan échoué:', e)
+    }
+    setScanning(false)
+  }
+
+  function choisirServeur(s) {
+    setServeurChoisi(s)
+    localStorage.setItem('qomet_server_ip', s.ip)
+  }
+
   const inputsRef = useRef([])
 
   function handleCodeInput(i, val) {
@@ -39,8 +64,19 @@ export default function VueAccueil({ onCreer, onRejoindre, isLoading }) {
     e.preventDefault()
   }
 
-  const disabledCreer    = isLoading || !prenomCreateur.trim()
-  const disabledRejoindre = isLoading || codeInput.join('').length < 4 || !prenomRejoignant.trim()
+  const codeSaisi = codeInput.join('')
+  const disabledCreer     = isLoading || !prenomCreateur.trim()
+  const disabledRejoindre = isLoading || codeSaisi.length < 4 || !prenomRejoignant.trim()
+
+  function handleRejoindre() {
+    if (disabledRejoindre) return
+    const serverURL = serveurChoisi
+      ? `http://${serveurChoisi.ip}:7777`
+      : 'http://127.0.0.1:7777'
+    // Remettre à zéro si même machine
+    if (!serveurChoisi) localStorage.removeItem('qomet_server_ip')
+    onRejoindre(prenomRejoignant.trim(), codeSaisi, serverURL)
+  }
 
   return (
     <div style={styles.page}>
@@ -91,6 +127,7 @@ export default function VueAccueil({ onCreer, onRejoindre, isLoading }) {
               <div style={styles.cardSous}>Entre le code donné par ton ami</div>
             </div>
           </div>
+
           <div>
             <label style={styles.label}><PersonIcon /> {r.prenom}</label>
             <input
@@ -102,6 +139,53 @@ export default function VueAccueil({ onCreer, onRejoindre, isLoading }) {
               onBlur={() => setFocusRejoindre(false)}
             />
           </div>
+
+          {/* ── Découverte réseau (Electron uniquement) ── */}
+          {isElectron && (
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                <span style={{ color: C.textSub, fontSize: 12 }}>Serveur hôte</span>
+                <button
+                  onClick={lancerScan}
+                  disabled={scanning}
+                  style={{ background: 'transparent', border: `1px solid ${C.cardBorder}`, color: C.textSub, borderRadius: 6, padding: '3px 10px', fontSize: 11, cursor: 'pointer' }}
+                >
+                  {scanning ? '⟳ Recherche...' : '🔍 Rechercher'}
+                </button>
+              </div>
+
+              {/* Liste des serveurs trouvés */}
+              {serveurs.length > 0 && (
+                <div style={{ border: `1px solid ${C.cardBorder}`, borderRadius: 8, overflow: 'hidden', marginBottom: 8 }}>
+                  {serveurs.map(s => (
+                    <div
+                      key={s.ip}
+                      onClick={() => choisirServeur(s)}
+                      style={{
+                        padding: '8px 12px', cursor: 'pointer', fontSize: 13,
+                        background: serveurChoisi?.ip === s.ip ? C.violet + '33' : C.card,
+                        borderLeft: `3px solid ${serveurChoisi?.ip === s.ip ? C.violet : 'transparent'}`,
+                        color: C.textPrimary, display: 'flex', justifyContent: 'space-between',
+                      }}
+                    >
+                      <span>🟢 {s.hostname}</span>
+                      <span style={{ color: C.textMuted, fontSize: 11 }}>{s.ip}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {serveurs.length === 0 && !scanning && (
+                <p style={{ color: C.textMuted, fontSize: 11, marginBottom: 6 }}>
+                  {serveurChoisi
+                    ? `✅ ${serveurChoisi.hostname} (${serveurChoisi.ip})`
+                    : 'Même machine ou cliquer Rechercher'}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* ── Code obligatoire ── */}
           <div>
             <p style={styles.codeLabel}>{r.code_label}</p>
             <div style={styles.codeRow}>
@@ -121,12 +205,10 @@ export default function VueAccueil({ onCreer, onRejoindre, isLoading }) {
               ))}
             </div>
           </div>
+
           <button
             style={primaryButtonStyle(disabledRejoindre)}
-            onClick={() => {
-              if (disabledRejoindre) return
-              onRejoindre(prenomRejoignant.trim(), codeInput.join(''))
-            }}
+            onClick={handleRejoindre}
             onMouseEnter={e => { if (!disabledRejoindre) e.currentTarget.style.background = C.violetHover }}
             onMouseLeave={e => { if (!disabledRejoindre) e.currentTarget.style.background = C.violet }}
           >
