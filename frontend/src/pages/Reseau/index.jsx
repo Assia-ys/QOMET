@@ -11,7 +11,7 @@ import EcranErreur from './EcranErreur'
 export default function Reseau() {
   const navigate = useNavigate()
   const socket   = useSocket()
-  const { setMaCouleur, reinitialiser, setPrenomJoueur } = useGameStore()
+  const { setMaCouleur, reinitialiser, setPrenomJoueur, setEtatServeur, setCodeRoom, setEtatPartie } = useGameStore()
 
   const [vue,        setVue]       = useState('accueil')
   const [codePartie, setCodePartie] = useState('')
@@ -48,11 +48,20 @@ export default function Reseau() {
     if (isLoading) return
     setIsLoading(true)
     try {
-      // Si un serveur distant est choisi, recrée le socket vers ce serveur
       const url = serverURL || getServerURL()
-      const s   = url !== 'http://127.0.0.1:7777'
-        ? resetSocketToServer(url)
-        : getSocket()
+      let s
+      if (url !== 'http://127.0.0.1:7777') {
+        s = resetSocketToServer(url)
+        // Le useSocket hook a ses listeners sur l'ancien socket (détruit) — on les re-attache ici
+        s.once('partie_demarree', (data) => {
+          setEtatServeur(data)
+          setCodeRoom(data.code)
+          setEtatPartie('en_cours')
+          navigate('/jeu')
+        })
+      } else {
+        s = getSocket()
+      }
 
       const data = await verifierPartie(code, url)
       if (data.pleine) { setVue('erreur'); return }

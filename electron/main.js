@@ -79,6 +79,12 @@ async function scanReseau() {
   return results
 }
 
+// ── Pare-feu Windows ──────────────────────────────────────────────────────
+if (process.platform === 'win32') {
+  const { exec } = require('child_process')
+  exec(`netsh advfirewall firewall delete rule name="QOMET" >nul 2>&1 & netsh advfirewall firewall add rule name="QOMET" dir=in action=allow protocol=TCP localport=${PORT}`)
+}
+
 // ── Démarrer le backend Python ─────────────────────────────────────────────
 
 function demarrerBackend() {
