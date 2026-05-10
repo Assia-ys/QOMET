@@ -57,7 +57,7 @@
       "target": "AppImage",
       "icon": "assets/icon.png",
       "extraResources": [
-        { "from": "backend-dist/qomet-server", "to": "qomet-server" }
+        { "from": "backend-dist/qomet-server-static", "to": "qomet-server" }
       ]
     },
     "mac": {

@@ -67,7 +67,7 @@ async function scanReseau() {
   for (let i = 0; i < ips.length; i += 30) {
     const groupe = ips.slice(i, i + 30)
     const checks = groupe.map(async (ip) => {
-      const ouvert = await checkPort(ip, PORT, 300)
+      const ouvert = await checkPort(ip, PORT, 1000)
       if (!ouvert) return null
       const info = await fetchInfo(ip)
       if (info?.app === 'QOMET') return { ip, ...info }
