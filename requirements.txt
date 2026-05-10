@@ -1,8 +1,11 @@
 fastapi==0.115.0
 uvicorn==0.30.6
 python-socketio==5.11.3
+python-engineio==4.13.1
+simple-websocket==1.1.0
 python-multipart==0.0.9
 pydantic==2.13.3
 starlette==0.38.6
 anyio==4.13.0
 httpx==0.28.1
+bidict==0.23.1
