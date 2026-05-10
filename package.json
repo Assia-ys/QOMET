@@ -9,17 +9,19 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "electron:dev":   "cross-env NODE_ENV=development electron .",
+    "electron:dev":  "cross-env NODE_ENV=development electron .",
+    "electron:pack": "vite build && electron-packager . QOMET --platform=win32 --arch=x64 --out=../QOMET-dist --overwrite --icon=assets/icon.ico --extra-resource=backend-dist/qomet-server.exe",
+    "electron:win":  "npm run electron:pack",
     "electron:build": "vite build && electron-builder",
-    "electron:win": "vite build && electron-builder --win",
     "electron:linux": "vite build && electron-builder --linux",
-    "electron:mac": "vite build && electron-builder --mac"
+    "electron:mac":   "vite build && electron-builder --mac"
   },
   "dependencies": {
     "react": "^19.2.4",
     "react-dom": "^19.2.4"
   },
   "devDependencies": {
+    "@electron/packager": "^20.0.0",
     "@eslint/js": "^9.39.4",
     "@tailwindcss/postcss": "^4.2.2",
     "@types/react": "^19.2.14",
@@ -47,7 +49,7 @@
     "extraResources": [
       {
         "from": "backend-dist/qomet-server.exe",
-        "to":   "qomet-server.exe"
+        "to": "qomet-server.exe"
       }
     ],
     "win": {
