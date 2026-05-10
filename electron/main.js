@@ -12,21 +12,28 @@ let   server = null
 
 // ── Utilitaires réseau ─────────────────────────────────────────────────────────
 
-function getLocalIP() {
+const ADAPTATEURS_VIRTUELS = ['hyper', 'vethernet', 'vmware', 'virtualbox', 'wsl', 'bluetooth', 'virtual', 'vpn', 'tap', 'tunnel']
+
+function getLocalIPs() {
   const nets = os.networkInterfaces()
-  for (const name of Object.keys(nets)) {
-    for (const iface of nets[name]) {
-      if (iface.family === 'IPv4' && !iface.internal) {
-        return iface.address
-      }
+  const result = []
+  for (const [name, ifaces] of Object.entries(nets)) {
+    const lower = name.toLowerCase()
+    if (ADAPTATEURS_VIRTUELS.some(s => lower.includes(s))) continue
+    for (const iface of ifaces) {
+      if (iface.family === 'IPv4' && !iface.internal) result.push(iface.address)
     }
   }
-  return '127.0.0.1'
+  return result.length ? result : ['127.0.0.1']
 }
 
-function getSubnet() {
-  const ip = getLocalIP()
-  return ip.split('.').slice(0, 3).join('.')
+function getLocalIP() {
+  return getLocalIPs()[0]
+}
+
+function getSubnets() {
+  const ips = getLocalIPs()
+  return [...new Set(ips.map(ip => ip.split('.').slice(0, 3).join('.')))]
 }
 
 function checkPort(ip, port, timeout = 300) {
@@ -58,16 +65,13 @@ function fetchInfo(ip) {
   })
 }
 
-async function scanReseau() {
-  const subnet  = getSubnet()
+async function scanSubnet(subnet) {
   const results = []
-  const ips     = Array.from({ length: 254 }, (_, i) => `${subnet}.${i + 1}`)
-
-  // Scan par groupes de 30 en parallèle
+  const ips = Array.from({ length: 254 }, (_, i) => `${subnet}.${i + 1}`)
   for (let i = 0; i < ips.length; i += 30) {
     const groupe = ips.slice(i, i + 30)
     const checks = groupe.map(async (ip) => {
-      const ouvert = await checkPort(ip, PORT, 1000)
+      const ouvert = await checkPort(ip, PORT, 500)
       if (!ouvert) return null
       const info = await fetchInfo(ip)
       if (info?.app === 'QOMET') return { ip, ...info }
@@ -79,10 +83,10 @@ async function scanReseau() {
   return results
 }
 
-// ── Pare-feu Windows ──────────────────────────────────────────────────────
-if (process.platform === 'win32') {
-  const { exec } = require('child_process')
-  exec(`netsh advfirewall firewall delete rule name="QOMET" >nul 2>&1 & netsh advfirewall firewall add rule name="QOMET" dir=in action=allow protocol=TCP localport=${PORT}`)
+async function scanReseau() {
+  const subnets = getSubnets()
+  const tous = await Promise.all(subnets.map(scanSubnet))
+  return tous.flat()
 }
 
 // ── Démarrer le backend Python ─────────────────────────────────────────────

@@ -68,7 +68,8 @@
     },
     "nsis": {
       "oneClick": true,
-      "runAfterFinish": true
+      "runAfterFinish": true,
+      "include": "installer.nsh"
     }
   }
 }
