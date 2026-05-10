@@ -1,13 +1,19 @@
 {
   "name": "qomet",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
+  "main": "electron/main.js",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "electron:dev": "NODE_ENV=development electron .",
+    "electron:build": "vite build && electron-builder",
+    "electron:win": "vite build && electron-builder --win",
+    "electron:linux": "vite build && electron-builder --linux",
+    "electron:mac": "vite build && electron-builder --mac"
   },
   "dependencies": {
     "react": "^19.2.4",
@@ -20,6 +26,8 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
     "autoprefixer": "^10.4.27",
+    "electron": "^36.9.5",
+    "electron-builder": "^26.8.1",
     "eslint": "^9.39.4",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",
@@ -27,5 +35,48 @@
     "postcss": "^8.5.8",
     "tailwindcss": "^4.2.2",
     "vite": "^8.0.1"
+  },
+  "build": {
+    "appId": "com.triova.qomet",
+    "productName": "QOMET",
+    "files": [
+      "electron/**/*",
+      "frontend/src/dist/**/*",
+      "app.py",
+      "backend/**/*",
+      "config/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "backend",
+        "to": "backend"
+      },
+      {
+        "from": "config",
+        "to": "config"
+      },
+      {
+        "from": "app.py",
+        "to": "app.py"
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "assets/icon.png"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "assets/icon.icns",
+      "identity": null,
+      "gatekeeperAssess": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
   }
 }
