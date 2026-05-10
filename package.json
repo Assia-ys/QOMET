@@ -1,25 +1,36 @@
 {
   "name": "qomet",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
+  "main": "electron/main.js",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "electron:dev":  "cross-env NODE_ENV=development electron .",
+    "electron:pack": "vite build && electron-packager . QOMET --platform=win32 --arch=x64 --out=../QOMET-dist --overwrite --icon=assets/icon.ico --extra-resource=backend-dist/qomet-server.exe",
+    "electron:win":  "npm run electron:pack",
+    "electron:build": "vite build && electron-builder",
+    "electron:linux": "vite build && electron-builder --linux",
+    "electron:mac":   "vite build && electron-builder --mac"
   },
   "dependencies": {
     "react": "^19.2.4",
     "react-dom": "^19.2.4"
   },
   "devDependencies": {
+    "@electron/packager": "^20.0.0",
     "@eslint/js": "^9.39.4",
     "@tailwindcss/postcss": "^4.2.2",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
     "autoprefixer": "^10.4.27",
+    "cross-env": "^10.1.0",
+    "electron": "^36.9.5",
+    "electron-builder": "^26.8.1",
     "eslint": "^9.39.4",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",
@@ -27,5 +38,37 @@
     "postcss": "^8.5.8",
     "tailwindcss": "^4.2.2",
     "vite": "^8.0.1"
+  },
+  "build": {
+    "appId": "com.triova.qomet",
+    "productName": "QOMET",
+    "files": [
+      "electron/**/*",
+      "frontend/src/dist/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "backend-dist/qomet-server.exe",
+        "to": "qomet-server.exe"
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "assets/icon.png"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "assets/icon.png",
+      "identity": null,
+      "gatekeeperAssess": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
   }
 }
