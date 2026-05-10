@@ -82,9 +82,10 @@ async function scanReseau() {
 // ── Démarrer le backend Python ─────────────────────────────────────────────
 
 function demarrerBackend() {
+  const binName = process.platform === 'win32' ? 'qomet-server.exe' : 'qomet-server'
   const exe = isDev
     ? (process.platform === 'win32' ? 'python' : 'python3')
-    : path.join(process.resourcesPath, 'qomet-server.exe')
+    : path.join(process.resourcesPath, binName)
 
   const args = isDev ? [path.join(__dirname, '..', 'app.py')] : []
 

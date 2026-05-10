@@ -46,19 +46,19 @@
       "electron/**/*",
       "frontend/src/dist/**/*"
     ],
-    "extraResources": [
-      {
-        "from": "backend-dist/qomet-server.exe",
-        "to": "qomet-server.exe"
-      }
-    ],
     "win": {
       "target": "nsis",
-      "icon": "assets/icon.ico"
+      "icon": "assets/icon.ico",
+      "extraResources": [
+        { "from": "backend-dist/qomet-server.exe", "to": "qomet-server.exe" }
+      ]
     },
     "linux": {
       "target": "AppImage",
-      "icon": "assets/icon.png"
+      "icon": "assets/icon.png",
+      "extraResources": [
+        { "from": "backend-dist/qomet-server", "to": "qomet-server" }
+      ]
     },
     "mac": {
       "target": "dmg",
