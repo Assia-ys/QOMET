@@ -137,6 +137,265 @@ TICKETS = [
         "labels": ["ia"],
         "milestone": None
     },
+
+    # ── PHASE ELECTRON ────────────────────────────────────────────────────────
+
+    {
+        "title": "[E-01] Setup Electron + dependances",
+        "body": """## Description
+Initialiser l'environnement Electron et connecter le frontend React existant.
+
+## Taches
+- Installer les dependances : `electron`, `electron-builder`, `vite-plugin-electron`
+- Creer `electron/main.js` : process principal (BrowserWindow, lifecycle)
+- Creer `electron/preload.js` : contextBridge pour exposer ipcRenderer
+- Ajouter scripts npm dans `package.json` :
+  - `dev:electron` : lance Vite + Electron en parallele
+  - `build:electron` : build Vite puis package Electron
+- Mettre `base: './'` dans `vite.config.js` pour compatibilite `file://`
+- Verifier que `HashRouter` charge correctement en mode Electron
+
+## Definition of Done
+- `npm run dev:electron` ouvre une fenetre Electron avec l'app React
+- Navigation entre pages fonctionne sans erreur
+- Console sans erreur critique
+
+## Dependances
+Aucune (premier ticket Electron)
+
+## Estimation
+2h""",
+        "labels": ["electron"],
+        "milestone": None
+    },
+    {
+        "title": "[E-02] Lancement et gestion du backend Python depuis Electron",
+        "body": """## Description
+Bundler le backend FastAPI+Socket.io en executable autonome et le gerer depuis le process Electron.
+
+## Taches
+- Bundler le backend avec **PyInstaller** :
+  - `pyinstaller --onefile backend/main.py --name qomet-server`
+  - Tester l'executable sans Python installe
+- Dans `electron/main.js` :
+  - Demarrer le process backend au lancement de l'app (`child_process.spawn`)
+  - Passer le port via variable d'environnement (`QOMET_PORT=7777`)
+  - Attendre que le serveur reponde (`/health`) avant d'ouvrir la fenetre
+  - Arreter proprement le process Python a la fermeture (`app.on('will-quit')`)
+- Gestion des erreurs :
+  - Port deja occupe → retry sur port suivant
+  - Executable introuvable → message d'erreur utilisateur
+- Mettre a jour `config.js` : `SERVER_URL` lit le port dynamique
+
+## Definition of Done
+- Lancer l'app Electron sans Python installe
+- Le serveur backend demarre et repond sur `/health`
+- La fermeture de l'app tue proprement le process backend
+- Aucun process zombie apres fermeture
+
+## Dependances
+E-01
+
+## Estimation
+3h""",
+        "labels": ["electron"],
+        "milestone": None
+    },
+    {
+        "title": "[E-03] Communication IPC et controles fenetre",
+        "body": """## Description
+Mettre en place la communication IPC securisee entre le renderer (React) et le main process Electron.
+
+## Taches
+- `electron/preload.js` : exposer via `contextBridge` :
+  - `window.electronAPI.closeApp()` → `ipcRenderer.send('close-app')`
+  - `window.electronAPI.minimize()` → `ipcRenderer.send('minimize')`
+  - `window.electronAPI.maximize()` → `ipcRenderer.send('maximize')`
+- `electron/main.js` : handlers IPC correspondants
+- Mettre a jour `config.js` `closeApp()` :
+  - Si `window.electronAPI` disponible → `window.electronAPI.closeApp()`
+  - Sinon → `window.close()` (fallback web)
+- Securite : `nodeIntegration: false`, `contextIsolation: true`
+- DevTools uniquement en `NODE_ENV=development`
+
+## Definition of Done
+- Bouton Quitter ferme proprement l'app Electron
+- Le bouton fonctionne aussi en mode navigateur (fallback)
+- Aucune alerte de securite dans la console
+
+## Dependances
+E-01
+
+## Estimation
+1h""",
+        "labels": ["electron"],
+        "milestone": None
+    },
+    {
+        "title": "[E-04] Configuration et apparence de la fenetre",
+        "body": """## Description
+Configurer la fenetre principale Electron : dimensions, titre, icone, comportement.
+
+## Taches
+- `BrowserWindow` options :
+  - Dimensions initiales : 1280×800, minimum 1024×700
+  - Titre : "QOMET"
+  - Icone : `assets/icon.ico` (Windows), `icon.icns` (Mac), `icon.png` (Linux)
+  - `frame: true` (garde la barre native OS)
+- Supprimer le menu applicatif natif : `Menu.setApplicationMenu(null)`
+- Comportement de fermeture :
+  - `app.on('window-all-closed')` : quitter sur Windows/Linux, garder actif sur Mac
+  - `app.on('activate')` : recreer fenetre sur Mac si dock clique
+- Ecran de chargement (splash screen) pendant le demarrage du backend
+
+## Definition of Done
+- L'app a le bon titre et la bonne icone
+- Pas de menu natif visible
+- Comportement MacOS conforme aux conventions (Cmd+Q, dock)
+
+## Dependances
+E-02
+
+## Estimation
+1h""",
+        "labels": ["electron"],
+        "milestone": None
+    },
+    {
+        "title": "[E-05] Build et packaging multi-plateforme",
+        "body": """## Description
+Generer des installeurs natifs pour Windows, Linux et macOS via electron-builder.
+
+## Taches
+- Configurer `electron-builder` dans `package.json` :
+  ```json
+  {
+    "build": {
+      "appId": "com.triova.qomet",
+      "productName": "QOMET",
+      "files": ["dist/**", "electron/**", "backend-dist/**"],
+      "win":   { "target": "nsis",   "icon": "assets/icon.ico"  },
+      "linux": { "target": "AppImage","icon": "assets/icon.png"  },
+      "mac":   { "target": "dmg",    "icon": "assets/icon.icns" }
+    }
+  }
+  ```
+- Inclure l'executable PyInstaller dans le package final
+- Script de build CI :
+  - Windows : `electron-builder --win`
+  - Linux   : `electron-builder --linux`
+  - macOS   : `electron-builder --mac`
+- Tester l'installeur genere sur chaque plateforme
+
+## Definition of Done
+- Installeur Windows `.exe` fonctionnel (sans Python ni Node)
+- Paquet Linux `.AppImage` fonctionnel
+- DMG macOS fonctionnel
+- L'app se lance et joue une partie complete apres installation
+
+## Dependances
+E-02, E-03, E-04
+
+## Estimation
+3h""",
+        "labels": ["electron"],
+        "milestone": None
+    },
+    {
+        "title": "[E-06] Script d'installation cross-platform",
+        "body": """## Description
+Creer un script unique que le client execute pour installer QOMET sans connaissance technique.
+Le script detecte automatiquement l'OS et installe la bonne version.
+
+## Taches
+
+### Script principal `install.sh` (Linux / macOS) :
+```bash
+#!/bin/bash
+OS=$(uname -s)
+if [ "$OS" = "Darwin" ]; then
+    # macOS : ouvre le DMG et installe
+    open QOMET-mac.dmg
+elif [ "$OS" = "Linux" ]; then
+    # Linux : rend AppImage executable et lance
+    chmod +x QOMET-linux.AppImage
+    ./QOMET-linux.AppImage
+fi
+```
+
+### Script principal `install.bat` (Windows) :
+```batch
+@echo off
+start QOMET-Setup.exe
+```
+
+### Script universel `install.py` :
+- Detecte OS automatiquement (`platform.system()`)
+- Telecharge la bonne version depuis les releases GitHub
+- Lance l'installeur correspondant
+- Affiche une barre de progression
+
+### Contenu du README d'installation :
+- 3 etapes maximum pour l'utilisateur final
+- Aucun prerequis (pas de Python, pas de Node.js)
+- Support Windows 10+, Ubuntu 20.04+, macOS 12+
+
+## Definition of Done
+- Un utilisateur peut installer QOMET en executant UN seul fichier
+- Script teste sur Windows, Linux et macOS
+- Documentation utilisateur claire (README ou PDF)
+
+## Dependances
+E-05
+
+## Estimation
+2h""",
+        "labels": ["electron"],
+        "milestone": None
+    },
+    {
+        "title": "[E-07] Tests et validation Electron multi-plateforme",
+        "body": """## Description
+Valider le bon fonctionnement de l'application Electron sur les 3 plateformes cibles.
+
+## Taches
+
+### Tests fonctionnels (sur chaque OS) :
+- [ ] L'app se lance sans erreur
+- [ ] Le backend Python demarre (verifier via `/health`)
+- [ ] Mode IA : lancer une partie Facile/Moyen/Difficile jusqu'a la fin
+- [ ] Mode Reseau : 2 instances Electron sur la meme machine, partie complete
+- [ ] Modal gagne/perdu s'affiche correctement
+- [ ] Bouton Quitter ferme l'app proprement (pas de process zombie)
+- [ ] Parametres : changement langue FR/EN persiste apres redemarrage
+- [ ] Fermeture forcee (Alt+F4 / Cmd+Q) : backend s'arrete aussi
+
+### Tests de performance :
+- [ ] Temps de lancement < 5 secondes
+- [ ] IA Difficile repond en < 2 secondes
+
+### Tests de robustesse :
+- [ ] Port 7777 occupe → l'app utilise un autre port
+- [ ] Relancer l'app immediatement apres fermeture → pas de conflit de port
+
+### Plateformes cibles :
+- Windows 10 / 11
+- Ubuntu 20.04 / 22.04
+- macOS 12 (Monterey) / 13 (Ventura)
+
+## Definition of Done
+- Tous les tests fonctionnels passent sur les 3 OS
+- Aucun process zombie detecte
+- Rapport de validation signe
+
+## Dependances
+E-06
+
+## Estimation
+3h""",
+        "labels": ["electron"],
+        "milestone": None
+    },
 ]
 
 
@@ -157,6 +416,7 @@ def creer_labels():
         ("backend",        "e4e669", "Tickets serveur Python FastAPI"),
         ("network",        "d93f0b", "Tickets reseau et WebSocket"),
         ("ia",             "0e8a16", "Tickets intelligence artificielle"),
+        ("electron",       "6f42c1", "Tickets packaging et distribution Electron"),
         ("priorite haute", "b60205", "A traiter en priorite"),
     ]
     print("Labels...")

@@ -1,4 +1,5 @@
 import asyncio
+import socket as _socket
 import uvicorn
 import socketio
 from fastapi import FastAPI
@@ -33,6 +34,25 @@ socket_app = socketio.ASGIApp(sio, other_asgi_app=app)
 
 app.include_router(parties_router)
 
+# ── Endpoint découverte réseau ─────────────────────────────────────────────────
+
+@app.get("/info")
+async def info():
+    """Retourne les infos du serveur pour la découverte réseau locale."""
+    hostname = _socket.gethostname()
+    salles_disponibles = [
+        {"code": code, "pleine": room_est_pleine(code)}
+        for code in rooms.keys()
+        if not room_est_pleine(code)
+    ]
+    return {
+        "hostname": hostname,
+        "app":      "QOMET",
+        "version":  "1.0.0",
+        "port":     PORT,
+        "salles":   salles_disponibles,
+    }
+
 # ── Événements Socket.io ───────────────────────────────────────────────────────
 
 @sio.event
@@ -44,11 +64,20 @@ async def connect(sid, _environ):
 async def disconnect(sid):
     print(f"[WS] Déconnecté : {sid}")
     code, _ = couleur_du_joueur(sid)
-    if code:
+    if not code:
+        return
+    game = rooms[code]["game"]
+    # Ne supprimer la room que si la partie était déjà en cours (les deux joueurs présents)
+    # En salle d'attente, une déconnexion temporaire ne doit pas tuer la room
+    if room_est_pleine(code) or game.termine:
         await sio.emit("adversaire_deconnecte", {
             "message": "Ton adversaire a quitté la partie. Tu remportes la victoire !"
         }, room=code)
         supprimer_room(code)
+    else:
+        # Salle d'attente : libère juste la place du joueur déconnecté
+        quitter_room(sid)
+ 
 
 
 @sio.event

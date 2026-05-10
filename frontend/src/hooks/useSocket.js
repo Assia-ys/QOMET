@@ -1,8 +1,7 @@
 import { useEffect } from 'react'
 import { io } from 'socket.io-client'
 import useGameStore from '../store/useGameStore'
-
-const SERVER_URL = 'http://127.0.0.1:7777'
+import { SERVER_URL } from '../config/config'
 
 let socket   = null
 let socketIA = null
@@ -15,6 +14,13 @@ export function getSocket() {
 export function getSocketIA() {
   if (!socketIA) socketIA = io(SERVER_URL, { autoConnect: false })
   return socketIA
+}
+
+// Recrée le socket vers un serveur distant (mode réseau 2 machines)
+export function resetSocketToServer(serverUrl) {
+  if (socket) { socket.disconnect(); socket = null }
+  socket = io(serverUrl, { autoConnect: false })
+  return socket
 }
 
 export default function useSocket() {

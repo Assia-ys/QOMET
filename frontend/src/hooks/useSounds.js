@@ -5,7 +5,7 @@
 
 let _ctx    = null
 let _master = null
-let _volume = 0.65  // 0–1, modifiable via setEffectsVolume()
+let _volume = Number(localStorage.getItem('qomet_volume') ?? 65) / 100
 
 // ── Contexte audio ─────────────────────────────────────────────────────────
 
@@ -23,6 +23,7 @@ function ctx() {
 export function setEffectsVolume(pct) {
   _volume = Math.max(0, Math.min(1, pct / 100))
   if (_master) _master.gain.value = _volume
+  localStorage.setItem('qomet_volume', pct)
 }
 
 function out() { return _master }
