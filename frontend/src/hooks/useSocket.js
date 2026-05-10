@@ -16,6 +16,13 @@ export function getSocketIA() {
   return socketIA
 }
 
+// Recrée le socket vers un serveur distant (mode réseau 2 machines)
+export function resetSocketToServer(serverUrl) {
+  if (socket) { socket.disconnect(); socket = null }
+  socket = io(serverUrl, { autoConnect: false })
+  return socket
+}
+
 export default function useSocket() {
   const { setEtatServeur, setCodeRoom, setEtatPartie, setGagnant, setCoupsValides, setPeutEjecter, setAdversaireEnPause, setCellulesGagnantes } = useGameStore()
 

@@ -1,4 +1,5 @@
 import asyncio
+import socket as _socket
 import uvicorn
 import socketio
 from fastapi import FastAPI
@@ -32,6 +33,25 @@ app.add_middleware(
 socket_app = socketio.ASGIApp(sio, other_asgi_app=app)
 
 app.include_router(parties_router)
+
+# ── Endpoint découverte réseau ─────────────────────────────────────────────────
+
+@app.get("/info")
+async def info():
+    """Retourne les infos du serveur pour la découverte réseau locale."""
+    hostname = _socket.gethostname()
+    salles_disponibles = [
+        {"code": code, "pleine": room_est_pleine(code)}
+        for code in rooms.keys()
+        if not room_est_pleine(code)
+    ]
+    return {
+        "hostname": hostname,
+        "app":      "QOMET",
+        "version":  "1.0.0",
+        "port":     PORT,
+        "salles":   salles_disponibles,
+    }
 
 # ── Événements Socket.io ───────────────────────────────────────────────────────
 

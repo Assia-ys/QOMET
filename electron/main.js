@@ -2,11 +2,82 @@ const { app, BrowserWindow, ipcMain, Menu } = require('electron')
 const { spawn }  = require('child_process')
 const path       = require('path')
 const http       = require('http')
+const net        = require('net')
+const os         = require('os')
 
 const isDev  = process.env.NODE_ENV === 'development'
 const PORT   = 7777
 let   win    = null
 let   server = null
+
+// ── Utilitaires réseau ─────────────────────────────────────────────────────────
+
+function getLocalIP() {
+  const nets = os.networkInterfaces()
+  for (const name of Object.keys(nets)) {
+    for (const iface of nets[name]) {
+      if (iface.family === 'IPv4' && !iface.internal) {
+        return iface.address
+      }
+    }
+  }
+  return '127.0.0.1'
+}
+
+function getSubnet() {
+  const ip = getLocalIP()
+  return ip.split('.').slice(0, 3).join('.')
+}
+
+function checkPort(ip, port, timeout = 300) {
+  return new Promise((resolve) => {
+    const sock = new net.Socket()
+    sock.setTimeout(timeout)
+    sock.on('connect', () => { sock.destroy(); resolve(true) })
+    sock.on('error',   () => { sock.destroy(); resolve(false) })
+    sock.on('timeout', () => { sock.destroy(); resolve(false) })
+    sock.connect(port, ip)
+  })
+}
+
+function fetchInfo(ip) {
+  return new Promise((resolve) => {
+    const req = http.get(
+      { hostname: ip, port: PORT, path: '/info', timeout: 1000 },
+      (res) => {
+        let data = ''
+        res.on('data', d => data += d)
+        res.on('end', () => {
+          try { resolve(JSON.parse(data)) }
+          catch { resolve(null) }
+        })
+      }
+    )
+    req.on('error',   () => resolve(null))
+    req.on('timeout', () => { req.destroy(); resolve(null) })
+  })
+}
+
+async function scanReseau() {
+  const subnet  = getSubnet()
+  const results = []
+  const ips     = Array.from({ length: 254 }, (_, i) => `${subnet}.${i + 1}`)
+
+  // Scan par groupes de 30 en parallèle
+  for (let i = 0; i < ips.length; i += 30) {
+    const groupe = ips.slice(i, i + 30)
+    const checks = groupe.map(async (ip) => {
+      const ouvert = await checkPort(ip, PORT, 300)
+      if (!ouvert) return null
+      const info = await fetchInfo(ip)
+      if (info?.app === 'QOMET') return { ip, ...info }
+      return null
+    })
+    const trouves = (await Promise.all(checks)).filter(Boolean)
+    results.push(...trouves)
+  }
+  return results
+}
 
 // ── Démarrer le backend Python ─────────────────────────────────────────────
 
@@ -113,3 +184,5 @@ app.on('will-quit', () => arreterBackend())
 ipcMain.on('close-app',  () => app.quit())
 ipcMain.on('minimize',   () => win?.minimize())
 ipcMain.on('maximize',   () => win?.isMaximized() ? win.unmaximize() : win.maximize())
+ipcMain.handle('scan-reseau', () => scanReseau())
+ipcMain.handle('get-local-ip', () => getLocalIP())
