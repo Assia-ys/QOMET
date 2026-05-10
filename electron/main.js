@@ -13,7 +13,7 @@ let   server = null
 function demarrerBackend() {
   const exe = isDev
     ? (process.platform === 'win32' ? 'python' : 'python3')
-    : path.join(process.resourcesPath, 'backend', 'qomet-server.exe')
+    : path.join(process.resourcesPath, 'qomet-server.exe')
 
   const args = isDev ? [path.join(__dirname, '..', 'app.py')] : []
 

@@ -9,7 +9,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "electron:dev": "NODE_ENV=development electron .",
+    "electron:dev":   "cross-env NODE_ENV=development electron .",
     "electron:build": "vite build && electron-builder",
     "electron:win": "vite build && electron-builder --win",
     "electron:linux": "vite build && electron-builder --linux",
@@ -26,6 +26,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
     "autoprefixer": "^10.4.27",
+    "cross-env": "^10.1.0",
     "electron": "^36.9.5",
     "electron-builder": "^26.8.1",
     "eslint": "^9.39.4",
@@ -41,23 +42,12 @@
     "productName": "QOMET",
     "files": [
       "electron/**/*",
-      "frontend/src/dist/**/*",
-      "app.py",
-      "backend/**/*",
-      "config/**/*"
+      "frontend/src/dist/**/*"
     ],
     "extraResources": [
       {
-        "from": "backend",
-        "to": "backend"
-      },
-      {
-        "from": "config",
-        "to": "config"
-      },
-      {
-        "from": "app.py",
-        "to": "app.py"
+        "from": "backend-dist/qomet-server.exe",
+        "to":   "qomet-server.exe"
       }
     ],
     "win": {
