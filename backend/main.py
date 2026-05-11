@@ -296,7 +296,7 @@ async def jouer(sid, data):
 # ── Routes HTTP ────────────────────────────────────────────────────────────────
 @app.get("/health")
 async def health():
-    return {"status": "ok", "port": PORT}
+    return {"status": "ok", "port": PORT, "hostname": _socket.gethostname()}
 
 
 # ── Lancement ──────────────────────────────────────────────────────────────────

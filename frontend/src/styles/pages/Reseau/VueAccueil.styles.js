@@ -25,6 +25,15 @@ export function codeInputStyle(focused) {
   }
 }
 
+export function modeTabStyle(actif) {
+  return {
+    flex: 1, padding: '8px 0', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13,
+    background: actif ? C.violet : 'transparent',
+    color: actif ? '#fff' : C.textSub,
+    transition: 'all 0.2s',
+  }
+}
+
 export const styles = {
   page:             { minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 16px' },
   titre:            { fontSize: 30, fontWeight: 800, color: C.textPrimary, marginBottom: 6, textAlign: 'center' },

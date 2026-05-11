@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import BoutonRetour from '../../components/layout/BoutonRetour'
 import { useLangue } from '../../hooks/useLangue'
 import { palette as C } from '../../styles/palette'
-import { styles, inputStyle, codeInputStyle, primaryButtonStyle } from '../../styles/pages/Reseau/VueAccueil.styles'
+import { styles, inputStyle, codeInputStyle, primaryButtonStyle, modeTabStyle } from '../../styles/pages/Reseau/VueAccueil.styles'
+
+const LOCAL_URL = 'http://127.0.0.1:7777'
 
 export default function VueAccueil({ onCreer, onRejoindre, isLoading }) {
   const navigate = useNavigate()
@@ -17,10 +19,17 @@ export default function VueAccueil({ onCreer, onRejoindre, isLoading }) {
   const [focusRejoindre,   setFocusRejoindre]   = useState(false)
   const [focusCode,        setFocusCode]        = useState(null)
 
-  // ── Découverte réseau ──────────────────────────────────────────────────────
-  const [scanning,         setScanning]         = useState(false)
-  const [serveurs,         setServeurs]          = useState([])
-  const [serveurChoisi,    setServeurChoisi]     = useState(null) // { ip, hostname }
+  // ── Mode : local ou en ligne ───────────────────────────────────────────────
+  const [mode,          setMode]          = useState('local')
+  const [onlineURL,     setOnlineURL]     = useState(() => localStorage.getItem('qomet_online_url') || '')
+  const [ipManuelle,    setIpManuelle]    = useState('')
+  const [focusURL,      setFocusURL]      = useState(false)
+  const [focusIP,       setFocusIP]       = useState(false)
+
+  // ── Découverte réseau (Electron + mode local) ─────────────────────────────
+  const [scanning,      setScanning]      = useState(false)
+  const [serveurs,      setServeurs]      = useState([])
+  const [serveurChoisi, setServeurChoisi] = useState(null)
   const isElectron = typeof window !== 'undefined' && !!window.electronAPI
 
   async function lancerScan() {
@@ -38,9 +47,10 @@ export default function VueAccueil({ onCreer, onRejoindre, isLoading }) {
 
   function choisirServeur(s) {
     setServeurChoisi(s)
-    localStorage.setItem('qomet_server_ip', s.ip)
+    setIpManuelle('')
   }
 
+  // ── Code 4 caractères ─────────────────────────────────────────────────────
   const inputsRef = useRef([])
 
   function handleCodeInput(i, val) {
@@ -64,18 +74,28 @@ export default function VueAccueil({ onCreer, onRejoindre, isLoading }) {
     e.preventDefault()
   }
 
-  const codeSaisi = codeInput.join('')
-  const disabledCreer     = isLoading || !prenomCreateur.trim()
-  const disabledRejoindre = isLoading || codeSaisi.length < 4 || !prenomRejoignant.trim()
+  // ── URL du serveur selon le mode ──────────────────────────────────────────
+  function getServerURL() {
+    if (mode === 'online') return onlineURL.trim()
+    if (ipManuelle.trim()) return `http://${ipManuelle.trim()}:7777`
+    if (serveurChoisi)     return `http://${serveurChoisi.ip}:7777`
+    return LOCAL_URL
+  }
+
+  const codeSaisi         = codeInput.join('')
+  const disabledCreer     = isLoading || !prenomCreateur.trim() || (mode === 'online' && !onlineURL.trim())
+  const disabledRejoindre = isLoading || codeSaisi.length < 4 || !prenomRejoignant.trim() || (mode === 'online' && !onlineURL.trim())
+
+  function handleCreer() {
+    if (disabledCreer) return
+    if (mode === 'online') localStorage.setItem('qomet_online_url', onlineURL.trim())
+    onCreer(prenomCreateur.trim(), getServerURL())
+  }
 
   function handleRejoindre() {
     if (disabledRejoindre) return
-    const serverURL = serveurChoisi
-      ? `http://${serveurChoisi.ip}:7777`
-      : 'http://127.0.0.1:7777'
-    // Remettre à zéro si même machine
-    if (!serveurChoisi) localStorage.removeItem('qomet_server_ip')
-    onRejoindre(prenomRejoignant.trim(), codeSaisi, serverURL)
+    if (mode === 'online') localStorage.setItem('qomet_online_url', onlineURL.trim())
+    onRejoindre(prenomRejoignant.trim(), codeSaisi, getServerURL())
   }
 
   return (
@@ -83,6 +103,27 @@ export default function VueAccueil({ onCreer, onRejoindre, isLoading }) {
       <BoutonRetour onClick={() => navigate('/')} />
       <h1 style={styles.titre}>{r.titre}</h1>
       <p style={styles.sous}>{r.sous}</p>
+
+      {/* ── Sélecteur de mode ── */}
+      <div style={{ display: 'flex', gap: 4, background: C.card, borderRadius: 10, padding: 4, marginBottom: 28, width: '100%', maxWidth: 300 }}>
+        <button style={modeTabStyle(mode === 'local')}  onClick={() => setMode('local')}>🖧 {r.mode_local}</button>
+        <button style={modeTabStyle(mode === 'online')} onClick={() => setMode('online')}>🌐 {r.mode_online}</button>
+      </div>
+
+      {/* ── URL en ligne (mode online uniquement) ── */}
+      {mode === 'online' && (
+        <div style={{ width: '100%', maxWidth: 720, marginBottom: 20 }}>
+          <label style={{ ...styles.label, marginBottom: 6 }}>{r.url_serveur}</label>
+          <input
+            style={inputStyle(focusURL)}
+            placeholder={r.url_placeholder}
+            value={onlineURL}
+            onChange={e => setOnlineURL(e.target.value)}
+            onFocus={() => setFocusURL(true)}
+            onBlur={() => setFocusURL(false)}
+          />
+        </div>
+      )}
 
       <div style={styles.cardsRow}>
 
@@ -92,7 +133,7 @@ export default function VueAccueil({ onCreer, onRejoindre, isLoading }) {
             <div style={styles.cardAvatar}>+</div>
             <div>
               <div style={styles.cardTitre}>{r.creer}</div>
-              <div style={styles.cardSous}>Tu seras l'hôte de la partie</div>
+              <div style={styles.cardSous}>{mode === 'online' ? r.url_serveur : 'Tu seras l\'hôte de la partie'}</div>
             </div>
           </div>
           <div style={styles.spacer} />
@@ -105,12 +146,12 @@ export default function VueAccueil({ onCreer, onRejoindre, isLoading }) {
               onChange={e => setPrenomCreateur(e.target.value)}
               onFocus={() => setFocusCreer(true)}
               onBlur={() => setFocusCreer(false)}
-              onKeyDown={e => e.key === 'Enter' && !disabledCreer && onCreer(prenomCreateur.trim())}
+              onKeyDown={e => e.key === 'Enter' && !disabledCreer && handleCreer()}
             />
           </div>
           <button
             style={primaryButtonStyle(disabledCreer)}
-            onClick={() => !disabledCreer && onCreer(prenomCreateur.trim())}
+            onClick={handleCreer}
             onMouseEnter={e => { if (!disabledCreer) e.currentTarget.style.background = C.violetHover }}
             onMouseLeave={e => { if (!disabledCreer) e.currentTarget.style.background = C.violet }}
           >
@@ -140,21 +181,24 @@ export default function VueAccueil({ onCreer, onRejoindre, isLoading }) {
             />
           </div>
 
-          {/* ── Découverte réseau (Electron uniquement) ── */}
-          {isElectron && (
+          {/* ── Serveur : local ou en ligne ── */}
+          {mode === 'local' && (
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                <span style={{ color: C.textSub, fontSize: 12 }}>Serveur hôte</span>
-                <button
-                  onClick={lancerScan}
-                  disabled={scanning}
-                  style={{ background: 'transparent', border: `1px solid ${C.cardBorder}`, color: C.textSub, borderRadius: 6, padding: '3px 10px', fontSize: 11, cursor: 'pointer' }}
-                >
-                  {scanning ? '⟳ Recherche...' : '🔍 Rechercher'}
-                </button>
-              </div>
+              {/* Scan automatique (Electron) */}
+              {isElectron && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                  <span style={{ color: C.textSub, fontSize: 12 }}>Serveur hôte</span>
+                  <button
+                    onClick={lancerScan}
+                    disabled={scanning}
+                    style={{ background: 'transparent', border: `1px solid ${C.cardBorder}`, color: C.textSub, borderRadius: 6, padding: '3px 10px', fontSize: 11, cursor: 'pointer' }}
+                  >
+                    {scanning ? '⟳ Recherche...' : '🔍 Rechercher'}
+                  </button>
+                </div>
+              )}
 
-              {/* Liste des serveurs trouvés */}
+              {/* Résultats scan */}
               {serveurs.length > 0 && (
                 <div style={{ border: `1px solid ${C.cardBorder}`, borderRadius: 8, overflow: 'hidden', marginBottom: 8 }}>
                   {serveurs.map(s => (
@@ -175,13 +219,16 @@ export default function VueAccueil({ onCreer, onRejoindre, isLoading }) {
                 </div>
               )}
 
-              {serveurs.length === 0 && !scanning && (
-                <p style={{ color: C.textMuted, fontSize: 11, marginBottom: 6 }}>
-                  {serveurChoisi
-                    ? `✅ ${serveurChoisi.hostname} (${serveurChoisi.ip})`
-                    : 'Même machine ou cliquer Rechercher'}
-                </p>
-              )}
+              {/* IP manuelle */}
+              <label style={{ ...styles.label, marginTop: 4 }}>{r.ip_manuelle}</label>
+              <input
+                style={inputStyle(focusIP)}
+                placeholder={r.ip_placeholder}
+                value={ipManuelle}
+                onChange={e => { setIpManuelle(e.target.value); setServeurChoisi(null) }}
+                onFocus={() => setFocusIP(true)}
+                onBlur={() => setFocusIP(false)}
+              />
             </div>
           )}
 
@@ -218,7 +265,9 @@ export default function VueAccueil({ onCreer, onRejoindre, isLoading }) {
 
       </div>
 
-      <p style={styles.footer}><WifiIcon /> {r.info_wifi}</p>
+      <p style={styles.footer}>
+        {mode === 'local' ? <><WifiIcon /> {r.info_wifi}</> : <><GlobeIcon /> {r.url_serveur}</>}
+      </p>
     </div>
   )
 }
@@ -231,4 +280,7 @@ function SearchIcon() {
 }
 function WifiIcon() {
   return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+}
+function GlobeIcon() {
+  return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
 }

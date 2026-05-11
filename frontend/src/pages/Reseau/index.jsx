@@ -3,10 +3,11 @@ import { useNavigate } from 'react-router-dom'
 import useSocket, { getSocket, resetSocketToServer } from '../../hooks/useSocket'
 import useGameStore from '../../store/useGameStore'
 import { creerPartie, verifierPartie } from '../../api/parties'
-import { getServerURL } from '../../config/config'
 import VueAccueil from './VueAccueil'
 import SalleAttente from './SalleAttente'
 import EcranErreur from './EcranErreur'
+
+const LOCAL_URL = 'http://127.0.0.1:7777'
 
 export default function Reseau() {
   const navigate = useNavigate()
@@ -25,15 +26,31 @@ export default function Reseau() {
     return () => s.off('partie_demarree', handler)
   }, [])
 
-  async function handleCreer(prenom) {
+  function connecterSocket(url) {
+    if (url !== LOCAL_URL) {
+      const s = resetSocketToServer(url)
+      s.once('partie_demarree', (data) => {
+        setEtatServeur(data)
+        setCodeRoom(data.code)
+        setEtatPartie('en_cours')
+        navigate('/jeu')
+      })
+      return s
+    }
+    return getSocket()
+  }
+
+  async function handleCreer(prenom, serverURL = LOCAL_URL) {
     if (isLoading) return
     setIsLoading(true)
     try {
-      const data = await creerPartie(prenom)
+      const data = await creerPartie(prenom, serverURL)
+      const s    = connecterSocket(serverURL)
       reinitialiser()
       setMaCouleur('clair')
       setPrenomJoueur(prenom)
-      socket.emit('rejoindre', { code: data.code, prenom })
+      if (!s.connected) s.connect()
+      s.emit('rejoindre', { code: data.code, prenom })
       setCodePartie(data.code)
       setPrenomHote(prenom)
       setVue('attente')
@@ -44,28 +61,13 @@ export default function Reseau() {
     }
   }
 
-  async function handleRejoindre(prenom, code, serverURL) {
+  async function handleRejoindre(prenom, code, serverURL = LOCAL_URL) {
     if (isLoading) return
     setIsLoading(true)
     try {
-      const url = serverURL || getServerURL()
-      let s
-      if (url !== 'http://127.0.0.1:7777') {
-        s = resetSocketToServer(url)
-        // Le useSocket hook a ses listeners sur l'ancien socket (détruit) — on les re-attache ici
-        s.once('partie_demarree', (data) => {
-          setEtatServeur(data)
-          setCodeRoom(data.code)
-          setEtatPartie('en_cours')
-          navigate('/jeu')
-        })
-      } else {
-        s = getSocket()
-      }
-
-      const data = await verifierPartie(code, url)
+      const s    = connecterSocket(serverURL)
+      const data = await verifierPartie(code, serverURL)
       if (data.pleine) { setVue('erreur'); return }
-
       reinitialiser()
       setMaCouleur('fonce')
       setPrenomJoueur(prenom)

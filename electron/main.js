@@ -65,28 +65,48 @@ function fetchInfo(ip) {
   })
 }
 
-async function scanSubnet(subnet) {
+function getArpIPs() {
+  return new Promise((resolve) => {
+    const { exec } = require('child_process')
+    const cmd = process.platform === 'win32' ? 'arp -a' : 'arp -n'
+    exec(cmd, (err, stdout) => {
+      if (err) { resolve([]); return }
+      const ips = []
+      const regex = /(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/g
+      let match
+      while ((match = regex.exec(stdout)) !== null) {
+        const ip = match[1]
+        if (!ip.endsWith('.255') && !ip.startsWith('127.') && !ip.startsWith('224.') && !ip.startsWith('239.'))
+          ips.push(ip)
+      }
+      resolve([...new Set(ips)])
+    })
+  })
+}
+
+async function scanReseau() {
+  const [arpIPs, subnets] = await Promise.all([getArpIPs(), Promise.resolve(getSubnets())])
+
+  const subnetIPs = subnets.flatMap(subnet =>
+    Array.from({ length: 254 }, (_, i) => `${subnet}.${i + 1}`)
+  )
+
+  const allIPs = [...new Set([...arpIPs, ...subnetIPs])]
   const results = []
-  const ips = Array.from({ length: 254 }, (_, i) => `${subnet}.${i + 1}`)
-  for (let i = 0; i < ips.length; i += 30) {
-    const groupe = ips.slice(i, i + 30)
+
+  for (let i = 0; i < allIPs.length; i += 30) {
+    const groupe = allIPs.slice(i, i + 30)
     const checks = groupe.map(async (ip) => {
       const ouvert = await checkPort(ip, PORT, 500)
       if (!ouvert) return null
       const info = await fetchInfo(ip)
-      if (info?.status === 'ok') return { ip, hostname: ip, ...info }
+      if (info?.status === 'ok') return { ip, hostname: info.hostname || ip, ...info }
       return null
     })
     const trouves = (await Promise.all(checks)).filter(Boolean)
     results.push(...trouves)
   }
   return results
-}
-
-async function scanReseau() {
-  const subnets = getSubnets()
-  const tous = await Promise.all(subnets.map(scanSubnet))
-  return tous.flat()
 }
 
 // ── Démarrer le backend Python ─────────────────────────────────────────────
