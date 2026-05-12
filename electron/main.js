@@ -161,11 +161,13 @@ function trouverServeur(code) {
 
     // ── Voie 2 : scan réseau via /health (endpoint garanti dans le binaire) ─
     ;(async () => {
+      const localIPs = getLocalIPs()
       const [arpIPs, subnets] = await Promise.all([getArpIPs(), Promise.resolve(getSubnets())])
       const subnetIPs = subnets.flatMap(s =>
         Array.from({ length: 254 }, (_, i) => `${s}.${i + 1}`)
       ).filter(ip => !arpIPs.includes(ip))
-      const allIPs = [...arpIPs, ...subnetIPs]
+      // Exclure les IPs locales : on cherche un AUTRE serveur, pas soi-même
+      const allIPs = [...arpIPs, ...subnetIPs].filter(ip => !localIPs.includes(ip))
 
       // Scan par batches de 30 : port-check 400ms puis /health
       for (let i = 0; i < allIPs.length && !done; i += 30) {
