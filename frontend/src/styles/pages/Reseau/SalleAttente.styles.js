@@ -25,10 +25,10 @@ export function joueurLabelStyle(connected) {
 }
 
 export const styles = {
-  page:        { minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 16px' },
+  page:        { minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 16px', overflowY: 'auto' },
   titre:       { fontSize: 26, fontWeight: 800, color: C.textPrimary, marginBottom: 6 },
   sous:        { color: C.textSub, fontSize: 14, marginBottom: 28 },
-  codeBox:     { border: `2px dashed ${C.cardBorder}`, borderRadius: 20, padding: '20px 48px', marginBottom: 28, textAlign: 'center' },
+  codeBox:     { border: `2px dashed ${C.cardBorder}`, borderRadius: 20, padding: '16px clamp(16px, 8vw, 48px)', marginBottom: 20, textAlign: 'center' },
   codeLabel:   { color: C.textMuted, fontSize: 12, marginBottom: 10 },
   codeChars:   { display: 'flex', gap: 18 },
   codeChar:    { fontSize: 36, fontWeight: 800, color: C.violetLight, letterSpacing: 2 },
