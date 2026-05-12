@@ -114,16 +114,17 @@ async function scanReseau() {
 
 const UDP_PORT = 7778
 
-// Retourne true si cette IP héberge un serveur QOMET (via /health)
-function estServeurQOMET(ip) {
+// Retourne true si cette IP héberge la room avec ce code exact
+function serverHasRoom(ip, code) {
   return new Promise((resolve) => {
     const req = http.get(
-      { hostname: ip, port: PORT, path: '/health', timeout: 800 },
+      { hostname: ip, port: PORT, path: `/parties/${encodeURIComponent(code)}`, timeout: 1000 },
       (res) => {
         let data = ''
         res.on('data', d => data += d)
         res.on('end', () => {
-          try { resolve(JSON.parse(data)?.status === 'ok') }
+          if (res.statusCode !== 200) { resolve(false); return }
+          try { resolve(!JSON.parse(data).pleine) }
           catch { resolve(false) }
         })
       }
@@ -134,6 +135,8 @@ function estServeurQOMET(ip) {
 }
 
 function trouverServeur(code) {
+  const upperCode = code.toUpperCase()
+
   return new Promise((resolve) => {
     let done = false
     const finish = (url) => { if (!done) { done = true; resolve(url) } }
@@ -145,7 +148,7 @@ function trouverServeur(code) {
     sock.on('message', (msg, rinfo) => {
       try {
         const d = JSON.parse(msg.toString())
-        if (d.type === 'found' && d.code === code.toUpperCase()) {
+        if (d.type === 'found' && d.code === upperCode) {
           clearTimeout(globalTimer); try { sock.close() } catch {}
           finish(`http://${rinfo.address}:${PORT}`)
         }
@@ -154,29 +157,27 @@ function trouverServeur(code) {
     sock.on('error', () => {})
     sock.bind(() => {
       sock.setBroadcast(true)
-      const payload = Buffer.from(JSON.stringify({ type: 'find', code: code.toUpperCase() }))
+      const payload = Buffer.from(JSON.stringify({ type: 'find', code: upperCode }))
       ;['255.255.255.255', ...getSubnets().map(s => `${s}.255`)]
         .forEach(addr => sock.send(payload, UDP_PORT, addr, () => {}))
     })
 
-    // ── Voie 2 : scan réseau via /health (endpoint garanti dans le binaire) ─
+    // ── Voie 2 : scan réseau, vérifie /parties/{code} (room exacte) ────────
     ;(async () => {
       const localIPs = getLocalIPs()
       const [arpIPs, subnets] = await Promise.all([getArpIPs(), Promise.resolve(getSubnets())])
       const subnetIPs = subnets.flatMap(s =>
         Array.from({ length: 254 }, (_, i) => `${s}.${i + 1}`)
       ).filter(ip => !arpIPs.includes(ip))
-      // Exclure les IPs locales : on cherche un AUTRE serveur, pas soi-même
       const allIPs = [...arpIPs, ...subnetIPs].filter(ip => !localIPs.includes(ip))
 
-      // Scan par batches de 30 : port-check 400ms puis /health
       for (let i = 0; i < allIPs.length && !done; i += 30) {
         const batch = allIPs.slice(i, i + 30)
         await Promise.all(batch.map(async ip => {
           if (done) return
           const ouvert = await checkPort(ip, PORT, 400)
           if (!ouvert) return
-          const ok = await estServeurQOMET(ip)
+          const ok = await serverHasRoom(ip, upperCode)
           if (ok) { clearTimeout(globalTimer); finish(`http://${ip}:${PORT}`) }
         }))
       }
