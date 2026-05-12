@@ -32,7 +32,7 @@ export const styles = {
   codeLabel:   { color: C.textMuted, fontSize: 12, marginBottom: 10 },
   codeChars:   { display: 'flex', gap: 18 },
   codeChar:    { fontSize: 36, fontWeight: 800, color: C.violetLight, letterSpacing: 2 },
-  joueurs:     { display: 'flex', gap: 16, marginBottom: 24 },
+  joueurs:     { display: 'flex', gap: 16, marginBottom: 24, flexWrap: 'wrap', justifyContent: 'center' },
   attente:     { color: C.textSub, fontSize: 13, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 28 },
   attentePoint:{ width: 8, height: 8, borderRadius: '50%', background: C.textSub, display: 'inline-block' },
   actions:     { display: 'flex', gap: 12 },

@@ -4,6 +4,11 @@
   box-sizing: border-box;
 }
 
+/* ── Responsive mobile ─────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  input, button, select { font-size: 16px !important; } /* évite le zoom iOS */
+}
+
 body {
   background: #0f172a;
   color: #f1f5f9;

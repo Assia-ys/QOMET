@@ -35,7 +35,7 @@ export function modeTabStyle(actif) {
 }
 
 export const styles = {
-  page:             { minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 16px' },
+  page:             { minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 'clamp(16px, 4vw, 40px) 16px' },
   titre:            { fontSize: 30, fontWeight: 800, color: C.textPrimary, marginBottom: 6, textAlign: 'center' },
   sous:             { color: C.textSub, fontSize: 14, marginBottom: 40, textAlign: 'center' },
   cardsRow:         { display: 'flex', gap: 24, width: '100%', maxWidth: 720 },

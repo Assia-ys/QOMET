@@ -5,10 +5,12 @@ import { useLangue } from '../../hooks/useLangue'
 import { palette as C } from '../../styles/palette'
 import { styles, inputStyle, codeInputStyle, primaryButtonStyle, modeTabStyle } from '../../styles/pages/Reseau/VueAccueil.styles'
 import { LOCAL_URL, ONLINE_URL } from '../../config/config'
+import useIsMobile from '../../hooks/useIsMobile'
 
 export default function VueAccueil({ onCreer, onRejoindre, isLoading }) {
-  const navigate = useNavigate()
-  const { t }    = useLangue()
+  const navigate  = useNavigate()
+  const isMobile  = useIsMobile()
+  const { t }     = useLangue()
   const r        = t.reseau
 
   const [prenomCreateur,   setPrenomCreateur]   = useState('')
@@ -116,7 +118,7 @@ export default function VueAccueil({ onCreer, onRejoindre, isLoading }) {
         </>
       )}
 
-      <div style={styles.cardsRow}>
+      <div style={{ ...styles.cardsRow, flexDirection: isMobile ? 'column' : 'row' }}>
 
         {/* ── Créer ── */}
         <div style={styles.card}>
