@@ -114,7 +114,6 @@ async function scanReseau() {
 
 const UDP_PORT = 7778
 
-// Retourne true si cette IP héberge la room avec ce code exact
 function serverHasRoom(ip, code) {
   return new Promise((resolve) => {
     const req = http.get(
@@ -134,57 +133,42 @@ function serverHasRoom(ip, code) {
   })
 }
 
-function trouverServeur(code) {
+async function trouverServeur(code) {
   const upperCode = code.toUpperCase()
+  const localIPs  = getLocalIPs()
 
-  return new Promise((resolve) => {
-    let done = false
-    const finish = (url) => { if (!done) { done = true; resolve(url) } }
+  // ── Étape 1 : trouver tous les serveurs QOMET via /health (pas de race condition)
+  const [arpIPs, subnets] = await Promise.all([getArpIPs(), Promise.resolve(getSubnets())])
+  const subnetIPs = subnets.flatMap(s =>
+    Array.from({ length: 254 }, (_, i) => `${s}.${i + 1}`)
+  ).filter(ip => !arpIPs.includes(ip))
+  const allIPs = [...arpIPs, ...subnetIPs].filter(ip => !localIPs.includes(ip))
 
-    const globalTimer = setTimeout(() => finish(null), 15000)
+  const servers = []
+  for (let i = 0; i < allIPs.length; i += 30) {
+    const batch = allIPs.slice(i, i + 30)
+    const found = await Promise.all(batch.map(async ip => {
+      const ouvert = await checkPort(ip, PORT, 400)
+      if (!ouvert) return null
+      const info = await fetchInfo(ip)  // /health — toujours présent dans le binaire
+      return info?.status === 'ok' ? ip : null
+    }))
+    servers.push(...found.filter(Boolean))
+  }
 
-    // ── Voie 1 : UDP broadcast ──────────────────────────────────────────────
-    const sock = dgram.createSocket({ type: 'udp4', reuseAddr: true })
-    sock.on('message', (msg, rinfo) => {
-      try {
-        const d = JSON.parse(msg.toString())
-        if (d.type === 'found' && d.code === upperCode) {
-          clearTimeout(globalTimer); try { sock.close() } catch {}
-          finish(`http://${rinfo.address}:${PORT}`)
-        }
-      } catch {}
-    })
-    sock.on('error', () => {})
-    sock.bind(() => {
-      sock.setBroadcast(true)
-      const payload = Buffer.from(JSON.stringify({ type: 'find', code: upperCode }))
-      ;['255.255.255.255', ...getSubnets().map(s => `${s}.255`)]
-        .forEach(addr => sock.send(payload, UDP_PORT, addr, () => {}))
-    })
+  if (servers.length === 0) return null
 
-    // ── Voie 2 : scan réseau, vérifie /parties/{code} (room exacte) ────────
-    ;(async () => {
-      const localIPs = getLocalIPs()
-      const [arpIPs, subnets] = await Promise.all([getArpIPs(), Promise.resolve(getSubnets())])
-      const subnetIPs = subnets.flatMap(s =>
-        Array.from({ length: 254 }, (_, i) => `${s}.${i + 1}`)
-      ).filter(ip => !arpIPs.includes(ip))
-      const allIPs = [...arpIPs, ...subnetIPs].filter(ip => !localIPs.includes(ip))
+  // ── Étape 2 : chercher la room exacte — retry 10× toutes les secondes
+  // (le créateur a peut-être pas encore fini de créer la room)
+  for (let attempt = 0; attempt < 10; attempt++) {
+    for (const ip of servers) {
+      const ok = await serverHasRoom(ip, upperCode)
+      if (ok) return `http://${ip}:${PORT}`
+    }
+    if (attempt < 9) await new Promise(r => setTimeout(r, 1000))
+  }
 
-      for (let i = 0; i < allIPs.length && !done; i += 30) {
-        const batch = allIPs.slice(i, i + 30)
-        await Promise.all(batch.map(async ip => {
-          if (done) return
-          const ouvert = await checkPort(ip, PORT, 400)
-          if (!ouvert) return
-          const ok = await serverHasRoom(ip, upperCode)
-          if (ok) { clearTimeout(globalTimer); finish(`http://${ip}:${PORT}`) }
-        }))
-      }
-      clearTimeout(globalTimer)
-      finish(null)
-    })()
-  })
+  return null
 }
 
 // ── Démarrer le backend Python ─────────────────────────────────────────────
