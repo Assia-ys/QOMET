@@ -255,6 +255,12 @@ function creerFenetre() {
   }
 
   win.on('closed', () => { win = null })
+
+  // Ctrl+Shift+I pour ouvrir les DevTools (debug réseau)
+  win.webContents.on('before-input-event', (_, input) => {
+    if (input.control && input.shift && input.key === 'I')
+      win.webContents.openDevTools()
+  })
 }
 
 // ── Cycle de vie de l'app ──────────────────────────────────────────────────
