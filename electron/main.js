@@ -129,24 +129,33 @@ function fetchInfoEtendu(ip) {
   })
 }
 
+async function scanSubnetPourCode(upperCode, onFound) {
+  const subnets = getSubnets()
+  const allIPs  = subnets.flatMap(s => Array.from({ length: 254 }, (_, i) => `${s}.${i + 1}`))
+  console.log('[HTTP-Subnet] Scan de', allIPs.length, 'IPs sur', subnets)
+  for (let i = 0; i < allIPs.length; i += 40) {
+    const batch = allIPs.slice(i, i + 40)
+    await Promise.all(batch.map(async ip => {
+      const info = await fetchInfoEtendu(ip)
+      if (info?.salles?.some(s => s.code === upperCode)) onFound(`http://${ip}:${PORT}`)
+    }))
+  }
+}
+
 function trouverServeur(code) {
   const upperCode = code.toUpperCase()
-  console.log('[Découverte] Recherche du serveur pour le code', upperCode)
+  console.log('[Découverte] Recherche pour le code', upperCode)
 
   return new Promise((resolve) => {
     let done = false
     const finish = (url) => {
       if (done) return
       done = true
-      console.log('[Découverte] Serveur trouvé :', url)
+      console.log('[Découverte]', url ? `Trouvé : ${url}` : 'Timeout — introuvable')
       resolve(url)
     }
 
-    // Timeout global 6 secondes
-    setTimeout(() => {
-      console.log('[Découverte] Timeout — serveur introuvable')
-      finish(null)
-    }, 6000)
+    setTimeout(() => finish(null), 10000)
 
     // ── Voie 1 : UDP broadcast ──────────────────────────────────────────────
     const sock = dgram.createSocket({ type: 'udp4', reuseAddr: true })
@@ -159,7 +168,7 @@ function trouverServeur(code) {
         }
       } catch {}
     })
-    sock.on('error', (e) => console.log('[UDP] Erreur socket :', e.message))
+    sock.on('error', e => console.log('[UDP] Erreur :', e.message))
     sock.bind(() => {
       sock.setBroadcast(true)
       const payload = Buffer.from(JSON.stringify({ type: 'find', code: upperCode }))
@@ -168,14 +177,15 @@ function trouverServeur(code) {
       targets.forEach(addr => sock.send(payload, UDP_PORT, addr, () => {}))
     })
 
-    // ── Voie 2 : HTTP via cache ARP ─────────────────────────────────────────
-    getArpIPs().then(arpIPs => {
-      console.log('[HTTP-ARP] IPs testées :', arpIPs)
-      Promise.all(arpIPs.map(async ip => {
+    // ── Voie 2 : HTTP via ARP puis subnet complet ──────────────────────────
+    getArpIPs().then(async arpIPs => {
+      console.log('[HTTP-ARP] IPs ARP :', arpIPs)
+      await Promise.all(arpIPs.map(async ip => {
         const info = await fetchInfoEtendu(ip)
-        if (info?.salles?.some(s => s.code === upperCode))
-          finish(`http://${ip}:${PORT}`)
+        if (info?.salles?.some(s => s.code === upperCode)) finish(`http://${ip}:${PORT}`)
       }))
+      if (!done) await scanSubnetPourCode(upperCode, finish)
+      finish(null)
     })
   })
 }

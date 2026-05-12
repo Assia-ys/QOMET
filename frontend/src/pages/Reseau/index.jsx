@@ -64,23 +64,28 @@ export default function Reseau() {
   async function handleRejoindre(prenom, code, serverURL = LOCAL_URL) {
     if (isLoading) return
     setIsLoading(true)
+    console.log('[Rejoindre] code:', code, '| electronAPI:', !!window.electronAPI, '| trouverServeur:', !!window.electronAPI?.trouverServeur)
     try {
       let resolvedURL = serverURL
-      // In Electron with no explicit IP, broadcast UDP to find the host automatically
       if (window.electronAPI?.trouverServeur && serverURL === LOCAL_URL) {
+        console.log('[Rejoindre] Lancement découverte...')
         const found = await window.electronAPI.trouverServeur(code)
+        console.log('[Rejoindre] Résultat découverte:', found)
         if (!found) { setVue('erreur'); return }
         resolvedURL = found
       }
+      console.log('[Rejoindre] Connexion vers:', resolvedURL)
       const s    = connecterSocket(resolvedURL)
       const data = await verifierPartie(code, resolvedURL)
+      console.log('[Rejoindre] verifierPartie:', data)
       if (data.pleine) { setVue('erreur'); return }
       reinitialiser()
       setMaCouleur('fonce')
       setPrenomJoueur(prenom)
       if (!s.connected) s.connect()
       s.emit('rejoindre', { code, prenom })
-    } catch {
+    } catch (err) {
+      console.error('[Rejoindre] Erreur:', err?.message || err)
       setVue('erreur')
     } finally {
       setIsLoading(false)
