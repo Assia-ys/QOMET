@@ -76,6 +76,7 @@ export default function VueAccueil({ onCreer, onRejoindre, isLoading }) {
 
   // ── URL du serveur selon le mode ──────────────────────────────────────────
   function getServerURL() {
+    if (!isElectron)           return window.location.origin
     if (mode === 'online')     return ONLINE_URL
     if (ipManuelle.trim())     return `http://${ipManuelle.trim()}:7777`
     if (serveurChoisi)         return `http://${serveurChoisi.ip}:7777`
@@ -102,17 +103,17 @@ export default function VueAccueil({ onCreer, onRejoindre, isLoading }) {
       <h1 style={styles.titre}>{r.titre}</h1>
       <p style={styles.sous}>{r.sous}</p>
 
-      {/* ── Sélecteur de mode ── */}
-      <div style={{ display: 'flex', gap: 4, background: C.card, borderRadius: 10, padding: 4, marginBottom: 28, width: '100%', maxWidth: 300 }}>
-        <button style={modeTabStyle(mode === 'local')}  onClick={() => setMode('local')}>🖧 {r.mode_local}</button>
-        <button style={modeTabStyle(mode === 'online')} onClick={() => setMode('online')}>🌐 {r.mode_online}</button>
-      </div>
-
-      {/* ── Indication mode en ligne ── */}
-      {mode === 'online' && (
-        <div style={{ width: '100%', maxWidth: 720, marginBottom: 20, textAlign: 'center' }}>
-          <span style={{ color: C.textSub, fontSize: 13 }}>🌐 {ONLINE_URL}</span>
-        </div>
+      {/* ── Sélecteur de mode (Electron uniquement) ── */}
+      {isElectron && (
+        <>
+          <div style={{ display: 'flex', gap: 4, background: C.card, borderRadius: 10, padding: 4, marginBottom: 20, width: '100%', maxWidth: 300 }}>
+            <button style={modeTabStyle(mode === 'local')}  onClick={() => setMode('local')}>🖧 {r.mode_local}</button>
+            <button style={modeTabStyle(mode === 'online')} onClick={() => setMode('online')}>🌐 {r.mode_online}</button>
+          </div>
+          {mode === 'online' && (
+            <p style={{ color: C.textSub, fontSize: 12, marginBottom: 16 }}>🌐 {ONLINE_URL}</p>
+          )}
+        </>
       )}
 
       <div style={styles.cardsRow}>
@@ -209,8 +210,8 @@ export default function VueAccueil({ onCreer, onRejoindre, isLoading }) {
                 </div>
               )}
 
-              {/* IP manuelle : seulement si scan effectué et rien trouvé */}
-              {scanFait && serveurs.length === 0 && (
+              {/* IP manuelle : après scan vide OU via bouton "Saisir manuellement" */}
+              {(scanFait && serveurs.length === 0) || ipManuelle ? (
                 <>
                   <label style={{ ...styles.label, marginTop: 4 }}>{r.ip_manuelle}</label>
                   <input
@@ -222,6 +223,13 @@ export default function VueAccueil({ onCreer, onRejoindre, isLoading }) {
                     onBlur={() => setFocusIP(false)}
                   />
                 </>
+              ) : (
+                <button
+                  onClick={() => setScanFait(true)}
+                  style={{ background: 'transparent', border: 'none', color: C.textMuted, fontSize: 11, cursor: 'pointer', textDecoration: 'underline', padding: 0, marginTop: 4 }}
+                >
+                  Saisir l'IP manuellement
+                </button>
               )}
             </div>
           )}
