@@ -20,6 +20,19 @@ function ctx() {
   return _ctx
 }
 
+// Débloque l'AudioContext sur mobile (iOS exige un geste utilisateur)
+function _unlock() {
+  if (!_ctx) {
+    _ctx    = new (window.AudioContext || window.webkitAudioContext)()
+    _master = _ctx.createGain()
+    _master.connect(_ctx.destination)
+    _master.gain.value = _volume
+  }
+  if (_ctx.state === 'suspended') _ctx.resume()
+}
+document.addEventListener('touchstart', _unlock, { once: true })
+document.addEventListener('click',      _unlock, { once: true })
+
 export function setEffectsVolume(pct) {
   _volume = Math.max(0, Math.min(1, pct / 100))
   if (_master) _master.gain.value = _volume
