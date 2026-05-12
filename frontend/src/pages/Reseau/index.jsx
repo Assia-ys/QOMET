@@ -65,8 +65,14 @@ export default function Reseau() {
     if (isLoading) return
     setIsLoading(true)
     try {
-      const s    = connecterSocket(serverURL)
-      const data = await verifierPartie(code, serverURL)
+      let resolvedURL = serverURL
+      // In Electron with no explicit IP, broadcast UDP to find the host automatically
+      if (window.electronAPI?.trouverServeur && serverURL === LOCAL_URL) {
+        const found = await window.electronAPI.trouverServeur(code)
+        if (found) resolvedURL = found
+      }
+      const s    = connecterSocket(resolvedURL)
+      const data = await verifierPartie(code, resolvedURL)
       if (data.pleine) { setVue('erreur'); return }
       reinitialiser()
       setMaCouleur('fonce')

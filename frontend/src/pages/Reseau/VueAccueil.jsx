@@ -59,7 +59,9 @@ function VueLocal({ r, navigate, onCreer, onRejoindre, isLoading, onSwitchOnline
   const [focusRejoindre,   setFocusRejoindre]   = useState(false)
   const [focusCode,        setFocusCode]        = useState(null)
   const [focusIP,          setFocusIP]          = useState(false)
+  const [showManualIP,     setShowManualIP]      = useState(false)
 
+  const isElectron = !!window.electronAPI
   const inputsRef = useRef([])
 
   function handleCodeInput(i, val) {
@@ -155,20 +157,30 @@ function VueLocal({ r, navigate, onCreer, onRejoindre, isLoading, onSwitchOnline
             />
           </div>
 
-          <div>
-            <label style={styles.label}><NetworkIcon /> {r.ip_manuelle}</label>
-            <input
-              style={inputStyle(focusIP)}
-              placeholder={r.ip_placeholder}
-              value={ipHote}
-              onChange={e => setIpHote(e.target.value)}
-              onFocus={() => setFocusIP(true)}
-              onBlur={() => setFocusIP(false)}
-            />
-            <p style={{ color: C.textMuted, fontSize: 11, marginTop: 4 }}>
-              Laisser vide si même machine
+          {(!isElectron || showManualIP) && (
+            <div>
+              <label style={styles.label}><NetworkIcon /> {r.ip_manuelle}</label>
+              <input
+                style={inputStyle(focusIP)}
+                placeholder={r.ip_placeholder}
+                value={ipHote}
+                onChange={e => setIpHote(e.target.value)}
+                onFocus={() => setFocusIP(true)}
+                onBlur={() => setFocusIP(false)}
+              />
+              <p style={{ color: C.textMuted, fontSize: 11, marginTop: 4 }}>
+                Laisser vide si même machine
+              </p>
+            </div>
+          )}
+          {isElectron && !showManualIP && (
+            <p
+              style={{ color: C.textMuted, fontSize: 11, textAlign: 'center', cursor: 'pointer', textDecoration: 'underline' }}
+              onClick={() => setShowManualIP(true)}
+            >
+              Saisir l'IP manuellement
             </p>
-          </div>
+          )}
 
           <div>
             <p style={styles.codeLabel}>{r.code_label}</p>

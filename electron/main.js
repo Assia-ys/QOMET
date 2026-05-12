@@ -3,6 +3,7 @@ const { spawn }  = require('child_process')
 const path       = require('path')
 const http       = require('http')
 const net        = require('net')
+const dgram      = require('dgram')
 const os         = require('os')
 
 const isDev  = process.env.NODE_ENV === 'development'
@@ -107,6 +108,44 @@ async function scanReseau() {
     results.push(...trouves)
   }
   return results
+}
+
+// ── Découverte UDP ─────────────────────────────────────────────────────────────
+
+const UDP_PORT = 7778
+
+function trouverServeur(code, timeout = 3000) {
+  return new Promise((resolve) => {
+    const sock = dgram.createSocket({ type: 'udp4', reuseAddr: true })
+    let done = false
+
+    const finish = (result) => {
+      if (done) return
+      done = true
+      clearTimeout(timer)
+      try { sock.close() } catch {}
+      resolve(result)
+    }
+
+    const timer = setTimeout(() => finish(null), timeout)
+
+    sock.on('message', (msg, rinfo) => {
+      try {
+        const data = JSON.parse(msg.toString())
+        if (data.type === 'found' && data.code === code.toUpperCase())
+          finish(`http://${rinfo.address}:${PORT}`)
+      } catch {}
+    })
+
+    sock.on('error', () => finish(null))
+
+    sock.bind(() => {
+      sock.setBroadcast(true)
+      const payload = Buffer.from(JSON.stringify({ type: 'find', code: code.toUpperCase() }))
+      const targets = ['255.255.255.255', ...getSubnets().map(s => `${s}.255`)]
+      targets.forEach(addr => sock.send(payload, UDP_PORT, addr, () => {}))
+    })
+  })
 }
 
 // ── Démarrer le backend Python ─────────────────────────────────────────────
@@ -215,6 +254,7 @@ app.on('will-quit', () => arreterBackend())
 ipcMain.on('close-app',  () => app.quit())
 ipcMain.on('minimize',   () => win?.minimize())
 ipcMain.on('maximize',   () => win?.isMaximized() ? win.unmaximize() : win.maximize())
-ipcMain.handle('scan-reseau',  () => scanReseau())
-ipcMain.handle('get-local-ip', () => getLocalIP())
-ipcMain.handle('ouvrir-url',   (_, url) => shell.openExternal(url))
+ipcMain.handle('scan-reseau',      () => scanReseau())
+ipcMain.handle('get-local-ip',     () => getLocalIP())
+ipcMain.handle('ouvrir-url',       (_, url) => shell.openExternal(url))
+ipcMain.handle('trouver-serveur',  (_, code) => trouverServeur(code))
