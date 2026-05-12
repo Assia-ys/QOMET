@@ -299,7 +299,13 @@ async def jouer(sid, data):
 # ── Routes HTTP ────────────────────────────────────────────────────────────────
 @app.get("/health")
 async def health():
-    return {"status": "ok", "port": PORT, "hostname": _socket.gethostname()}
+    return {
+        "status":      "ok",
+        "port":        PORT,
+        "hostname":    _socket.gethostname(),
+        "dist_exists": _dist.exists(),
+        "dist_path":   str(_dist),
+    }
 
 
 # ── Frontend statique (production Railway) ─────────────────────────────────────
