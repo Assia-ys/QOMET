@@ -36,7 +36,7 @@ const fr = {
   // ── Réseau ───────────────────────────────────────────────────────────
   reseau: {
     titre:       'Multijoueur sur réseau local',
-    sous:        'Affrontez un ami humain sur le même réseau Wi-Fi (sans IA)',
+    sous:        'Affrontez un ami humain sur le même réseau Wi-Fi ',
     creer:       'Créer une partie',
     rejoindre:   'Rejoindre une partie',
     prenom:      'Ton prénom',

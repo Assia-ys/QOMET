@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { getSocket } from '../../hooks/useSocket'
 import { useLangue } from '../../hooks/useLangue'
 import { palette as C } from '../../styles/palette'
+import BoutonMenu from '../components/layout/BoutonMenu'
 import { styles, joueurCardStyle, joueurAvatarStyle, joueurNomStyle, joueurLabelStyle } from '../../styles/pages/Reseau/SalleAttente.styles'
 
 export default function SalleAttente({ code, prenom, onAnnuler }) {
@@ -47,14 +48,7 @@ export default function SalleAttente({ code, prenom, onAnnuler }) {
         >
           <span style={{ fontSize: 16 }}>&#10005;</span> {r.annuler}
         </button>
-        <button
-          style={{ ...styles.btn, color: C.textSub }}
-          onClick={() => navigate('/')}
-          onMouseEnter={e => e.currentTarget.style.background = C.cardBorder}
-          onMouseLeave={e => e.currentTarget.style.background = C.card}
-        >
-          <span>&#8592;</span> {t.menu}
-        </button>
+        <BoutonMenu onClick={handleAbandonner} label="Menu" />
       </div>
     </div>
   )
