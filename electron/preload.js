@@ -9,4 +9,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getLocalIP:      () => ipcRenderer.invoke('get-local-ip'),
   ouvrirURL:       (url) => ipcRenderer.invoke('ouvrir-url', url),
   trouverServeur:  (code) => ipcRenderer.invoke('trouver-serveur', code),
+  getNetworkInfo:  ()     => ipcRenderer.invoke('get-network-info'),
 })

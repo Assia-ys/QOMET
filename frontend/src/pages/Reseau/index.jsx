@@ -66,6 +66,10 @@ export default function Reseau() {
     setIsLoading(true)
     console.log('[Rejoindre] code:', code, '| electronAPI:', !!window.electronAPI, '| trouverServeur:', !!window.electronAPI?.trouverServeur)
     try {
+      if (window.electronAPI?.getNetworkInfo) {
+        const net = await window.electronAPI.getNetworkInfo()
+        console.log('[Network] IPs locales:', net.localIPs, '| Subnets:', net.subnets, '| ARP:', net.arpIPs)
+      }
       let resolvedURL = serverURL
       if (window.electronAPI?.trouverServeur && serverURL === LOCAL_URL) {
         console.log('[Rejoindre] Lancement découverte...')

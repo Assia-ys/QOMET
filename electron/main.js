@@ -110,35 +110,33 @@ async function scanReseau() {
   return results
 }
 
-// ── Découverte serveur (UDP + HTTP ARP en parallèle) ──────────────────────────
+// ── Découverte serveur ─────────────────────────────────────────────────────────
 
 const UDP_PORT = 7778
 
-function fetchInfoEtendu(ip) {
+// Retourne true si cette IP héberge un serveur QOMET (via /health)
+function estServeurQOMET(ip) {
   return new Promise((resolve) => {
     const req = http.get(
-      { hostname: ip, port: PORT, path: '/info', timeout: 1500 },
+      { hostname: ip, port: PORT, path: '/health', timeout: 800 },
       (res) => {
         let data = ''
         res.on('data', d => data += d)
-        res.on('end', () => { try { resolve(JSON.parse(data)) } catch { resolve(null) } })
+        res.on('end', () => {
+          try { resolve(JSON.parse(data)?.status === 'ok') }
+          catch { resolve(false) }
+        })
       }
     )
-    req.on('error',   () => resolve(null))
-    req.on('timeout', () => { req.destroy(); resolve(null) })
+    req.on('error',   () => resolve(false))
+    req.on('timeout', () => { req.destroy(); resolve(false) })
   })
 }
 
 function trouverServeur(code) {
-  const upperCode = code.toUpperCase()
-
   return new Promise((resolve) => {
     let done = false
-    const finish = (url) => {
-      if (done) return
-      done = true
-      resolve(url)
-    }
+    const finish = (url) => { if (!done) { done = true; resolve(url) } }
 
     const globalTimer = setTimeout(() => finish(null), 15000)
 
@@ -147,9 +145,8 @@ function trouverServeur(code) {
     sock.on('message', (msg, rinfo) => {
       try {
         const d = JSON.parse(msg.toString())
-        if (d.type === 'found' && d.code === upperCode) {
-          clearTimeout(globalTimer)
-          try { sock.close() } catch {}
+        if (d.type === 'found' && d.code === code.toUpperCase()) {
+          clearTimeout(globalTimer); try { sock.close() } catch {}
           finish(`http://${rinfo.address}:${PORT}`)
         }
       } catch {}
@@ -157,46 +154,30 @@ function trouverServeur(code) {
     sock.on('error', () => {})
     sock.bind(() => {
       sock.setBroadcast(true)
-      const payload = Buffer.from(JSON.stringify({ type: 'find', code: upperCode }))
+      const payload = Buffer.from(JSON.stringify({ type: 'find', code: code.toUpperCase() }))
       ;['255.255.255.255', ...getSubnets().map(s => `${s}.255`)]
         .forEach(addr => sock.send(payload, UDP_PORT, addr, () => {}))
     })
 
-    // ── Voie 2 : Port-check rapide puis /info ──────────────────────────────
+    // ── Voie 2 : scan réseau via /health (endpoint garanti dans le binaire) ─
     ;(async () => {
-      const arpIPs  = await getArpIPs()
-      const subnets = getSubnets()
+      const [arpIPs, subnets] = await Promise.all([getArpIPs(), Promise.resolve(getSubnets())])
       const subnetIPs = subnets.flatMap(s =>
         Array.from({ length: 254 }, (_, i) => `${s}.${i + 1}`)
       ).filter(ip => !arpIPs.includes(ip))
+      const allIPs = [...arpIPs, ...subnetIPs]
 
-      // ARP d'abord (instantané)
-      for (const ip of arpIPs) {
-        if (done) return
-        const ouvert = await checkPort(ip, PORT, 400)
-        if (!ouvert) continue
-        const info = await fetchInfoEtendu(ip)
-        if (info?.salles?.some(s => s.code === upperCode)) {
-          clearTimeout(globalTimer); finish(`http://${ip}:${PORT}`); return
-        }
-      }
-
-      if (done) return
-
-      // Subnet scan en batches de 30 avec port-check 400ms
-      for (let i = 0; i < subnetIPs.length && !done; i += 30) {
-        const batch = subnetIPs.slice(i, i + 30)
+      // Scan par batches de 30 : port-check 400ms puis /health
+      for (let i = 0; i < allIPs.length && !done; i += 30) {
+        const batch = allIPs.slice(i, i + 30)
         await Promise.all(batch.map(async ip => {
           if (done) return
           const ouvert = await checkPort(ip, PORT, 400)
           if (!ouvert) return
-          const info = await fetchInfoEtendu(ip)
-          if (info?.salles?.some(s => s.code === upperCode)) {
-            clearTimeout(globalTimer); finish(`http://${ip}:${PORT}`)
-          }
+          const ok = await estServeurQOMET(ip)
+          if (ok) { clearTimeout(globalTimer); finish(`http://${ip}:${PORT}`) }
         }))
       }
-
       clearTimeout(globalTimer)
       finish(null)
     })()
@@ -319,3 +300,8 @@ ipcMain.handle('scan-reseau',      () => scanReseau())
 ipcMain.handle('get-local-ip',     () => getLocalIP())
 ipcMain.handle('ouvrir-url',       (_, url) => shell.openExternal(url))
 ipcMain.handle('trouver-serveur',  (_, code) => trouverServeur(code))
+ipcMain.handle('get-network-info', async () => ({
+  localIPs: getLocalIPs(),
+  subnets:  getSubnets(),
+  arpIPs:   await getArpIPs(),
+}))
