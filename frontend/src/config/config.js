@@ -1,13 +1,5 @@
-const LOCAL_URL = 'http://127.0.0.1:7777'
-
-// SERVER_URL dynamique : lit l'IP choisie dans localStorage (mode réseau 2 machines)
-export function getServerURL() {
-  if (typeof window !== 'undefined') {
-    const ip = localStorage.getItem('qomet_server_ip')
-    if (ip) return `http://${ip}:7777`
-  }
-  return import.meta.env?.VITE_SERVER_URL || LOCAL_URL
-}
+export const LOCAL_URL  = 'http://127.0.0.1:7777'
+export const ONLINE_URL = import.meta.env?.VITE_SERVER_URL || 'https://qomet-production.up.railway.app'
 
 // Constante pour compatibilité backwards (IA, dev, localhost)
 export const SERVER_URL = LOCAL_URL

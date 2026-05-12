@@ -4,8 +4,7 @@ import BoutonRetour from '../../components/layout/BoutonRetour'
 import { useLangue } from '../../hooks/useLangue'
 import { palette as C } from '../../styles/palette'
 import { styles, inputStyle, codeInputStyle, primaryButtonStyle, modeTabStyle } from '../../styles/pages/Reseau/VueAccueil.styles'
-
-const LOCAL_URL = 'http://127.0.0.1:7777'
+import { LOCAL_URL, ONLINE_URL } from '../../config/config'
 
 export default function VueAccueil({ onCreer, onRejoindre, isLoading }) {
   const navigate = useNavigate()
@@ -21,13 +20,12 @@ export default function VueAccueil({ onCreer, onRejoindre, isLoading }) {
 
   // ── Mode : local ou en ligne ───────────────────────────────────────────────
   const [mode,          setMode]          = useState('local')
-  const [onlineURL,     setOnlineURL]     = useState(() => localStorage.getItem('qomet_online_url') || '')
   const [ipManuelle,    setIpManuelle]    = useState('')
-  const [focusURL,      setFocusURL]      = useState(false)
   const [focusIP,       setFocusIP]       = useState(false)
 
   // ── Découverte réseau (Electron + mode local) ─────────────────────────────
   const [scanning,      setScanning]      = useState(false)
+  const [scanFait,      setScanFait]      = useState(false)
   const [serveurs,      setServeurs]      = useState([])
   const [serveurChoisi, setServeurChoisi] = useState(null)
   const isElectron = typeof window !== 'undefined' && !!window.electronAPI
@@ -36,6 +34,7 @@ export default function VueAccueil({ onCreer, onRejoindre, isLoading }) {
     setScanning(true)
     setServeurs([])
     setServeurChoisi(null)
+    setScanFait(false)
     try {
       const resultats = await window.electronAPI.scanReseau()
       setServeurs(resultats || [])
@@ -43,6 +42,7 @@ export default function VueAccueil({ onCreer, onRejoindre, isLoading }) {
       console.error('Scan échoué:', e)
     }
     setScanning(false)
+    setScanFait(true)
   }
 
   function choisirServeur(s) {
@@ -76,25 +76,23 @@ export default function VueAccueil({ onCreer, onRejoindre, isLoading }) {
 
   // ── URL du serveur selon le mode ──────────────────────────────────────────
   function getServerURL() {
-    if (mode === 'online') return onlineURL.trim()
-    if (ipManuelle.trim()) return `http://${ipManuelle.trim()}:7777`
-    if (serveurChoisi)     return `http://${serveurChoisi.ip}:7777`
+    if (mode === 'online')     return ONLINE_URL
+    if (ipManuelle.trim())     return `http://${ipManuelle.trim()}:7777`
+    if (serveurChoisi)         return `http://${serveurChoisi.ip}:7777`
     return LOCAL_URL
   }
 
   const codeSaisi         = codeInput.join('')
-  const disabledCreer     = isLoading || !prenomCreateur.trim() || (mode === 'online' && !onlineURL.trim())
-  const disabledRejoindre = isLoading || codeSaisi.length < 4 || !prenomRejoignant.trim() || (mode === 'online' && !onlineURL.trim())
+  const disabledCreer     = isLoading || !prenomCreateur.trim()
+  const disabledRejoindre = isLoading || codeSaisi.length < 4 || !prenomRejoignant.trim()
 
   function handleCreer() {
     if (disabledCreer) return
-    if (mode === 'online') localStorage.setItem('qomet_online_url', onlineURL.trim())
     onCreer(prenomCreateur.trim(), getServerURL())
   }
 
   function handleRejoindre() {
     if (disabledRejoindre) return
-    if (mode === 'online') localStorage.setItem('qomet_online_url', onlineURL.trim())
     onRejoindre(prenomRejoignant.trim(), codeSaisi, getServerURL())
   }
 
@@ -110,18 +108,10 @@ export default function VueAccueil({ onCreer, onRejoindre, isLoading }) {
         <button style={modeTabStyle(mode === 'online')} onClick={() => setMode('online')}>🌐 {r.mode_online}</button>
       </div>
 
-      {/* ── URL en ligne (mode online uniquement) ── */}
+      {/* ── Indication mode en ligne ── */}
       {mode === 'online' && (
-        <div style={{ width: '100%', maxWidth: 720, marginBottom: 20 }}>
-          <label style={{ ...styles.label, marginBottom: 6 }}>{r.url_serveur}</label>
-          <input
-            style={inputStyle(focusURL)}
-            placeholder={r.url_placeholder}
-            value={onlineURL}
-            onChange={e => setOnlineURL(e.target.value)}
-            onFocus={() => setFocusURL(true)}
-            onBlur={() => setFocusURL(false)}
-          />
+        <div style={{ width: '100%', maxWidth: 720, marginBottom: 20, textAlign: 'center' }}>
+          <span style={{ color: C.textSub, fontSize: 13 }}>🌐 {ONLINE_URL}</span>
         </div>
       )}
 
@@ -219,16 +209,20 @@ export default function VueAccueil({ onCreer, onRejoindre, isLoading }) {
                 </div>
               )}
 
-              {/* IP manuelle */}
-              <label style={{ ...styles.label, marginTop: 4 }}>{r.ip_manuelle}</label>
-              <input
-                style={inputStyle(focusIP)}
-                placeholder={r.ip_placeholder}
-                value={ipManuelle}
-                onChange={e => { setIpManuelle(e.target.value); setServeurChoisi(null) }}
-                onFocus={() => setFocusIP(true)}
-                onBlur={() => setFocusIP(false)}
-              />
+              {/* IP manuelle : seulement si scan effectué et rien trouvé */}
+              {scanFait && serveurs.length === 0 && (
+                <>
+                  <label style={{ ...styles.label, marginTop: 4 }}>{r.ip_manuelle}</label>
+                  <input
+                    style={inputStyle(focusIP)}
+                    placeholder={r.ip_placeholder}
+                    value={ipManuelle}
+                    onChange={e => { setIpManuelle(e.target.value); setServeurChoisi(null) }}
+                    onFocus={() => setFocusIP(true)}
+                    onBlur={() => setFocusIP(false)}
+                  />
+                </>
+              )}
             </div>
           )}
 
