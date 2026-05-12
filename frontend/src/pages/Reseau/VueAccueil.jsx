@@ -32,7 +32,10 @@ export default function VueAccueil({ onCreer, onRejoindre, isLoading }) {
           </p>
           <button
             style={{ ...primaryButtonStyle(false), marginTop: 4 }}
-            onClick={() => window.open(ONLINE_URL, '_blank')}
+            onClick={() => window.electronAPI?.ouvrirURL
+            ? window.electronAPI.ouvrirURL(ONLINE_URL)
+            : window.open(ONLINE_URL, '_blank')
+          }
             onMouseEnter={e => { e.currentTarget.style.background = C.violetHover }}
             onMouseLeave={e => { e.currentTarget.style.background = C.violet }}
           >
