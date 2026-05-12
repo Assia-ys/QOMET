@@ -69,7 +69,8 @@ export default function Reseau() {
       // In Electron with no explicit IP, broadcast UDP to find the host automatically
       if (window.electronAPI?.trouverServeur && serverURL === LOCAL_URL) {
         const found = await window.electronAPI.trouverServeur(code)
-        if (found) resolvedURL = found
+        if (!found) { setVue('erreur'); return }
+        resolvedURL = found
       }
       const s    = connecterSocket(resolvedURL)
       const data = await verifierPartie(code, resolvedURL)

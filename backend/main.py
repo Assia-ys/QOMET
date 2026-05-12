@@ -1,9 +1,9 @@
 import asyncio
 import json
 import socket as _socket
+import threading
 import uvicorn
 import socketio
-from contextlib import asynccontextmanager
 from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -20,35 +20,34 @@ from backend.api.routes import router as parties_router
 from backend.ai.minimax import coup_facile, coup_minimax
 
 # ── UDP découverte LAN ─────────────────────────────────────────────────────────
+# socketio.ASGIApp absorbe les lifespan events sans les propager à FastAPI,
+# donc on démarre le serveur UDP dans un thread daemon au chargement du module.
 UDP_PORT = 7778
 
-class _UDPDiscovery(asyncio.DatagramProtocol):
-    def __init__(self): self.transport = None
-    def connection_made(self, transport): self.transport = transport
-    def datagram_received(self, data, addr):
-        try:
-            msg = json.loads(data.decode())
-            if msg.get('type') == 'find':
-                code = msg.get('code', '').upper()
-                if code in rooms and not room_est_pleine(code):
-                    resp = json.dumps({'type': 'found', 'code': code}).encode()
-                    self.transport.sendto(resp, addr)
-        except Exception:
-            pass
-
-@asynccontextmanager
-async def lifespan(_: FastAPI):
-    loop = asyncio.get_event_loop()
+def _udp_server_thread():
+    sock = _socket.socket(_socket.AF_INET, _socket.SOCK_DGRAM)
+    sock.setsockopt(_socket.SOL_SOCKET, _socket.SO_REUSEADDR, 1)
+    sock.setsockopt(_socket.SOL_SOCKET, _socket.SO_BROADCAST, 1)
     try:
-        await loop.create_datagram_endpoint(
-            _UDPDiscovery,
-            local_addr=('0.0.0.0', UDP_PORT),
-            allow_broadcast=True,
-        )
+        sock.bind(('0.0.0.0', UDP_PORT))
         print(f'[UDP] Découverte active sur port {UDP_PORT}')
+        while True:
+            try:
+                data, addr = sock.recvfrom(1024)
+                msg = json.loads(data.decode())
+                if msg.get('type') == 'find':
+                    code = msg.get('code', '').upper()
+                    if code in rooms and not room_est_pleine(code):
+                        resp = json.dumps({'type': 'found', 'code': code}).encode()
+                        sock.sendto(resp, addr)
+            except Exception:
+                pass
     except Exception as e:
-        print(f'[UDP] Impossible de démarrer la découverte : {e}')
-    yield
+        print(f'[UDP] Erreur démarrage : {e}')
+    finally:
+        sock.close()
+
+threading.Thread(target=_udp_server_thread, daemon=True).start()
 
 # ── Socket.io ──────────────────────────────────────────────────────────────────
 sio = socketio.AsyncServer(
@@ -57,7 +56,7 @@ sio = socketio.AsyncServer(
 )
 
 # ── FastAPI ────────────────────────────────────────────────────────────────────
-app = FastAPI(title="QOMET API", lifespan=lifespan)
+app = FastAPI(title="QOMET API")
 
 app.add_middleware(
     CORSMiddleware,
