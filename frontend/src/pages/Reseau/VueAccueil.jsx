@@ -210,27 +210,6 @@ export default function VueAccueil({ onCreer, onRejoindre, isLoading }) {
                 </div>
               )}
 
-              {/* IP manuelle : après scan vide OU via bouton "Saisir manuellement" */}
-              {(scanFait && serveurs.length === 0) || ipManuelle ? (
-                <>
-                  <label style={{ ...styles.label, marginTop: 4 }}>{r.ip_manuelle}</label>
-                  <input
-                    style={inputStyle(focusIP)}
-                    placeholder={r.ip_placeholder}
-                    value={ipManuelle}
-                    onChange={e => { setIpManuelle(e.target.value); setServeurChoisi(null) }}
-                    onFocus={() => setFocusIP(true)}
-                    onBlur={() => setFocusIP(false)}
-                  />
-                </>
-              ) : (
-                <button
-                  onClick={() => setScanFait(true)}
-                  style={{ background: 'transparent', border: 'none', color: C.textMuted, fontSize: 11, cursor: 'pointer', textDecoration: 'underline', padding: 0, marginTop: 4 }}
-                >
-                  Saisir l'IP manuellement
-                </button>
-              )}
             </div>
           )}
 
