@@ -26,7 +26,7 @@ export function boutonCommencerStyle(actif) {
 }
 
 export const styles = {
-  page:     { position: 'relative', minHeight: '100vh', background: palette.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 'clamp(16px, 4vw, 32px)', color: '#fff' },
+  page:     { position: 'relative', minHeight: '100vh', background: palette.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '70px 16px 20px', color: '#fff' },
   titre:    { fontSize: 36, fontWeight: 700, marginBottom: 4 },
   sous:     { color: palette.textSub, marginBottom: 40 },
   grille:   { display: 'flex', gap: 24, marginBottom: 40, flexWrap: 'wrap', justifyContent: 'center' },

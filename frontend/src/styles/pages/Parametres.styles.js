@@ -20,7 +20,7 @@ export function boutonLangueStyle(actif) {
 }
 
 export const styles = {
-  page:         { minHeight: '100vh', background: palette.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '2rem', color: '#fff', position: 'relative' },
+  page:         { minHeight: '100vh', background: palette.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '70px 16px 20px', color: '#fff', position: 'relative' },
   titre:        { fontSize: 32, fontWeight: 700, marginBottom: 4 },
   sous:         { color: palette.textSub, marginBottom: 32 },
   section:      { background: palette.card, borderRadius: 16, padding: '1.5rem', width: '100%', maxWidth: 560, marginBottom: 16 },
