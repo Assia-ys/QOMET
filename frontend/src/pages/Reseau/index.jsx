@@ -27,17 +27,17 @@ export default function Reseau() {
   }, [])
 
   function connecterSocket(url) {
-    if (url !== LOCAL_URL) {
-      const s = resetSocketToServer(url)
-      s.once('partie_demarree', (data) => {
-        setEtatServeur(data)
-        setCodeRoom(data.code)
-        setEtatPartie('en_cours')
-        navigate('/jeu')
-      })
-      return s
-    }
-    return getSocket()
+    // Toujours reset : si on était joineur sur une partie distante, le socket
+    // global pointe encore vers le serveur distant. Reset garantit qu'on parle
+    // au bon serveur (local ou distant selon url).
+    const s = resetSocketToServer(url)
+    s.once('partie_demarree', (data) => {
+      setEtatServeur(data)
+      setCodeRoom(data.code)
+      setEtatPartie('en_cours')
+      navigate('/jeu')
+    })
+    return s
   }
 
   async function handleCreer(prenom, serverURL = LOCAL_URL) {
