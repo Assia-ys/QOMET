@@ -2,7 +2,7 @@ import { palette } from '../../palette'
 
 export function boutonRetourStyle(survol) {
   return {
-    position: 'absolute', top: 24, left: 24,
+    position: 'fixed', top: 16, left: 16, zIndex: 100,
     background: 'transparent',
     border: `1px solid ${survol ? palette.inputBorder : palette.cardBorder}`,
     borderRadius: 8, padding: '8px 16px',
