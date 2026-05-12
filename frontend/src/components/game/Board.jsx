@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { SET_JOUABLES, EDGES } from '../../utils/boardGeometry'
 import { playPlace, playSlide, playPush, playEject } from '../../hooks/useSounds'
 import { palette } from '../../styles/palette'
@@ -94,7 +94,18 @@ export default function Board({ plateau, selectionne, coupsValides = [], onCellC
   const estSelectionne = (r, c) => selectionne?.[0] === r && selectionne?.[1] === c
   const estCoupValide  = (r, c) => coupsValides.some(([vr, vc]) => vr === r && vc === c)
 
+  const [scale, setScale] = useState(() => Math.min(1, (window.innerWidth - 32) / SVG_SIZE))
+  useEffect(() => {
+    const update = () => setScale(Math.min(1, (window.innerWidth - 32) / SVG_SIZE))
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [])
+
+  const scaledSize = Math.round(SVG_SIZE * scale)
+
   return (
+    <div style={{ width: scaledSize, height: scaledSize, overflow: 'visible', flexShrink: 0 }}>
+    <div style={{ transform: scale < 1 ? `scale(${scale})` : undefined, transformOrigin: 'top left', width: SVG_SIZE, height: SVG_SIZE }}>
     <div style={styles.wrapper}>
       <div style={styles.board}>
 
@@ -175,6 +186,8 @@ export default function Board({ plateau, selectionne, coupsValides = [], onCellC
         })}
 
       </div>
+    </div>
+    </div>
     </div>
   )
 }

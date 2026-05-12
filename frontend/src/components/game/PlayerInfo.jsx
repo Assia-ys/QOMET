@@ -3,12 +3,28 @@ import { useLangue } from '../../hooks/useLangue'
 import { palette } from '../../styles/palette'
 import { styles, playerCardStyle, tourBadgeStyle, niveauDotStyle, niveauTextStyle } from '../../styles/components/game/PlayerInfo.styles'
 
-export default function PlayerInfo({ joueur, estActif, estMoi = true, niveauIA }) {
+export default function PlayerInfo({ joueur, estActif, estMoi = true, niveauIA, compact = false }) {
   const { t }            = useLangue()
   const { fill, stroke } = palette[joueur.couleur]
   const estIA            = joueur.nom === 'IA'
   const couleurNiveau    = palette.niveauCouleur[niveauIA]
   const labelNiveau      = { facile: t.ia.facile, moyen: t.ia.moyen, difficile: t.ia.difficile }
+
+  if (compact) {
+    return (
+      <div style={{ ...playerCardStyle(estActif), minWidth: 0, flex: 1, padding: '8px 12px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+        {estActif && <div style={{ ...tourBadgeStyle(estMoi), marginBottom: 0, fontSize: 9 }}>{estMoi ? t.game.ton_tour : t.game.son_tour}</div>}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <EtoileSVG fill={fill} stroke={stroke} strokeWidth={1.5} innerFill="#fff" size={20} />
+          <span style={{ ...styles.nom, fontSize: 13 }}>{joueur.nom}</span>
+        </div>
+        <div style={{ display: 'flex', gap: 12, fontSize: 11, color: palette.textMuted }}>
+          <span>✋ {joueur.en_main}</span>
+          <span>⬡ {joueur.sur_plateau}</span>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div style={playerCardStyle(estActif)}>

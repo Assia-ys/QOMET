@@ -15,11 +15,13 @@ import { playWin, playLose } from '../hooks/useSounds'
 import { useLangue } from '../hooks/useLangue'
 import { palette } from '../styles/palette'
 import { styles, tempsRestantStyle } from '../styles/pages/Game.styles'
+import useIsMobile from '../hooks/useIsMobile'
 
 export default function Game() {
-  const navigate = useNavigate()
-  const socket   = useSocket()
-  const { t }    = useLangue()
+  const navigate  = useNavigate()
+  const socket    = useSocket()
+  const isMobile  = useIsMobile()
+  const { t }     = useLangue()
   const g        = t.game
 
   const {
@@ -121,14 +123,21 @@ export default function Game() {
         </p>
       )}
 
-      <div style={styles.zoneJeu}>
-        <PlayerInfo joueur={joueurs[0]} estActif={indexJoueurActif === 0} estMoi={joueurs[0].couleur === maCouleur} niveauIA={joueurs[0]?.nom === 'IA' ? niveauIA : undefined} />
+      {isMobile && (
+        <div style={{ display: 'flex', gap: 8, width: '100%', justifyContent: 'space-around' }}>
+          <PlayerInfo joueur={joueurs[0]} estActif={indexJoueurActif === 0} estMoi={joueurs[0].couleur === maCouleur} niveauIA={joueurs[0]?.nom === 'IA' ? niveauIA : undefined} compact />
+          <PlayerInfo joueur={joueurs[1]} estActif={indexJoueurActif === 1} estMoi={joueurs[1].couleur === maCouleur} niveauIA={joueurs[1]?.nom === 'IA' ? niveauIA : undefined} compact />
+        </div>
+      )}
+
+      <div style={{ ...styles.zoneJeu, flexDirection: isMobile ? 'column' : 'row', alignItems: 'center' }}>
+        {!isMobile && <PlayerInfo joueur={joueurs[0]} estActif={indexJoueurActif === 0} estMoi={joueurs[0].couleur === maCouleur} niveauIA={joueurs[0]?.nom === 'IA' ? niveauIA : undefined} />}
         <Board
           plateau={plateau} selectionne={selectionne} coupsValides={coupsValides}
           onCellClick={handleCellClick} phase={phase}
           cellulesGagnantes={new Set(cellulesGagnantes.map(([r, c]) => `${r},${c}`))}
         />
-        <PlayerInfo joueur={joueurs[1]} estActif={indexJoueurActif === 1} estMoi={joueurs[1].couleur === maCouleur} niveauIA={joueurs[1]?.nom === 'IA' ? niveauIA : undefined} />
+        {!isMobile && <PlayerInfo joueur={joueurs[1]} estActif={indexJoueurActif === 1} estMoi={joueurs[1].couleur === maCouleur} niveauIA={joueurs[1]?.nom === 'IA' ? niveauIA : undefined} />}
       </div>
 
       {selectionne && peutEjecter && estMonTour && !estTourIA && (

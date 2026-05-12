@@ -9,7 +9,7 @@ export const styles = {
     minHeight: '100vh', backgroundColor: palette.bg,
     display: 'flex', flexDirection: 'column',
     alignItems: 'center', justifyContent: 'center',
-    gap: 20, padding: 20, position: 'relative',
+    gap: 'clamp(8px, 2vw, 20px)', padding: 'clamp(8px, 2vw, 20px)', position: 'relative',
   },
   bandeau:        { display: 'flex', alignItems: 'center', gap: 16 },
   bandeauTexte:   { color: palette.textSub, fontSize: '0.9rem' },

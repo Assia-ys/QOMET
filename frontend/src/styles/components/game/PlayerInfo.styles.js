@@ -2,7 +2,7 @@ import { palette } from '../../palette'
 
 export function playerCardStyle(estActif) {
   return {
-    padding: 20, borderRadius: 12, minWidth: 180, transition: 'all 0.3s',
+    padding: 20, borderRadius: 12, minWidth: 140, maxWidth: 200, transition: 'all 0.3s',
     background: estActif ? palette.card : palette.cardDark,
     border: `2px solid ${estActif ? palette.violet : palette.cardDark}`,
   }
