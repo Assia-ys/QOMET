@@ -2,8 +2,11 @@ import asyncio
 import socket as _socket
 import uvicorn
 import socketio
+from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 from config.settings import HOST, PORT
 from backend.game.rules import Rules
@@ -297,6 +300,16 @@ async def jouer(sid, data):
 @app.get("/health")
 async def health():
     return {"status": "ok", "port": PORT, "hostname": _socket.gethostname()}
+
+
+# ── Frontend statique (production Railway) ─────────────────────────────────────
+_dist = Path(__file__).parent.parent / 'frontend' / 'src' / 'dist'
+if _dist.exists():
+    app.mount('/assets', StaticFiles(directory=str(_dist / 'assets')), name='assets')
+
+    @app.get('/{full_path:path}', include_in_schema=False)
+    async def serve_spa(_: str):
+        return FileResponse(str(_dist / 'index.html'))
 
 
 # ── Lancement ──────────────────────────────────────────────────────────────────
