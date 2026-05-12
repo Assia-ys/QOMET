@@ -110,40 +110,72 @@ async function scanReseau() {
   return results
 }
 
-// ── Découverte UDP ─────────────────────────────────────────────────────────────
+// ── Découverte serveur (UDP + HTTP ARP en parallèle) ──────────────────────────
 
 const UDP_PORT = 7778
 
-function trouverServeur(code, timeout = 3000) {
+function fetchInfoEtendu(ip) {
   return new Promise((resolve) => {
-    const sock = dgram.createSocket({ type: 'udp4', reuseAddr: true })
-    let done = false
+    const req = http.get(
+      { hostname: ip, port: PORT, path: '/info', timeout: 1500 },
+      (res) => {
+        let data = ''
+        res.on('data', d => data += d)
+        res.on('end', () => { try { resolve(JSON.parse(data)) } catch { resolve(null) } })
+      }
+    )
+    req.on('error',   () => resolve(null))
+    req.on('timeout', () => { req.destroy(); resolve(null) })
+  })
+}
 
-    const finish = (result) => {
+function trouverServeur(code) {
+  const upperCode = code.toUpperCase()
+  console.log('[Découverte] Recherche du serveur pour le code', upperCode)
+
+  return new Promise((resolve) => {
+    let done = false
+    const finish = (url) => {
       if (done) return
       done = true
-      clearTimeout(timer)
-      try { sock.close() } catch {}
-      resolve(result)
+      console.log('[Découverte] Serveur trouvé :', url)
+      resolve(url)
     }
 
-    const timer = setTimeout(() => finish(null), timeout)
+    // Timeout global 6 secondes
+    setTimeout(() => {
+      console.log('[Découverte] Timeout — serveur introuvable')
+      finish(null)
+    }, 6000)
 
+    // ── Voie 1 : UDP broadcast ──────────────────────────────────────────────
+    const sock = dgram.createSocket({ type: 'udp4', reuseAddr: true })
     sock.on('message', (msg, rinfo) => {
       try {
-        const data = JSON.parse(msg.toString())
-        if (data.type === 'found' && data.code === code.toUpperCase())
+        const d = JSON.parse(msg.toString())
+        if (d.type === 'found' && d.code === upperCode) {
+          try { sock.close() } catch {}
           finish(`http://${rinfo.address}:${PORT}`)
+        }
       } catch {}
     })
-
-    sock.on('error', () => finish(null))
-
+    sock.on('error', (e) => console.log('[UDP] Erreur socket :', e.message))
     sock.bind(() => {
       sock.setBroadcast(true)
-      const payload = Buffer.from(JSON.stringify({ type: 'find', code: code.toUpperCase() }))
+      const payload = Buffer.from(JSON.stringify({ type: 'find', code: upperCode }))
       const targets = ['255.255.255.255', ...getSubnets().map(s => `${s}.255`)]
+      console.log('[UDP] Broadcast vers', targets)
       targets.forEach(addr => sock.send(payload, UDP_PORT, addr, () => {}))
+    })
+
+    // ── Voie 2 : HTTP via cache ARP ─────────────────────────────────────────
+    getArpIPs().then(arpIPs => {
+      console.log('[HTTP-ARP] IPs testées :', arpIPs)
+      Promise.all(arpIPs.map(async ip => {
+        const info = await fetchInfoEtendu(ip)
+        if (info?.salles?.some(s => s.code === upperCode))
+          finish(`http://${ip}:${PORT}`)
+      }))
     })
   })
 }
