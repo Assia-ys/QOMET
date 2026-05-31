@@ -1,8 +1,9 @@
-const { app, BrowserWindow, ipcMain, Menu } = require('electron')
+const { app, BrowserWindow, ipcMain, Menu, shell } = require('electron')
 const { spawn }  = require('child_process')
 const path       = require('path')
 const http       = require('http')
 const net        = require('net')
+const dgram      = require('dgram')
 const os         = require('os')
 
 const isDev  = process.env.NODE_ENV === 'development'
@@ -109,6 +110,67 @@ async function scanReseau() {
   return results
 }
 
+// ── Découverte serveur ─────────────────────────────────────────────────────────
+
+const UDP_PORT = 7778
+
+function serverHasRoom(ip, code) {
+  return new Promise((resolve) => {
+    const req = http.get(
+      { hostname: ip, port: PORT, path: `/parties/${encodeURIComponent(code)}`, timeout: 1000 },
+      (res) => {
+        let data = ''
+        res.on('data', d => data += d)
+        res.on('end', () => {
+          if (res.statusCode !== 200) { resolve(false); return }
+          try { resolve(!JSON.parse(data).pleine) }
+          catch { resolve(false) }
+        })
+      }
+    )
+    req.on('error',   () => resolve(false))
+    req.on('timeout', () => { req.destroy(); resolve(false) })
+  })
+}
+
+async function trouverServeur(code) {
+  const upperCode = code.toUpperCase()
+  const localIPs  = getLocalIPs()
+
+  // ── Étape 1 : trouver tous les serveurs QOMET via /health (pas de race condition)
+  const [arpIPs, subnets] = await Promise.all([getArpIPs(), Promise.resolve(getSubnets())])
+  const subnetIPs = subnets.flatMap(s =>
+    Array.from({ length: 254 }, (_, i) => `${s}.${i + 1}`)
+  ).filter(ip => !arpIPs.includes(ip))
+  const allIPs = [...arpIPs, ...subnetIPs].filter(ip => !localIPs.includes(ip))
+
+  const servers = []
+  for (let i = 0; i < allIPs.length; i += 30) {
+    const batch = allIPs.slice(i, i + 30)
+    const found = await Promise.all(batch.map(async ip => {
+      const ouvert = await checkPort(ip, PORT, 400)
+      if (!ouvert) return null
+      const info = await fetchInfo(ip)  // /health — toujours présent dans le binaire
+      return info?.status === 'ok' ? ip : null
+    }))
+    servers.push(...found.filter(Boolean))
+  }
+
+  if (servers.length === 0) return null
+
+  // ── Étape 2 : chercher la room exacte — retry 10× toutes les secondes
+  // (le créateur a peut-être pas encore fini de créer la room)
+  for (let attempt = 0; attempt < 10; attempt++) {
+    for (const ip of servers) {
+      const ok = await serverHasRoom(ip, upperCode)
+      if (ok) return `http://${ip}:${PORT}`
+    }
+    if (attempt < 9) await new Promise(r => setTimeout(r, 1000))
+  }
+
+  return null
+}
+
 // ── Démarrer le backend Python ─────────────────────────────────────────────
 
 function demarrerBackend() {
@@ -184,6 +246,12 @@ function creerFenetre() {
   }
 
   win.on('closed', () => { win = null })
+
+  // Ctrl+Shift+I pour ouvrir les DevTools (debug réseau)
+  win.webContents.on('before-input-event', (_, input) => {
+    if (input.control && input.shift && input.key === 'I')
+      win.webContents.openDevTools()
+  })
 }
 
 // ── Cycle de vie de l'app ──────────────────────────────────────────────────
@@ -215,5 +283,12 @@ app.on('will-quit', () => arreterBackend())
 ipcMain.on('close-app',  () => app.quit())
 ipcMain.on('minimize',   () => win?.minimize())
 ipcMain.on('maximize',   () => win?.isMaximized() ? win.unmaximize() : win.maximize())
-ipcMain.handle('scan-reseau', () => scanReseau())
-ipcMain.handle('get-local-ip', () => getLocalIP())
+ipcMain.handle('scan-reseau',      () => scanReseau())
+ipcMain.handle('get-local-ip',     () => getLocalIP())
+ipcMain.handle('ouvrir-url',       (_, url) => shell.openExternal(url))
+ipcMain.handle('trouver-serveur',  (_, code) => trouverServeur(code))
+ipcMain.handle('get-network-info', async () => ({
+  localIPs: getLocalIPs(),
+  subnets:  getSubnets(),
+  arpIPs:   await getArpIPs(),
+}))

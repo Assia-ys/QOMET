@@ -5,54 +5,64 @@ import { useLangue } from '../../hooks/useLangue'
 import { palette as C } from '../../styles/palette'
 import { styles, inputStyle, codeInputStyle, primaryButtonStyle, modeTabStyle } from '../../styles/pages/Reseau/VueAccueil.styles'
 import { LOCAL_URL, ONLINE_URL } from '../../config/config'
-import useIsMobile from '../../hooks/useIsMobile'
 
 export default function VueAccueil({ onCreer, onRejoindre, isLoading }) {
-  const navigate  = useNavigate()
-  const isMobile  = useIsMobile()
-  const { t }     = useLangue()
-  const r        = t.reseau
+  const navigate        = useNavigate()
+  const { t }           = useLangue()
+  const r               = t.reseau
+  const [onglet, setOnglet] = useState('local')
 
+  if (onglet === 'online') {
+    return (
+      <div style={styles.page}>
+        <BoutonRetour onClick={() => navigate('/')} />
+        <h1 style={styles.titre}>{r.titre_online}</h1>
+
+        <div style={{ display: 'flex', gap: 4, background: C.card, borderRadius: 10, padding: 4, marginBottom: 32, width: '100%', maxWidth: 300 }}>
+          <button style={modeTabStyle(false)} onClick={() => setOnglet('local')}>🖧 {r.mode_local}</button>
+          <button style={modeTabStyle(true)}>🌐 {r.mode_online}</button>
+        </div>
+
+        <div style={{ background: C.card, borderRadius: 20, padding: 40, maxWidth: 380, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20, textAlign: 'center' }}>
+          <div style={{ fontSize: 48 }}>🌐</div>
+          <h2 style={{ color: C.textPrimary, fontSize: 20, fontWeight: 700, margin: 0 }}>Jouer en ligne</h2>
+          <p style={{ color: C.textSub, fontSize: 14, margin: 0, lineHeight: 1.6 }}>
+            Joue avec n'importe qui, depuis n'importe quel réseau.<br/>
+            Aucune configuration requise.
+          </p>
+          <button
+            style={{ ...primaryButtonStyle(false), marginTop: 4 }}
+            onClick={() => window.electronAPI?.ouvrirURL
+            ? window.electronAPI.ouvrirURL(ONLINE_URL)
+            : window.open(ONLINE_URL, '_blank')
+          }
+            onMouseEnter={e => { e.currentTarget.style.background = C.violetHover }}
+            onMouseLeave={e => { e.currentTarget.style.background = C.violet }}
+          >
+            🌐 Accéder au jeu en ligne
+          </button>
+          <p style={{ color: C.textMuted, fontSize: 11, margin: 0 }}>{ONLINE_URL}</p>
+        </div>
+      </div>
+    )
+  }
+
+  return <VueLocal r={r} navigate={navigate} onCreer={onCreer} onRejoindre={onRejoindre}
+                   isLoading={isLoading} onSwitchOnline={() => setOnglet('online')} />
+}
+
+function VueLocal({ r, navigate, onCreer, onRejoindre, isLoading, onSwitchOnline }) {
   const [prenomCreateur,   setPrenomCreateur]   = useState('')
   const [prenomRejoignant, setPrenomRejoignant] = useState('')
   const [codeInput,        setCodeInput]        = useState(['', '', '', ''])
+  const [ipHote,           setIpHote]           = useState('')
   const [focusCreer,       setFocusCreer]       = useState(false)
   const [focusRejoindre,   setFocusRejoindre]   = useState(false)
   const [focusCode,        setFocusCode]        = useState(null)
+  const [focusIP,          setFocusIP]          = useState(false)
+  const [showManualIP,     setShowManualIP]      = useState(false)
 
-  // ── Mode : local ou en ligne ───────────────────────────────────────────────
-  const [mode,          setMode]          = useState('local')
-  const [ipManuelle,    setIpManuelle]    = useState('')
-  const [focusIP,       setFocusIP]       = useState(false)
-
-  // ── Découverte réseau (Electron + mode local) ─────────────────────────────
-  const [scanning,      setScanning]      = useState(false)
-  const [scanFait,      setScanFait]      = useState(false)
-  const [serveurs,      setServeurs]      = useState([])
-  const [serveurChoisi, setServeurChoisi] = useState(null)
-  const isElectron = typeof window !== 'undefined' && !!window.electronAPI
-
-  async function lancerScan() {
-    setScanning(true)
-    setServeurs([])
-    setServeurChoisi(null)
-    setScanFait(false)
-    try {
-      const resultats = await window.electronAPI.scanReseau()
-      setServeurs(resultats || [])
-    } catch (e) {
-      console.error('Scan échoué:', e)
-    }
-    setScanning(false)
-    setScanFait(true)
-  }
-
-  function choisirServeur(s) {
-    setServeurChoisi(s)
-    setIpManuelle('')
-  }
-
-  // ── Code 4 caractères ─────────────────────────────────────────────────────
+  const isElectron = !!window.electronAPI
   const inputsRef = useRef([])
 
   function handleCodeInput(i, val) {
@@ -76,49 +86,26 @@ export default function VueAccueil({ onCreer, onRejoindre, isLoading }) {
     e.preventDefault()
   }
 
-  // ── URL du serveur selon le mode ──────────────────────────────────────────
-  function getServerURL() {
-    if (!isElectron)           return window.location.origin
-    if (mode === 'online')     return ONLINE_URL
-    if (ipManuelle.trim())     return `http://${ipManuelle.trim()}:7777`
-    if (serveurChoisi)         return `http://${serveurChoisi.ip}:7777`
-    return LOCAL_URL
-  }
-
+  // En Electron sans IP saisie → undefined (déclenchera la découverte auto)
+  // Avec IP saisie → URL explicite
+  // En navigateur → undefined (handleRejoindre utilisera SERVER_URL = window.location.origin)
+  const joinURL           = ipHote.trim() ? `http://${ipHote.trim()}:7777` : undefined
   const codeSaisi         = codeInput.join('')
   const disabledCreer     = isLoading || !prenomCreateur.trim()
   const disabledRejoindre = isLoading || codeSaisi.length < 4 || !prenomRejoignant.trim()
 
-  function handleCreer() {
-    if (disabledCreer) return
-    onCreer(prenomCreateur.trim(), getServerURL())
-  }
-
-  function handleRejoindre() {
-    if (disabledRejoindre) return
-    onRejoindre(prenomRejoignant.trim(), codeSaisi, getServerURL())
-  }
-
   return (
     <div style={styles.page}>
       <BoutonRetour onClick={() => navigate('/')} />
-      <h1 style={styles.titre}>{r.titre}</h1>
-      <p style={styles.sous}>{r.sous}</p>
+      <h1 style={styles.titre}>{isElectron ? r.titre : r.titre_online}</h1>
+      <p style={styles.sous}>{isElectron ? r.sous : r.sous_online}</p>
 
-      {/* ── Sélecteur de mode (Electron uniquement) ── */}
-      {isElectron && (
-        <>
-          <div style={{ display: 'flex', gap: 4, background: C.card, borderRadius: 10, padding: 4, marginBottom: 20, width: '100%', maxWidth: 300 }}>
-            <button style={modeTabStyle(mode === 'local')}  onClick={() => setMode('local')}>🖧 {r.mode_local}</button>
-            <button style={modeTabStyle(mode === 'online')} onClick={() => setMode('online')}>🌐 {r.mode_online}</button>
-          </div>
-          {mode === 'online' && (
-            <p style={{ color: C.textSub, fontSize: 12, marginBottom: 16 }}>🌐 {ONLINE_URL}</p>
-          )}
-        </>
-      )}
+      <div style={{ display: 'flex', gap: 4, background: C.card, borderRadius: 10, padding: 4, marginBottom: 28, width: '100%', maxWidth: 300 }}>
+        <button style={modeTabStyle(true)}>🖧 {r.mode_local}</button>
+        <button style={modeTabStyle(false)} onClick={onSwitchOnline}>🌐 {r.mode_online}</button>
+      </div>
 
-      <div style={{ ...styles.cardsRow, flexDirection: isMobile ? 'column' : 'row' }}>
+      <div style={styles.cardsRow}>
 
         {/* ── Créer ── */}
         <div style={styles.card}>
@@ -126,7 +113,7 @@ export default function VueAccueil({ onCreer, onRejoindre, isLoading }) {
             <div style={styles.cardAvatar}>+</div>
             <div>
               <div style={styles.cardTitre}>{r.creer}</div>
-              <div style={styles.cardSous}>{mode === 'online' ? r.url_serveur : 'Tu seras l\'hôte de la partie'}</div>
+              <div style={styles.cardSous}>Tu seras l'hôte de la partie</div>
             </div>
           </div>
           <div style={styles.spacer} />
@@ -139,12 +126,12 @@ export default function VueAccueil({ onCreer, onRejoindre, isLoading }) {
               onChange={e => setPrenomCreateur(e.target.value)}
               onFocus={() => setFocusCreer(true)}
               onBlur={() => setFocusCreer(false)}
-              onKeyDown={e => e.key === 'Enter' && !disabledCreer && handleCreer()}
+              onKeyDown={e => e.key === 'Enter' && !disabledCreer && onCreer(prenomCreateur.trim())}
             />
           </div>
           <button
             style={primaryButtonStyle(disabledCreer)}
-            onClick={handleCreer}
+            onClick={() => !disabledCreer && onCreer(prenomCreateur.trim())}
             onMouseEnter={e => { if (!disabledCreer) e.currentTarget.style.background = C.violetHover }}
             onMouseLeave={e => { if (!disabledCreer) e.currentTarget.style.background = C.violet }}
           >
@@ -174,48 +161,31 @@ export default function VueAccueil({ onCreer, onRejoindre, isLoading }) {
             />
           </div>
 
-          {/* ── Serveur : local ou en ligne ── */}
-          {mode === 'local' && (
+          {(!isElectron || showManualIP) && (
             <div>
-              {/* Scan automatique (Electron) */}
-              {isElectron && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                  <span style={{ color: C.textSub, fontSize: 12 }}>Serveur hôte</span>
-                  <button
-                    onClick={lancerScan}
-                    disabled={scanning}
-                    style={{ background: 'transparent', border: `1px solid ${C.cardBorder}`, color: C.textSub, borderRadius: 6, padding: '3px 10px', fontSize: 11, cursor: 'pointer' }}
-                  >
-                    {scanning ? '⟳ Recherche...' : '🔍 Rechercher'}
-                  </button>
-                </div>
-              )}
-
-              {/* Résultats scan */}
-              {serveurs.length > 0 && (
-                <div style={{ border: `1px solid ${C.cardBorder}`, borderRadius: 8, overflow: 'hidden', marginBottom: 8 }}>
-                  {serveurs.map(s => (
-                    <div
-                      key={s.ip}
-                      onClick={() => choisirServeur(s)}
-                      style={{
-                        padding: '8px 12px', cursor: 'pointer', fontSize: 13,
-                        background: serveurChoisi?.ip === s.ip ? C.violet + '33' : C.card,
-                        borderLeft: `3px solid ${serveurChoisi?.ip === s.ip ? C.violet : 'transparent'}`,
-                        color: C.textPrimary, display: 'flex', justifyContent: 'space-between',
-                      }}
-                    >
-                      <span>🟢 {s.hostname}</span>
-                      <span style={{ color: C.textMuted, fontSize: 11 }}>{s.ip}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-
+              <label style={styles.label}><NetworkIcon /> {r.ip_manuelle}</label>
+              <input
+                style={inputStyle(focusIP)}
+                placeholder={r.ip_placeholder}
+                value={ipHote}
+                onChange={e => setIpHote(e.target.value)}
+                onFocus={() => setFocusIP(true)}
+                onBlur={() => setFocusIP(false)}
+              />
+              <p style={{ color: C.textMuted, fontSize: 11, marginTop: 4 }}>
+                Laisser vide si même machine
+              </p>
             </div>
           )}
+          {isElectron && !showManualIP && (
+            <p
+              style={{ color: C.textMuted, fontSize: 11, textAlign: 'center', cursor: 'pointer', textDecoration: 'underline' }}
+              onClick={() => setShowManualIP(true)}
+            >
+              Saisir l'IP manuellement
+            </p>
+          )}
 
-          {/* ── Code obligatoire ── */}
           <div>
             <p style={styles.codeLabel}>{r.code_label}</p>
             <div style={styles.codeRow}>
@@ -238,7 +208,7 @@ export default function VueAccueil({ onCreer, onRejoindre, isLoading }) {
 
           <button
             style={primaryButtonStyle(disabledRejoindre)}
-            onClick={handleRejoindre}
+            onClick={() => !disabledRejoindre && onRejoindre(prenomRejoignant.trim(), codeSaisi, joinURL)}
             onMouseEnter={e => { if (!disabledRejoindre) e.currentTarget.style.background = C.violetHover }}
             onMouseLeave={e => { if (!disabledRejoindre) e.currentTarget.style.background = C.violet }}
           >
@@ -248,9 +218,7 @@ export default function VueAccueil({ onCreer, onRejoindre, isLoading }) {
 
       </div>
 
-      <p style={styles.footer}>
-        {mode === 'local' ? <><WifiIcon /> {r.info_wifi}</> : <><GlobeIcon /> {r.url_serveur}</>}
-      </p>
+      {isElectron && <p style={styles.footer}><WifiIcon /> {r.info_wifi}</p>}
     </div>
   )
 }
@@ -261,9 +229,9 @@ function PersonIcon() {
 function SearchIcon() {
   return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
 }
+function NetworkIcon() {
+  return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="2" width="6" height="6" rx="1"/><rect x="16" y="2" width="6" height="6" rx="1"/><rect x="9" y="16" width="6" height="6" rx="1"/><path d="M5 8v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8"/><line x1="12" y1="12" x2="12" y2="16"/></svg>
+}
 function WifiIcon() {
   return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
-}
-function GlobeIcon() {
-  return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
 }

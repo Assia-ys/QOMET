@@ -35,8 +35,10 @@ const fr = {
 
   // ── Réseau ───────────────────────────────────────────────────────────
   reseau: {
-    titre:       'Multijoueur sur réseau local',
-    sous:        'Affrontez un ami humain sur le même réseau Wi-Fi ',
+    titre:         'Multijoueur sur réseau local',
+    sous:          'Affrontez un ami humain sur le même réseau Wi-Fi',
+    titre_online:  'Multijoueur en ligne',
+    sous_online:   'Joue avec un ami depuis n\'importe où, aucune configuration requise',
     creer:       'Créer une partie',
     rejoindre:   'Rejoindre une partie',
     prenom:      'Ton prénom',
