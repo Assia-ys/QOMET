@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Music, Globe, Monitor } from 'lucide-react'
 import BoutonRetour from '../components/layout/BoutonRetour'
@@ -9,6 +9,7 @@ import { styles, toggleStyle, boutonLangueStyle } from '../styles/pages/Parametr
 const KEYS = {
   volumeEffets: 'qomet_volume',
   port:         'qomet_port',
+  pleinEcran:   'qomet_plein_ecran',
 }
 
 export default function Parametres() {
@@ -18,7 +19,33 @@ export default function Parametres() {
 
   const [volumeEffets, setVolumeEffets] = useState(() => Number(localStorage.getItem(KEYS.volumeEffets) ?? 65))
   const [port,          setPort]          = useState(() => localStorage.getItem(KEYS.port) ?? '7777')
-  const [pleinEcran,    setPleinEcran]    = useState(false)
+  const [pleinEcran,    setPleinEcran]    = useState(() => localStorage.getItem(KEYS.pleinEcran) === 'true')
+
+  useEffect(() => {
+    if (window.electronAPI?.getFullScreen) {
+      window.electronAPI.getFullScreen().then(v => setPleinEcran(v))
+    } else {
+      setPleinEcran(!!document.fullscreenElement)
+    }
+
+    const onFsChange = () => {
+      if (!window.electronAPI) setPleinEcran(!!document.fullscreenElement)
+    }
+    document.addEventListener('fullscreenchange', onFsChange)
+    return () => document.removeEventListener('fullscreenchange', onFsChange)
+  }, [])
+
+  async function handleTogglePleinEcran(val) {
+    setPleinEcran(val)
+    localStorage.setItem(KEYS.pleinEcran, val)
+    if (window.electronAPI?.setFullScreen) {
+      window.electronAPI.setFullScreen(val)
+    } else if (val) {
+      document.documentElement.requestFullscreen?.()
+    } else {
+      document.exitFullscreen?.()
+    }
+  }
 
   function sauvegarder() {
     localStorage.setItem(KEYS.volumeEffets, volumeEffets)
@@ -63,7 +90,7 @@ export default function Parametres() {
             <span style={styles.champLabel}>{p.plein_ecran}</span>
             <p style={styles.hint}>{p.plein_hint}</p>
           </div>
-          <Toggle actif={pleinEcran} onChange={setPleinEcran} />
+          <Toggle actif={pleinEcran} onChange={handleTogglePleinEcran} />
         </div>
 
         <div style={{ ...styles.rangee, marginTop: 16 }}>

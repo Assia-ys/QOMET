@@ -10,4 +10,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   ouvrirURL:       (url) => ipcRenderer.invoke('ouvrir-url', url),
   trouverServeur:  (code) => ipcRenderer.invoke('trouver-serveur', code),
   getNetworkInfo:  ()     => ipcRenderer.invoke('get-network-info'),
+  setFullScreen:   (val)  => ipcRenderer.invoke('set-fullscreen', val),
+  getFullScreen:   ()     => ipcRenderer.invoke('get-fullscreen'),
 })

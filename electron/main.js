@@ -292,3 +292,5 @@ ipcMain.handle('get-network-info', async () => ({
   subnets:  getSubnets(),
   arpIPs:   await getArpIPs(),
 }))
+ipcMain.handle('set-fullscreen',   (_, val) => win?.setFullScreen(!!val))
+ipcMain.handle('get-fullscreen',   () => win?.isFullScreen() ?? false)
