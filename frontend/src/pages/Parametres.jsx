@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Music, Globe, Monitor } from 'lucide-react'
 import BoutonRetour from '../components/layout/BoutonRetour'
@@ -15,6 +15,7 @@ const KEYS = {
 export default function Parametres() {
   const navigate             = useNavigate()
   const { langue, setLangue, t } = useLangue()
+  const langueOriginale = useRef(langue)
   const p = t.params
 
   const [volumeEffets, setVolumeEffets] = useState(() => Number(localStorage.getItem(KEYS.volumeEffets) ?? 65))
@@ -104,7 +105,7 @@ export default function Parametres() {
 
       <div style={styles.boutons}>
         <button style={styles.btnSave}    onClick={sauvegarder}>{p.sauvegarder}</button>
-        <button style={styles.btnAnnuler} onClick={() => navigate('/')}>{p.annuler}</button>
+        <button style={styles.btnAnnuler} onClick={() => { setLangue(langueOriginale.current); navigate('/') }}>{p.annuler}</button>
       </div>
     </div>
   )
