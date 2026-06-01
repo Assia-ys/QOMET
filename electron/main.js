@@ -3,7 +3,6 @@ const { spawn }  = require('child_process')
 const path       = require('path')
 const http       = require('http')
 const net        = require('net')
-const dgram      = require('dgram')
 const os         = require('os')
 
 const isDev  = process.env.NODE_ENV === 'development'
@@ -112,8 +111,6 @@ async function scanReseau() {
 
 // ── Découverte serveur ─────────────────────────────────────────────────────────
 
-const UDP_PORT = 7778
-
 function serverHasRoom(ip, code) {
   return new Promise((resolve) => {
     const req = http.get(
@@ -133,105 +130,41 @@ function serverHasRoom(ip, code) {
   })
 }
 
-// ── UDP broadcast vers toutes les adresses possibles ──────────────────────────
-function trouverServeurUDP(code, timeoutMs = 3000) {
-  return new Promise((resolve) => {
-    const upperCode = code.toUpperCase()
-    const client    = dgram.createSocket({ type: 'udp4', reuseAddr: true })
-    let   resolved  = false
-
-    const done = (val) => {
-      if (resolved) return
-      resolved = true
-      try { client.close() } catch {}
-      resolve(val)
-    }
-
-    client.on('message', (msg, rinfo) => {
-      try {
-        const data = JSON.parse(msg.toString())
-        if (data.type === 'found' && data.code === upperCode)
-          done(`http://${rinfo.address}:${PORT}`)
-      } catch {}
-    })
-
-    client.on('error', () => done(null))
-
-    client.bind(0, () => {
-      try {
-        client.setBroadcast(true)
-        const payload = Buffer.from(JSON.stringify({ type: 'find', code: upperCode }))
-        const targets = ['255.255.255.255']
-        getSubnets().forEach(s => targets.push(s + '.255'))
-        targets.forEach(addr => {
-          try { client.send(payload, 0, payload.length, UDP_PORT, addr) } catch {}
-        })
-      } catch { done(null) }
-    })
-
-    setTimeout(() => done(null), timeoutMs)
-  })
-}
-
 // Retourne : URL string = trouvé | 'INVALID_CODE' = serveur trouvé mais code inexistant | null = pas de serveur
 async function trouverServeur(code) {
   const upperCode = code.toUpperCase()
   const localIPs  = getLocalIPs()
 
-  // ── ARP + UDP en parallèle ─────────────────────────────────────────────────
-  const [arpIPs, udpResult] = await Promise.all([
-    getArpIPs(),
-    trouverServeurUDP(code),
-  ])
-
-  if (udpResult) {
-    const ip = udpResult.replace('http://', '').replace(`:${PORT}`, '')
-    if (await serverHasRoom(ip, upperCode)) return udpResult
-    return 'INVALID_CODE'
-  }
-
-  // Scan HTTP ARP (voisins directs)
-  const arpFiltered = arpIPs.filter(ip => !localIPs.includes(ip))
-  const arpServers = (await Promise.all(
-    arpFiltered.map(async ip => {
-      if (!await checkPort(ip, PORT, 500)) return null
-      const info = await fetchInfo(ip)
-      return info?.status === 'ok' ? ip : null
-    })
-  )).filter(Boolean)
-
-  for (const ip of arpServers) {
-    if (await serverHasRoom(ip, upperCode)) return `http://${ip}:${PORT}`
-  }
-  if (arpServers.length > 0) return 'INVALID_CODE'
-
-  // ── Fallback : scan complet du sous-réseau ─────────────────────────────────
-  const subnets = getSubnets()
-  const subnetIPs = subnets
-    .flatMap(s => Array.from({ length: 254 }, (_, i) => `${s}.${i + 1}`))
-    .filter(ip => !localIPs.includes(ip) && !arpFiltered.includes(ip))
+  // Étape 1 : scan complet ARP + sous-réseau pour trouver tous les serveurs QOMET
+  const [arpIPs, subnets] = await Promise.all([getArpIPs(), Promise.resolve(getSubnets())])
+  const subnetIPs = subnets.flatMap(s =>
+    Array.from({ length: 254 }, (_, i) => `${s}.${i + 1}`)
+  ).filter(ip => !arpIPs.includes(ip))
+  const allIPs = [...arpIPs, ...subnetIPs].filter(ip => !localIPs.includes(ip))
 
   const servers = []
-  for (let i = 0; i < subnetIPs.length; i += 50) {
-    const batch = subnetIPs.slice(i, i + 50)
-    const found = (await Promise.all(batch.map(async ip => {
-      if (!await checkPort(ip, PORT, 300)) return null
+  for (let i = 0; i < allIPs.length; i += 30) {
+    const batch = allIPs.slice(i, i + 30)
+    const found = await Promise.all(batch.map(async ip => {
+      const ouvert = await checkPort(ip, PORT, 400)
+      if (!ouvert) return null
       const info = await fetchInfo(ip)
       return info?.status === 'ok' ? ip : null
-    }))).filter(Boolean)
-    servers.push(...found)
-    if (servers.length > 0) break
+    }))
+    servers.push(...found.filter(Boolean))
   }
 
+  if (servers.length === 0) return null
+
+  // Étape 2 : chercher la room exacte (3 tentatives, délai 1s — la room peut ne pas être encore créée)
   for (let attempt = 0; attempt < 3; attempt++) {
     for (const ip of servers) {
       if (await serverHasRoom(ip, upperCode)) return `http://${ip}:${PORT}`
     }
     if (attempt < 2) await new Promise(r => setTimeout(r, 1000))
   }
-  if (servers.length > 0) return 'INVALID_CODE'
 
-  return null
+  return 'INVALID_CODE'
 }
 
 // ── Démarrer le backend Python ─────────────────────────────────────────────
