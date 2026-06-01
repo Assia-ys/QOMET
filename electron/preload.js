@@ -12,4 +12,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getNetworkInfo:  ()     => ipcRenderer.invoke('get-network-info'),
   setFullScreen:   (val)  => ipcRenderer.invoke('set-fullscreen', val),
   getFullScreen:   ()     => ipcRenderer.invoke('get-fullscreen'),
+  onMainLog:       (cb)   => ipcRenderer.on('main-log', (_, msg) => cb(msg)),
 })

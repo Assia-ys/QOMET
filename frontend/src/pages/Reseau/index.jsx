@@ -87,34 +87,44 @@ export default function Reseau() {
         // 1) Essai via signaling Railway (fonctionne sur tout réseau, instant)
         let signalingURL = null
         try {
+          console.log('[Rejoindre] Interrogation Railway pour code', code.toUpperCase())
           const res = await fetch(`${ONLINE_URL}/local/find/${code.toUpperCase()}`, {
             signal: AbortSignal.timeout(4000),
           })
           if (res.ok) {
             const info = await res.json()
             signalingURL = `http://${info.ip}:${info.port}`
+            console.log('[Rejoindre] Railway → IP hôte:', signalingURL)
+          } else {
+            console.log('[Rejoindre] Railway → code inconnu (HTTP', res.status, '), fallback scan')
           }
-        } catch {}
+        } catch (e) {
+          console.log('[Rejoindre] Railway injoignable:', e?.message, '→ fallback scan')
+        }
 
         if (signalingURL) {
           resolvedURL = signalingURL
         } else {
-          // 2) Fallback : scan réseau local (ARP + sous-réseau)
+          console.log('[Rejoindre] Lancement scan réseau local...')
           const found = await window.electronAPI.trouverServeur(code)
+          console.log('[Rejoindre] Résultat scan:', found)
           if (!found) { setVue('erreur'); return }
           if (found === 'INVALID_CODE') { setVue('code_invalide'); return }
           resolvedURL = found
         }
       }
+      console.log('[Rejoindre] Connexion vers:', resolvedURL)
       const s    = connecterSocket(resolvedURL)
       const data = await verifierPartie(code, resolvedURL)
+      console.log('[Rejoindre] verifierPartie OK:', data)
       if (data.pleine) { setVue('erreur'); return }
       reinitialiser()
       setMaCouleur('fonce')
       setPrenomJoueur(prenom)
       if (!s.connected) s.connect()
       s.emit('rejoindre', { code, prenom })
-    } catch {
+    } catch (err) {
+      console.error('[Rejoindre] Erreur:', err?.message || err)
       setVue('erreur')
     } finally {
       setIsLoading(false)

@@ -110,6 +110,12 @@ async function scanReseau() {
   return results
 }
 
+// ── Logs vers renderer (visibles dans DevTools via Ctrl+Shift+I) ──────────────
+function log(msg) {
+  console.log(msg)
+  try { win?.webContents?.send('main-log', msg) } catch {}
+}
+
 // ── Découverte serveur ─────────────────────────────────────────────────────────
 
 function serverHasRoom(ip, code) {
@@ -136,12 +142,17 @@ async function trouverServeur(code) {
   const upperCode = code.toUpperCase()
   const localIPs  = getLocalIPs()
 
-  // Étape 1 : scan complet ARP + sous-réseau pour trouver tous les serveurs QOMET
+  log(`[Scan] Démarrage — code: ${upperCode} | IP locales: ${localIPs.join(', ')}`)
+
   const [arpIPs, subnets] = await Promise.all([getArpIPs(), Promise.resolve(getSubnets())])
+  log(`[Scan] ARP: ${arpIPs.length} IPs | Subnets: ${subnets.join(', ')}`)
+
   const subnetIPs = subnets.flatMap(s =>
     Array.from({ length: 254 }, (_, i) => `${s}.${i + 1}`)
   ).filter(ip => !arpIPs.includes(ip))
   const allIPs = [...arpIPs, ...subnetIPs].filter(ip => !localIPs.includes(ip))
+
+  log(`[Scan] Total à tester: ${allIPs.length} IPs (${arpIPs.filter(ip => !localIPs.includes(ip)).length} ARP + ${subnetIPs.filter(ip => !localIPs.includes(ip)).length} subnet)`)
 
   const servers = []
   for (let i = 0; i < allIPs.length; i += 30) {
@@ -149,22 +160,31 @@ async function trouverServeur(code) {
     const found = await Promise.all(batch.map(async ip => {
       const ouvert = await checkPort(ip, PORT, 400)
       if (!ouvert) return null
+      log(`[Scan] Port ouvert sur ${ip}, vérification /health...`)
       const info = await fetchInfo(ip)
+      if (info?.status === 'ok') log(`[Scan] Serveur QOMET trouvé: ${ip} (${info.hostname})`)
       return info?.status === 'ok' ? ip : null
     }))
     servers.push(...found.filter(Boolean))
   }
 
+  log(`[Scan] Serveurs QOMET trouvés: ${servers.length > 0 ? servers.join(', ') : 'aucun'}`)
+
   if (servers.length === 0) return null
 
-  // Étape 2 : chercher la room exacte (3 tentatives, délai 1s — la room peut ne pas être encore créée)
   for (let attempt = 0; attempt < 3; attempt++) {
     for (const ip of servers) {
-      if (await serverHasRoom(ip, upperCode)) return `http://${ip}:${PORT}`
+      const ok = await serverHasRoom(ip, upperCode)
+      log(`[Scan] Room ${upperCode} sur ${ip}: ${ok ? 'OUI ✓' : 'non'}`)
+      if (ok) return `http://${ip}:${PORT}`
     }
-    if (attempt < 2) await new Promise(r => setTimeout(r, 1000))
+    if (attempt < 2) {
+      log(`[Scan] Room pas encore prête, tentative ${attempt + 2}/3...`)
+      await new Promise(r => setTimeout(r, 1000))
+    }
   }
 
+  log(`[Scan] Serveurs trouvés mais code ${upperCode} introuvable → INVALID_CODE`)
   return 'INVALID_CODE'
 }
 
