@@ -19,7 +19,25 @@ jobs:
       - name: Build backend (Mac binary)
         run: |
           pip install -r requirements.txt pyinstaller
-          pyinstaller app.py --name qomet-server --onefile --console
+          pyinstaller app.py \
+            --name qomet-server \
+            --onefile \
+            --console \
+            --paths . \
+            --hidden-import uvicorn.logging \
+            --hidden-import uvicorn.loops \
+            --hidden-import uvicorn.loops.auto \
+            --hidden-import uvicorn.protocols \
+            --hidden-import uvicorn.protocols.http \
+            --hidden-import uvicorn.protocols.http.auto \
+            --hidden-import uvicorn.protocols.websockets \
+            --hidden-import uvicorn.protocols.websockets.auto \
+            --hidden-import uvicorn.lifespan \
+            --hidden-import uvicorn.lifespan.on \
+            --hidden-import engineio.async_drivers.asgi \
+            --hidden-import backend.main \
+            --collect-all socketio \
+            --collect-all engineio
           mkdir -p backend-dist
           cp dist/qomet-server backend-dist/qomet-server-mac
           chmod +x backend-dist/qomet-server-mac
