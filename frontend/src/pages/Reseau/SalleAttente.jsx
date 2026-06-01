@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getSocket } from '../../hooks/useSocket'
 import { useTranslation } from 'react-i18next'
@@ -5,9 +6,16 @@ import { palette as C } from '../../styles/palette'
 import BoutonMenu from '../../components/layout/BoutonMenu'
 import { styles, joueurCardStyle, joueurAvatarStyle, joueurNomStyle, joueurLabelStyle } from '../../styles/pages/Reseau/SalleAttente.styles'
 
-export default function SalleAttente({ code, prenom, onAnnuler }) {
+export default function SalleAttente({ code, prenom, onAnnuler, isLocal = false }) {
   const navigate = useNavigate()
   const { t } = useTranslation()
+  const [localIP, setLocalIP] = useState(null)
+
+  useEffect(() => {
+    if (isLocal && window.electronAPI?.getLocalIP) {
+      window.electronAPI.getLocalIP().then(ip => { if (ip) setLocalIP(ip) }).catch(() => {})
+    }
+  }, [isLocal])
 
   function handleAnnuler() {
     getSocket().emit('quitter')
@@ -26,6 +34,12 @@ export default function SalleAttente({ code, prenom, onAnnuler }) {
             <span key={i} style={styles.codeChar}>{ch}</span>
           ))}
         </div>
+        {isLocal && localIP && (
+          <div style={{ marginTop: 14, background: 'rgba(139,92,246,0.12)', border: `1px solid ${C.violet}`, borderRadius: 10, padding: '8px 18px', textAlign: 'center' }}>
+            <p style={{ color: C.textSub, fontSize: 11, margin: '0 0 2px 0' }}>Ton IP (à donner à ton ami)</p>
+            <p style={{ color: C.violet, fontSize: 18, fontWeight: 700, margin: 0, letterSpacing: 2, fontFamily: 'monospace' }}>{localIP}</p>
+          </div>
+        )}
       </div>
 
       <div style={styles.joueurs}>
