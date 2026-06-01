@@ -14,7 +14,10 @@ let   server = null
 
 // ── Utilitaires réseau ─────────────────────────────────────────────────────────
 
-const ADAPTATEURS_VIRTUELS = ['hyper', 'vethernet', 'vmware', 'virtualbox', 'wsl', 'bluetooth', 'virtual', 'vpn', 'tap', 'tunnel']
+const ADAPTATEURS_VIRTUELS = ['hyper', 'vethernet', 'vmware', 'virtualbox', 'vbox', 'wsl', 'bluetooth', 'virtual', 'vpn', 'tap', 'tunnel', 'loopback']
+
+// Plages IP réservées aux adaptateurs virtuels (VirtualBox, Docker, etc.)
+const PLAGES_VIRTUELLES = ['192.168.56.', '192.168.99.', '192.168.100.', '10.0.2.']
 
 function getLocalIPs() {
   const nets = os.networkInterfaces()
@@ -23,7 +26,9 @@ function getLocalIPs() {
     const lower = name.toLowerCase()
     if (ADAPTATEURS_VIRTUELS.some(s => lower.includes(s))) continue
     for (const iface of ifaces) {
-      if (iface.family === 'IPv4' && !iface.internal) result.push(iface.address)
+      if (iface.family !== 'IPv4' || iface.internal) continue
+      if (PLAGES_VIRTUELLES.some(p => iface.address.startsWith(p))) continue
+      result.push(iface.address)
     }
   }
   return result.length ? result : ['127.0.0.1']
