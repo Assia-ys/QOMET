@@ -19,9 +19,9 @@ jobs:
       - name: Build backend (Mac binary)
         run: |
           pip install -r requirements.txt pyinstaller
-          pyinstaller qomet-server.spec --distpath backend-dist-tmp
+          pyinstaller app.py --name qomet-server --onefile --console
           mkdir -p backend-dist
-          cp backend-dist-tmp/qomet-server backend-dist/qomet-server-mac
+          cp dist/qomet-server backend-dist/qomet-server-mac
           chmod +x backend-dist/qomet-server-mac
 
       - name: Setup Node
