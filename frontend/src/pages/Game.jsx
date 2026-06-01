@@ -111,12 +111,12 @@ export default function Game() {
 
       <BoutonRetour onClick={() => { actions.abandonner(); navigate(modeIA ? '/ia' : '/reseau') }} />
 
-      <div style={styles.bandeau}>
+      {!gagnant && <div style={styles.bandeau}>
         <span style={styles.bandeauTexte}>{joueurActif?.en_main > 0 ? t('game.poser_ou_deplacer') : t('game.deplacer')}</span>
         <span style={styles.chrono}>&#9203; {tempsJeu}</span>
-      </div>
+      </div>}
 
-      {estTourIA && (
+      {!gagnant && estTourIA && (
         <p style={styles.iaThink}>
           <span style={styles.iaDot} /> {t('game.ia_reflechit')}
         </p>
@@ -139,7 +139,7 @@ export default function Game() {
         {!isMobile && <PlayerInfo joueur={joueurs[1]} estActif={indexJoueurActif === 1} estMoi={joueurs[1].couleur === maCouleur} niveauIA={joueurs[1]?.nom === 'IA' ? niveauIA : undefined} />}
       </div>
 
-      {selectionne && peutEjecter && estMonTour && !estTourIA && (
+      {!gagnant && selectionne && peutEjecter && estMonTour && !estTourIA && (
         <div style={styles.ejecterBandeau}>
           <button style={styles.ejecterBtn} onClick={() => {
             actions.jouerEjecter(selectionne[0], selectionne[1])
@@ -150,7 +150,7 @@ export default function Game() {
         </div>
       )}
 
-      <div style={styles.actions}>
+      {!gagnant && <div style={styles.actions}>
         <BoutonMenu onClick={handleAbandonner} label="Menu" />
         {!modeIA && (
           <Button label={t('game.pause')} couleur="#1e40af" onClick={() => {
@@ -159,7 +159,7 @@ export default function Game() {
           }} />
         )}
         <Button label={t('game.abandonner')} couleur="#dc2626" onClick={() => setAbandonVisible(true)} />
-      </div>
+      </div>}
 
       {pauseVisible && (
         <Modal>
