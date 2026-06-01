@@ -133,11 +133,61 @@ function serverHasRoom(ip, code) {
   })
 }
 
+// ── UDP broadcast : demande directe au serveur hôte ───────────────────────────
+function trouverServeurUDP(code, timeoutMs = 4000) {
+  return new Promise((resolve) => {
+    const upperCode = code.toUpperCase()
+    const client    = dgram.createSocket('udp4')
+    let   resolved  = false
+
+    const done = (val) => {
+      if (resolved) return
+      resolved = true
+      try { client.close() } catch {}
+      resolve(val)
+    }
+
+    client.on('message', (msg, rinfo) => {
+      try {
+        const data = JSON.parse(msg.toString())
+        if (data.type === 'found' && data.code === upperCode)
+          done(`http://${rinfo.address}:${PORT}`)
+      } catch {}
+    })
+
+    client.on('error', () => done(null))
+
+    client.bind(() => {
+      try {
+        client.setBroadcast(true)
+        const payload = Buffer.from(JSON.stringify({ type: 'find', code: upperCode }))
+        // Broadcast sur le réseau local + sous-réseaux connus
+        client.send(payload, 0, payload.length, UDP_PORT, '255.255.255.255')
+        getSubnets().forEach(subnet => {
+          const broadcast = subnet + '.255'
+          client.send(payload, 0, payload.length, UDP_PORT, broadcast)
+        })
+      } catch { done(null) }
+    })
+
+    setTimeout(() => done(null), timeoutMs)
+  })
+}
+
 async function trouverServeur(code) {
   const upperCode = code.toUpperCase()
-  const localIPs  = getLocalIPs()
 
-  // ── Étape 1 : trouver tous les serveurs QOMET via /health (pas de race condition)
+  // ── Étape 1 : UDP broadcast (rapide, ~2-4s) ────────────────────────────────
+  const udpResult = await trouverServeurUDP(code)
+  if (udpResult) {
+    // Vérifier que la room existe bien sur ce serveur
+    const ip = udpResult.replace(`http://`, '').replace(`:${PORT}`, '')
+    const ok = await serverHasRoom(ip, upperCode)
+    if (ok) return udpResult
+  }
+
+  // ── Étape 2 : fallback HTTP scan (si UDP bloqué par le réseau) ─────────────
+  const localIPs = getLocalIPs()
   const [arpIPs, subnets] = await Promise.all([getArpIPs(), Promise.resolve(getSubnets())])
   const subnetIPs = subnets.flatMap(s =>
     Array.from({ length: 254 }, (_, i) => `${s}.${i + 1}`)
@@ -150,7 +200,7 @@ async function trouverServeur(code) {
     const found = await Promise.all(batch.map(async ip => {
       const ouvert = await checkPort(ip, PORT, 400)
       if (!ouvert) return null
-      const info = await fetchInfo(ip)  // /health — toujours présent dans le binaire
+      const info = await fetchInfo(ip)
       return info?.status === 'ok' ? ip : null
     }))
     servers.push(...found.filter(Boolean))
@@ -158,14 +208,12 @@ async function trouverServeur(code) {
 
   if (servers.length === 0) return null
 
-  // ── Étape 2 : chercher la room exacte — retry 10× toutes les secondes
-  // (le créateur a peut-être pas encore fini de créer la room)
-  for (let attempt = 0; attempt < 10; attempt++) {
+  for (let attempt = 0; attempt < 5; attempt++) {
     for (const ip of servers) {
       const ok = await serverHasRoom(ip, upperCode)
       if (ok) return `http://${ip}:${PORT}`
     }
-    if (attempt < 9) await new Promise(r => setTimeout(r, 1000))
+    if (attempt < 4) await new Promise(r => setTimeout(r, 1000))
   }
 
   return null
