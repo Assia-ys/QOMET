@@ -36,7 +36,7 @@ jobs:
         run: cd frontend/src && npm install
 
       - name: Build Electron app (Mac)
-        run: npm run electron:mac
+        run: vite build && electron-builder --mac --publish never
 
       - name: Upload DMG
         uses: actions/upload-artifact@v4
