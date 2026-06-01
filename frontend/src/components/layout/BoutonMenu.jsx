@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { Home } from 'lucide-react'
-import { useLangue } from '../../hooks/useLangue'
+import { useTranslation } from 'react-i18next'
 import { boutonMenuStyle } from '../../styles/components/layout/BoutonMenu.styles'
 
 export default function BoutonMenu({ onClick, label, fullWidth = false, taille = 'normal' }) {
-  const { t }    = useLangue()
-  const texte    = label ?? t.menu
+  const { t }    = useTranslation()
+  const texte    = label ?? t('menu')
   const petit    = taille === 'petit'
   const [survol, setSurvol] = useState(false)
 

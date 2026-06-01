@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import BoutonRetour from '../../components/layout/BoutonRetour'
-import { useLangue } from '../../hooks/useLangue'
+import { useTranslation } from 'react-i18next'
 import { palette as C } from '../../styles/palette'
 import { styles, inputStyle, codeInputStyle, primaryButtonStyle, modeTabStyle } from '../../styles/pages/Reseau/VueAccueil.styles'
 import { LOCAL_URL, ONLINE_URL } from '../../config/config'
@@ -10,12 +10,11 @@ export default function VueAccueil({ onCreer, onRejoindre, isLoading }) {
   const isElectron      = !!window.electronAPI
   const [onglet, setOnglet] = useState('local')
   const navigate        = useNavigate()
-  const { t }           = useLangue()
-  const r               = t.reseau
+  const { t }           = useTranslation()
 
   // ── Navigateur (Railway) : page en ligne directe, sans tabs ───────────
   if (!isElectron) {
-    return <VueOnline r={r} navigate={navigate} onCreer={onCreer} onRejoindre={onRejoindre} isLoading={isLoading} />
+    return <VueOnline navigate={navigate} onCreer={onCreer} onRejoindre={onRejoindre} isLoading={isLoading} />
   }
 
   // ── Electron : tab "En ligne" (lien Railway) ───────────────────────────
@@ -23,19 +22,18 @@ export default function VueAccueil({ onCreer, onRejoindre, isLoading }) {
     return (
       <div style={styles.page}>
         <BoutonRetour onClick={() => navigate('/')} />
-        <h1 style={styles.titre}>{r.titre_online}</h1>
+        <h1 style={styles.titre}>{t('reseau.titre_online')}</h1>
 
         <div style={{ display: 'flex', gap: 4, background: C.card, borderRadius: 10, padding: 4, marginBottom: 32, width: '100%', maxWidth: 300 }}>
-          <button style={modeTabStyle(false)} onClick={() => setOnglet('local')}>🖧 {r.mode_local}</button>
-          <button style={modeTabStyle(true)}>🌐 {r.mode_online}</button>
+          <button style={modeTabStyle(false)} onClick={() => setOnglet('local')}>🖧 {t('reseau.mode_local')}</button>
+          <button style={modeTabStyle(true)}>🌐 {t('reseau.mode_online')}</button>
         </div>
 
         <div style={{ background: C.card, borderRadius: 20, padding: 40, maxWidth: 380, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20, textAlign: 'center' }}>
           <div style={{ fontSize: 48 }}>🌐</div>
-          <h2 style={{ color: C.textPrimary, fontSize: 20, fontWeight: 700, margin: 0 }}>Jouer en ligne</h2>
+          <h2 style={{ color: C.textPrimary, fontSize: 20, fontWeight: 700, margin: 0 }}>{t('reseau.jouer_en_ligne')}</h2>
           <p style={{ color: C.textSub, fontSize: 14, margin: 0, lineHeight: 1.6 }}>
-            Joue avec n'importe qui, depuis n'importe quel réseau.<br/>
-            Aucune configuration requise.
+            {t('reseau.online_desc')}
           </p>
           <button
             style={{ ...primaryButtonStyle(false), marginTop: 4 }}
@@ -46,7 +44,7 @@ export default function VueAccueil({ onCreer, onRejoindre, isLoading }) {
             onMouseEnter={e => { e.currentTarget.style.background = C.violetHover }}
             onMouseLeave={e => { e.currentTarget.style.background = C.violet }}
           >
-            🌐 Accéder au jeu en ligne
+            🌐 {t('reseau.acceder_en_ligne')}
           </button>
           <p style={{ color: C.textMuted, fontSize: 11, margin: 0 }}>{ONLINE_URL}</p>
         </div>
@@ -55,12 +53,13 @@ export default function VueAccueil({ onCreer, onRejoindre, isLoading }) {
   }
 
   // ── Electron : tab "Réseau local" ──────────────────────────────────────
-  return <VueLocal r={r} navigate={navigate} onCreer={onCreer} onRejoindre={onRejoindre}
+  return <VueLocal navigate={navigate} onCreer={onCreer} onRejoindre={onRejoindre}
                    isLoading={isLoading} onSwitchOnline={() => setOnglet('online')} />
 }
 
 // ── Page en ligne (navigateur / Railway) — sans tabs, sans IP ─────────────
-function VueOnline({ r, navigate, onCreer, onRejoindre, isLoading }) {
+function VueOnline({ navigate, onCreer, onRejoindre, isLoading }) {
+  const { t } = useTranslation()
   const [prenomCreateur,   setPrenomCreateur]   = useState('')
   const [prenomRejoignant, setPrenomRejoignant] = useState('')
   const [codeInput,        setCodeInput]        = useState(['', '', '', ''])
@@ -97,8 +96,8 @@ function VueOnline({ r, navigate, onCreer, onRejoindre, isLoading }) {
   return (
     <div style={styles.page}>
       <BoutonRetour onClick={() => navigate('/')} />
-      <h1 style={styles.titre}>{r.titre_online}</h1>
-      <p style={styles.sous}>{r.sous_online}</p>
+      <h1 style={styles.titre}>{t('reseau.titre_online')}</h1>
+      <p style={styles.sous}>{t('reseau.sous_online')}</p>
 
       <div style={styles.cardsRow}>
 
@@ -107,16 +106,16 @@ function VueOnline({ r, navigate, onCreer, onRejoindre, isLoading }) {
           <div style={styles.cardHeader}>
             <div style={styles.cardAvatar}>+</div>
             <div>
-              <div style={styles.cardTitre}>{r.creer}</div>
-              <div style={styles.cardSous}>Tu seras l'hôte de la partie</div>
+              <div style={styles.cardTitre}>{t('reseau.creer')}</div>
+              <div style={styles.cardSous}>{t('reseau.creer_sous')}</div>
             </div>
           </div>
           <div style={styles.spacer} />
           <div>
-            <label style={styles.label}><PersonIcon /> {r.prenom}</label>
+            <label style={styles.label}><PersonIcon /> {t('reseau.prenom')}</label>
             <input
               style={inputStyle(focusCreer)}
-              placeholder={r.prenom_placeholder}
+              placeholder={t('reseau.prenom_placeholder')}
               value={prenomCreateur}
               onChange={e => setPrenomCreateur(e.target.value)}
               onFocus={() => setFocusCreer(true)}
@@ -130,7 +129,7 @@ function VueOnline({ r, navigate, onCreer, onRejoindre, isLoading }) {
             onMouseEnter={e => { if (!disabledCreer) e.currentTarget.style.background = C.violetHover }}
             onMouseLeave={e => { if (!disabledCreer) e.currentTarget.style.background = C.violet }}
           >
-            {isLoading ? 'Création…' : r.creer_btn}
+            {isLoading ? 'Création…' : t('reseau.creer_btn')}
           </button>
         </div>
 
@@ -139,13 +138,13 @@ function VueOnline({ r, navigate, onCreer, onRejoindre, isLoading }) {
           <div style={styles.cardHeader}>
             <div style={styles.cardSearchAvatar}><SearchIcon /></div>
             <div>
-              <div style={styles.cardTitre}>{r.rejoindre}</div>
-              <div style={styles.cardSous}>Entre le code donné par ton ami</div>
+              <div style={styles.cardTitre}>{t('reseau.rejoindre')}</div>
+              <div style={styles.cardSous}>{t('reseau.rejoindre_sous')}</div>
             </div>
           </div>
 
           <div>
-            <label style={styles.label}><PersonIcon /> {r.prenom}</label>
+            <label style={styles.label}><PersonIcon /> {t('reseau.prenom')}</label>
             <input
               style={inputStyle(focusRejoindre)}
               placeholder="Bob"
@@ -157,7 +156,7 @@ function VueOnline({ r, navigate, onCreer, onRejoindre, isLoading }) {
           </div>
 
           <div>
-            <p style={styles.codeLabel}>{r.code_label}</p>
+            <p style={styles.codeLabel}>{t('reseau.code_label')}</p>
             <div style={styles.codeRow}>
               {codeInput.map((ch, i) => (
                 <input
@@ -182,7 +181,7 @@ function VueOnline({ r, navigate, onCreer, onRejoindre, isLoading }) {
             onMouseEnter={e => { if (!disabledRejoindre) e.currentTarget.style.background = C.violetHover }}
             onMouseLeave={e => { if (!disabledRejoindre) e.currentTarget.style.background = C.violet }}
           >
-            {isLoading ? 'Connexion…' : r.rejoindre_btn}
+            {isLoading ? 'Connexion…' : t('reseau.rejoindre_btn')}
           </button>
         </div>
 
@@ -192,7 +191,8 @@ function VueOnline({ r, navigate, onCreer, onRejoindre, isLoading }) {
 }
 
 // ── Page réseau local (Electron) — avec IP optionnelle ────────────────────
-function VueLocal({ r, navigate, onCreer, onRejoindre, isLoading, onSwitchOnline }) {
+function VueLocal({ navigate, onCreer, onRejoindre, isLoading, onSwitchOnline }) {
+  const { t } = useTranslation()
   const [prenomCreateur,   setPrenomCreateur]   = useState('')
   const [prenomRejoignant, setPrenomRejoignant] = useState('')
   const [codeInput,        setCodeInput]        = useState(['', '', '', ''])
@@ -233,12 +233,12 @@ function VueLocal({ r, navigate, onCreer, onRejoindre, isLoading, onSwitchOnline
   return (
     <div style={styles.page}>
       <BoutonRetour onClick={() => navigate('/')} />
-      <h1 style={styles.titre}>{r.titre}</h1>
-      <p style={styles.sous}>{r.sous}</p>
+      <h1 style={styles.titre}>{t('reseau.titre')}</h1>
+      <p style={styles.sous}>{t('reseau.sous')}</p>
 
       <div style={{ display: 'flex', gap: 4, background: C.card, borderRadius: 10, padding: 4, marginBottom: 28, width: '100%', maxWidth: 300 }}>
-        <button style={modeTabStyle(true)}>🖧 {r.mode_local}</button>
-        <button style={modeTabStyle(false)} onClick={onSwitchOnline}>🌐 {r.mode_online}</button>
+        <button style={modeTabStyle(true)}>🖧 {t('reseau.mode_local')}</button>
+        <button style={modeTabStyle(false)} onClick={onSwitchOnline}>🌐 {t('reseau.mode_online')}</button>
       </div>
 
       <div style={styles.cardsRow}>
@@ -248,16 +248,16 @@ function VueLocal({ r, navigate, onCreer, onRejoindre, isLoading, onSwitchOnline
           <div style={styles.cardHeader}>
             <div style={styles.cardAvatar}>+</div>
             <div>
-              <div style={styles.cardTitre}>{r.creer}</div>
-              <div style={styles.cardSous}>Tu seras l'hôte de la partie</div>
+              <div style={styles.cardTitre}>{t('reseau.creer')}</div>
+              <div style={styles.cardSous}>{t('reseau.creer_sous')}</div>
             </div>
           </div>
           <div style={styles.spacer} />
           <div>
-            <label style={styles.label}><PersonIcon /> {r.prenom}</label>
+            <label style={styles.label}><PersonIcon /> {t('reseau.prenom')}</label>
             <input
               style={inputStyle(focusCreer)}
-              placeholder={r.prenom_placeholder}
+              placeholder={t('reseau.prenom_placeholder')}
               value={prenomCreateur}
               onChange={e => setPrenomCreateur(e.target.value)}
               onFocus={() => setFocusCreer(true)}
@@ -271,7 +271,7 @@ function VueLocal({ r, navigate, onCreer, onRejoindre, isLoading, onSwitchOnline
             onMouseEnter={e => { if (!disabledCreer) e.currentTarget.style.background = C.violetHover }}
             onMouseLeave={e => { if (!disabledCreer) e.currentTarget.style.background = C.violet }}
           >
-            {isLoading ? 'Création…' : r.creer_btn}
+            {isLoading ? 'Création…' : t('reseau.creer_btn')}
           </button>
         </div>
 
@@ -280,13 +280,13 @@ function VueLocal({ r, navigate, onCreer, onRejoindre, isLoading, onSwitchOnline
           <div style={styles.cardHeader}>
             <div style={styles.cardSearchAvatar}><SearchIcon /></div>
             <div>
-              <div style={styles.cardTitre}>{r.rejoindre}</div>
-              <div style={styles.cardSous}>Entre le code donné par ton ami</div>
+              <div style={styles.cardTitre}>{t('reseau.rejoindre')}</div>
+              <div style={styles.cardSous}>{t('reseau.rejoindre_sous')}</div>
             </div>
           </div>
 
           <div>
-            <label style={styles.label}><PersonIcon /> {r.prenom}</label>
+            <label style={styles.label}><PersonIcon /> {t('reseau.prenom')}</label>
             <input
               style={inputStyle(focusRejoindre)}
               placeholder="Bob"
@@ -299,10 +299,10 @@ function VueLocal({ r, navigate, onCreer, onRejoindre, isLoading, onSwitchOnline
 
           {showManualIP && (
             <div>
-              <label style={styles.label}><NetworkIcon /> {r.ip_manuelle}</label>
+              <label style={styles.label}><NetworkIcon /> {t('reseau.ip_manuelle')}</label>
               <input
                 style={inputStyle(focusIP)}
-                placeholder={r.ip_placeholder}
+                placeholder={t('reseau.ip_placeholder')}
                 value={ipHote}
                 onChange={e => setIpHote(e.target.value)}
                 onFocus={() => setFocusIP(true)}
@@ -314,11 +314,11 @@ function VueLocal({ r, navigate, onCreer, onRejoindre, isLoading, onSwitchOnline
             style={{ color: C.textMuted, fontSize: 11, textAlign: 'center', cursor: 'pointer', textDecoration: 'underline', margin: 0 }}
             onClick={() => setShowManualIP(v => !v)}
           >
-            {showManualIP ? "Masquer l'IP manuelle" : "Saisir l'IP manuellement"}
+            {showManualIP ? t('reseau.masquer_ip') : t('reseau.saisir_ip')}
           </p>
 
           <div>
-            <p style={styles.codeLabel}>{r.code_label}</p>
+            <p style={styles.codeLabel}>{t('reseau.code_label')}</p>
             <div style={styles.codeRow}>
               {codeInput.map((ch, i) => (
                 <input
@@ -343,13 +343,13 @@ function VueLocal({ r, navigate, onCreer, onRejoindre, isLoading, onSwitchOnline
             onMouseEnter={e => { if (!disabledRejoindre) e.currentTarget.style.background = C.violetHover }}
             onMouseLeave={e => { if (!disabledRejoindre) e.currentTarget.style.background = C.violet }}
           >
-            {isLoading ? 'Connexion…' : r.rejoindre_btn}
+            {isLoading ? 'Connexion…' : t('reseau.rejoindre_btn')}
           </button>
         </div>
 
       </div>
 
-      <p style={styles.footer}><WifiIcon /> {r.info_wifi}</p>
+      <p style={styles.footer}><WifiIcon /> {t('reseau.info_wifi')}</p>
     </div>
   )
 }

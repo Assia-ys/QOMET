@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useLangue } from '../hooks/useLangue'
+import { useTranslation } from 'react-i18next'
 import { closeApp } from '../config/config'
 import Button from '../components/ui/Button'
 import { styles } from '../styles/pages/Home.styles'
@@ -19,29 +19,29 @@ export default function Home() {
 }
 
 function EcranChargement() {
-  const { t } = useLangue()
+  const { t } = useTranslation()
   return (
     <div style={styles.page}>
       <h1 style={styles.titre}>QOMET</h1>
       <div style={styles.spinner} />
-      <p style={styles.texteChargement}>{t.home.chargement}</p>
-      <p style={styles.sousTexte}>{t.home.init}</p>
+      <p style={styles.texteChargement}>{t('home.chargement')}</p>
+      <p style={styles.sousTexte}>{t('home.init')}</p>
     </div>
   )
 }
 
 function MenuPrincipal({ navigate }) {
-  const { t } = useLangue()
+  const { t } = useTranslation()
   return (
     <div style={styles.page}>
       <div style={styles.menuContainer}>
         <h1 style={styles.titre}>QOMET</h1>
-        <p style={styles.sousTitre}>{t.home.menuPrincipal}</p>
+        <p style={styles.sousTitre}>{t('home.menuPrincipal')}</p>
         <div style={styles.boutons}>
-          <Button icone="📶" label={t.home.jouerReseau}  couleur="#7c3aed" onClick={() => navigate('/reseau')}     fullWidth />
-          <Button icone="🤖" label={t.home.jouerIA}      couleur="#7c3aed" onClick={() => navigate('/ia')}         fullWidth />
-          <Button icone="⚙️" label={t.home.parametres}   couleur="#374151" onClick={() => navigate('/parametres')} fullWidth />
-          <Button icone="↩"  label={t.home.quitter}      couleur="#dc2626" onClick={closeApp}                     fullWidth />
+          <Button icone="📶" label={t('home.jouerReseau')}  couleur="#7c3aed" onClick={() => navigate('/reseau')}     fullWidth />
+          <Button icone="🤖" label={t('home.jouerIA')}      couleur="#7c3aed" onClick={() => navigate('/ia')}         fullWidth />
+          <Button icone="⚙️" label={t('home.parametres')}   couleur="#374151" onClick={() => navigate('/parametres')} fullWidth />
+          <Button icone="↩"  label={t('home.quitter')}      couleur="#dc2626" onClick={closeApp}                     fullWidth />
         </div>
       </div>
     </div>

@@ -1,14 +1,13 @@
 import { useNavigate } from 'react-router-dom'
 import BoutonRetour from '../../components/layout/BoutonRetour'
 import BoutonMenu from '../../components/layout/BoutonMenu'
-import { useLangue } from '../../hooks/useLangue'
+import { useTranslation } from 'react-i18next'
 import { palette as C } from '../../styles/palette'
 import { styles, btnPrimaryStyle } from '../../styles/pages/Reseau/EcranErreur.styles'
 
 export default function EcranErreur({ onReessayer, onRetour }) {
   const navigate = useNavigate()
-  const { t }    = useLangue()
-  const r        = t.reseau
+  const { t } = useTranslation()
 
   return (
     <div style={styles.page}>
@@ -21,8 +20,8 @@ export default function EcranErreur({ onReessayer, onRetour }) {
         </svg>
       </div>
 
-      <h1 style={styles.titre}>{r.erreur_titre}</h1>
-      <p style={styles.sous}>{r.erreur_sous}</p>
+      <h1 style={styles.titre}>{t('reseau.erreur_titre')}</h1>
+      <p style={styles.sous}>{t('reseau.erreur_sous')}</p>
       <span style={styles.badge}>ERR_ROOM_NOT_FOUND</span>
 
       <div style={styles.actions}>
@@ -32,7 +31,7 @@ export default function EcranErreur({ onReessayer, onRetour }) {
           onMouseEnter={e => e.currentTarget.style.background = C.violetHover}
           onMouseLeave={e => e.currentTarget.style.background = C.violet}
         >
-          <span style={{ fontSize: 18 }}>&#8635;</span> {r.reessayer}
+          <span style={{ fontSize: 18 }}>&#8635;</span> {t('reseau.reessayer')}
         </button>
         <BoutonMenu onClick={() => navigate('/')} fullWidth />
       </div>

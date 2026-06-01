@@ -12,7 +12,7 @@ import BoutonMenu from '../components/layout/BoutonMenu'
 import Button from '../components/ui/Button'
 import Modal from '../components/ui/Modal'
 import { playWin, playLose } from '../hooks/useSounds'
-import { useLangue } from '../hooks/useLangue'
+import { useTranslation } from 'react-i18next'
 import { palette } from '../styles/palette'
 import { styles, tempsRestantStyle } from '../styles/pages/Game.styles'
 import useIsMobile from '../hooks/useIsMobile'
@@ -21,8 +21,7 @@ export default function Game() {
   const navigate  = useNavigate()
   const socket    = useSocket()
   const isMobile  = useIsMobile()
-  const { t }     = useLangue()
-  const g        = t.game
+  const { t } = useTranslation()
 
   const {
     plateau, joueurs, indexJoueurActif, niveauIA,
@@ -113,13 +112,13 @@ export default function Game() {
       <BoutonRetour onClick={() => { actions.abandonner(); navigate(modeIA ? '/ia' : '/reseau') }} />
 
       <div style={styles.bandeau}>
-        <span style={styles.bandeauTexte}>{joueurActif?.en_main > 0 ? g.poser_ou_deplacer : g.deplacer}</span>
+        <span style={styles.bandeauTexte}>{joueurActif?.en_main > 0 ? t('game.poser_ou_deplacer') : t('game.deplacer')}</span>
         <span style={styles.chrono}>&#9203; {tempsJeu}</span>
       </div>
 
       {estTourIA && (
         <p style={styles.iaThink}>
-          <span style={styles.iaDot} /> {g.ia_reflechit}
+          <span style={styles.iaDot} /> {t('game.ia_reflechit')}
         </p>
       )}
 
@@ -146,7 +145,7 @@ export default function Game() {
             actions.jouerEjecter(selectionne[0], selectionne[1])
             selectionnerCase(null, null); setCoupsValides([]); setPeutEjecter(false)
           }}>
-            {g.sortir_plateau}
+            {t('game.sortir_plateau')}
           </button>
         </div>
       )}
@@ -154,21 +153,21 @@ export default function Game() {
       <div style={styles.actions}>
         <BoutonMenu onClick={handleAbandonner} label="Menu" />
         {!modeIA && (
-          <Button label={g.pause} couleur="#1e40af" onClick={() => {
+          <Button label={t('game.pause')} couleur="#1e40af" onClick={() => {
             setPauseVisible(true)
             if (codeRoom) actions.mettreEnPause()
           }} />
         )}
-        <Button label={g.abandonner} couleur="#dc2626" onClick={() => setAbandonVisible(true)} />
+        <Button label={t('game.abandonner')} couleur="#dc2626" onClick={() => setAbandonVisible(true)} />
       </div>
 
       {pauseVisible && (
         <Modal>
           <div style={styles.modaleIcone}>II</div>
-          <h2 style={styles.modaleTitre}>{g.pause_titre}</h2>
+          <h2 style={styles.modaleTitre}>{t('game.pause_titre')}</h2>
           <p style={styles.modaleSousTexte}>
-            {adversaireEnPause ? g.pause_msg_adverse : g.pause_attente}
-            <br />{g.pause_reprise_auto} : <strong style={tempsRestantStyle(tempsPause)}>{tempsPause}s</strong>
+            {adversaireEnPause ? t('game.pause_msg_adverse') : t('game.pause_attente')}
+            <br />{t('game.pause_reprise_auto')} : <strong style={tempsRestantStyle(tempsPause)}>{tempsPause}s</strong>
           </p>
           <div style={styles.modaleJoueurs}>
             <JoueurPause nom={joueurs[0].nom} label="Joueur 1" />
@@ -176,7 +175,7 @@ export default function Game() {
             <JoueurPause nom={joueurs[1].nom} label="Joueur 2" />
           </div>
           {!adversaireEnPause && (
-            <Button label={g.reprendre} couleur={palette.violet} onClick={() => {
+            <Button label={t('game.reprendre')} couleur={palette.violet} onClick={() => {
               setPauseVisible(false)
               if (codeRoom) actions.reprendre()
             }} />
@@ -188,11 +187,11 @@ export default function Game() {
       {abandonVisible && (
         <Modal>
           <div style={styles.abandonIcone}>!</div>
-          <h2 style={styles.modaleTitre}>{g.abandon_titre}</h2>
-          <p style={styles.modaleSousTexte}>{g.abandon_msg.split('\n')[0]}<br />{g.abandon_msg.split('\n')[1]}</p>
+          <h2 style={styles.modaleTitre}>{t('game.abandon_titre')}</h2>
+          <p style={styles.modaleSousTexte}>{t('game.abandon_msg').split('\n')[0]}<br />{t('game.abandon_msg').split('\n')[1]}</p>
           <div style={styles.abandonActions}>
-            <Button label={g.annuler}    couleur="#374151" onClick={() => setAbandonVisible(false)} />
-            <Button label={g.abandonner} couleur="#dc2626" onClick={handleAbandonner} />
+            <Button label={t('game.annuler')}    couleur="#374151" onClick={() => setAbandonVisible(false)} />
+            <Button label={t('game.abandonner')} couleur="#dc2626" onClick={handleAbandonner} />
           </div>
         </Modal>
       )}

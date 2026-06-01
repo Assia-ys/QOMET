@@ -1,19 +1,19 @@
 import { EtoileSVG } from './Board'
-import { useLangue } from '../../hooks/useLangue'
+import { useTranslation } from 'react-i18next'
 import { palette } from '../../styles/palette'
 import { styles, playerCardStyle, tourBadgeStyle, niveauDotStyle, niveauTextStyle } from '../../styles/components/game/PlayerInfo.styles'
 
 export default function PlayerInfo({ joueur, estActif, estMoi = true, niveauIA, compact = false }) {
-  const { t }            = useLangue()
+  const { t }            = useTranslation()
   const { fill, stroke } = palette[joueur.couleur]
   const estIA            = joueur.nom === 'IA'
   const couleurNiveau    = palette.niveauCouleur[niveauIA]
-  const labelNiveau      = { facile: t.ia.facile, moyen: t.ia.moyen, difficile: t.ia.difficile }
+  const labelNiveau      = { facile: t('ia.facile'), moyen: t('ia.moyen'), difficile: t('ia.difficile') }
 
   if (compact) {
     return (
       <div style={{ ...playerCardStyle(estActif), minWidth: 0, flex: 1, padding: '8px 12px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-        {estActif && <div style={{ ...tourBadgeStyle(estMoi), marginBottom: 0, fontSize: 9 }}>{estMoi ? t.game.ton_tour : t.game.son_tour}</div>}
+        {estActif && <div style={{ ...tourBadgeStyle(estMoi), marginBottom: 0, fontSize: 9 }}>{estMoi ? t('game.ton_tour') : t('game.son_tour')}</div>}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <EtoileSVG fill={fill} stroke={stroke} strokeWidth={1.5} innerFill="#fff" size={20} />
           <span style={{ ...styles.nom, fontSize: 13 }}>{joueur.nom}</span>
@@ -31,7 +31,7 @@ export default function PlayerInfo({ joueur, estActif, estMoi = true, niveauIA, 
 
       {estActif && (
         <div style={tourBadgeStyle(estMoi)}>
-          {estMoi ? t.game.ton_tour : t.game.son_tour}
+          {estMoi ? t('game.ton_tour') : t('game.son_tour')}
         </div>
       )}
 
@@ -46,8 +46,8 @@ export default function PlayerInfo({ joueur, estActif, estMoi = true, niveauIA, 
         )}
       </div>
 
-      <Compteur label={t.game.en_main}     count={joueur.en_main}     fill={fill} stroke={stroke} />
-      <Compteur label={t.game.sur_plateau} count={joueur.sur_plateau} fill={fill} stroke={stroke} />
+      <Compteur label={t('game.en_main')}     count={joueur.en_main}     fill={fill} stroke={stroke} />
+      <Compteur label={t('game.sur_plateau')} count={joueur.sur_plateau} fill={fill} stroke={stroke} />
 
     </div>
   )

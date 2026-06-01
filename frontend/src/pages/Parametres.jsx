@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Music, Globe, Monitor } from 'lucide-react'
 import BoutonRetour from '../components/layout/BoutonRetour'
 import { setEffectsVolume } from '../hooks/useSounds'
-import { useLangue } from '../hooks/useLangue'
+import { useTranslation } from 'react-i18next'
 import { styles, toggleStyle, boutonLangueStyle } from '../styles/pages/Parametres.styles'
 
 const KEYS = {
@@ -13,10 +13,9 @@ const KEYS = {
 }
 
 export default function Parametres() {
-  const navigate             = useNavigate()
-  const { langue, setLangue, t } = useLangue()
-  const langueOriginale = useRef(langue)
-  const p = t.params
+  const navigate        = useNavigate()
+  const { t, i18n }    = useTranslation()
+  const langueOriginale = useRef(i18n.language)
 
   const [volumeEffets, setVolumeEffets] = useState(() => Number(localStorage.getItem(KEYS.volumeEffets) ?? 65))
   const [port,          setPort]          = useState(() => localStorage.getItem(KEYS.port) ?? '7777')
@@ -59,12 +58,12 @@ export default function Parametres() {
     <div style={styles.page}>
       <BoutonRetour onClick={() => navigate('/')} />
 
-      <h1 style={styles.titre}>{p.titre}</h1>
-      <p style={styles.sous}>{p.sous}</p>
+      <h1 style={styles.titre}>{t('params.titre')}</h1>
+      <p style={styles.sous}>{t('params.sous')}</p>
 
-      <Section icone={<Music size={24} color="#6366f1" />} label={p.audio}>
+      <Section icone={<Music size={24} color="#6366f1" />} label={t('params.audio')}>
         <SliderChamp
-          label={p.vol_effets}
+          label={t('params.vol_effets')}
           valeur={volumeEffets}
           onChange={v => {
             setVolumeEffets(v)
@@ -73,39 +72,39 @@ export default function Parametres() {
         />
       </Section>
 
-      <Section icone={<Globe size={24} color="#6366f1" />} label={p.reseau}>
+      <Section icone={<Globe size={24} color="#6366f1" />} label={t('params.reseau')}>
         <div style={styles.rangee}>
-          <span style={styles.champLabel}>{p.port}</span>
+          <span style={styles.champLabel}>{t('params.port')}</span>
           <input
             value={port}
             onChange={e => setPort(e.target.value)}
             style={styles.inputPetit}
           />
         </div>
-        <p style={styles.hint}>{p.port_hint}</p>
+        <p style={styles.hint}>{t('params.port_hint')}</p>
       </Section>
 
-      <Section icone={<Monitor size={24} color="#6366f1" />} label={p.affichage}>
+      <Section icone={<Monitor size={24} color="#6366f1" />} label={t('params.affichage')}>
         <div style={styles.rangee}>
           <div>
-            <span style={styles.champLabel}>{p.plein_ecran}</span>
-            <p style={styles.hint}>{p.plein_hint}</p>
+            <span style={styles.champLabel}>{t('params.plein_ecran')}</span>
+            <p style={styles.hint}>{t('params.plein_hint')}</p>
           </div>
           <Toggle actif={pleinEcran} onChange={handleTogglePleinEcran} />
         </div>
 
         <div style={{ ...styles.rangee, marginTop: 16 }}>
-          <span style={styles.champLabel}>{p.langue}</span>
+          <span style={styles.champLabel}>{t('params.langue')}</span>
           <div style={styles.langueOptions}>
-            <button style={boutonLangueStyle(langue === 'fr')} onClick={() => setLangue('fr')}>&#127467;&#127479; Français</button>
-            <button style={boutonLangueStyle(langue === 'en')} onClick={() => setLangue('en')}>&#127468;&#127463; English</button>
+            <button style={boutonLangueStyle(i18n.language === 'fr')} onClick={() => i18n.changeLanguage('fr')}>&#127467;&#127479; Français</button>
+            <button style={boutonLangueStyle(i18n.language === 'en')} onClick={() => i18n.changeLanguage('en')}>&#127468;&#127463; English</button>
           </div>
         </div>
       </Section>
 
       <div style={styles.boutons}>
-        <button style={styles.btnSave}    onClick={sauvegarder}>{p.sauvegarder}</button>
-        <button style={styles.btnAnnuler} onClick={() => { setLangue(langueOriginale.current); navigate('/') }}>{p.annuler}</button>
+        <button style={styles.btnSave}    onClick={sauvegarder}>{t('params.sauvegarder')}</button>
+        <button style={styles.btnAnnuler} onClick={() => { i18n.changeLanguage(langueOriginale.current); navigate('/') }}>{t('params.annuler')}</button>
       </div>
     </div>
   )

@@ -4,21 +4,20 @@ import useGameStore from '../store/useGameStore'
 import { getSocket, getSocketIA } from '../hooks/useSocket'
 import { Sparkles, Zap, Flame } from 'lucide-react'
 import BoutonRetour from '../components/layout/BoutonRetour'
-import { useLangue } from '../hooks/useLangue'
+import { useTranslation } from 'react-i18next'
 import { creerPartie } from '../api/parties'
 import { palette } from '../styles/palette'
 import { styles, carteNiveauStyle, cocheStyle, badgeNiveauStyle, boutonCommencerStyle } from '../styles/pages/IA.styles'
 
 export default function IA() {
   const navigate = useNavigate()
-  const { t }    = useLangue()
-  const ia       = t.ia
+  const { t }    = useTranslation()
   const { reinitialiser, setConfigIA, setMaCouleur, setCodeRoom, setEtatServeur } = useGameStore()
 
   const NIVEAUX = [
-    { id: 'facile',    label: ia.facile,    badge: ia.facile_badge,    description: ia.facile_desc,    icon: <Sparkles size={32} />, couleur: 'green'  },
-    { id: 'moyen',     label: ia.moyen,     badge: ia.moyen_badge,     description: ia.moyen_desc,     icon: <Zap      size={32} />, couleur: 'orange' },
-    { id: 'difficile', label: ia.difficile, badge: ia.difficile_badge, description: ia.difficile_desc, icon: <Flame    size={32} />, couleur: 'red'    },
+    { id: 'facile',    label: t('ia.facile'),    badge: t('ia.facile_badge'),    description: t('ia.facile_desc'),    icon: <Sparkles size={32} />, couleur: 'green'  },
+    { id: 'moyen',     label: t('ia.moyen'),     badge: t('ia.moyen_badge'),     description: t('ia.moyen_desc'),     icon: <Zap      size={32} />, couleur: 'orange' },
+    { id: 'difficile', label: t('ia.difficile'), badge: t('ia.difficile_badge'), description: t('ia.difficile_desc'), icon: <Flame    size={32} />, couleur: 'red'    },
   ]
 
   const [niveauChoisi, setNiveauChoisi] = useState('facile')
@@ -68,8 +67,8 @@ export default function IA() {
   return (
     <div style={styles.page}>
       <BoutonRetour onClick={() => navigate('/')} />
-      <h1 style={styles.titre}>{ia.titre}</h1>
-      <p style={styles.sous}>{ia.sous}</p>
+      <h1 style={styles.titre}>{t('ia.titre')}</h1>
+      <p style={styles.sous}>{t('ia.sous')}</p>
 
       <div style={styles.grille}>
         {NIVEAUX.map((n) => (
@@ -78,10 +77,10 @@ export default function IA() {
       </div>
 
       <div style={styles.champ}>
-        <label style={styles.label}>{ia.prenom}</label>
+        <label style={styles.label}>{t('ia.prenom')}</label>
         <input
           style={styles.input}
-          placeholder={ia.prenom_placeholder}
+          placeholder={t('ia.prenom_placeholder')}
           value={prenom}
           onChange={(e) => setPrenom(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && commencer()}
@@ -93,7 +92,7 @@ export default function IA() {
         onClick={commencer}
         disabled={!prenom.trim() || chargement}
       >
-        {chargement ? ia.connexion : ia.commencer}
+        {chargement ? t('ia.connexion') : t('ia.commencer')}
       </button>
     </div>
   )

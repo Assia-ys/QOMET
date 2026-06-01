@@ -1,10 +1,10 @@
 import { useState } from 'react'
-import { useLangue } from '../../hooks/useLangue'
+import { useTranslation } from 'react-i18next'
 import { boutonRetourStyle } from '../../styles/components/layout/BoutonRetour.styles'
 
 export default function BoutonRetour({ onClick, label }) {
-  const { t }    = useLangue()
-  const texte    = label ?? t.retour
+  const { t }    = useTranslation()
+  const texte    = label ?? t('retour')
   const [survol, setSurvol] = useState(false)
 
   return (

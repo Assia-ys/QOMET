@@ -1,14 +1,13 @@
 import { useNavigate } from 'react-router-dom'
 import { getSocket } from '../../hooks/useSocket'
-import { useLangue } from '../../hooks/useLangue'
+import { useTranslation } from 'react-i18next'
 import { palette as C } from '../../styles/palette'
 import BoutonMenu from '../../components/layout/BoutonMenu'
 import { styles, joueurCardStyle, joueurAvatarStyle, joueurNomStyle, joueurLabelStyle } from '../../styles/pages/Reseau/SalleAttente.styles'
 
 export default function SalleAttente({ code, prenom, onAnnuler }) {
   const navigate = useNavigate()
-  const { t }    = useLangue()
-  const r        = t.reseau
+  const { t } = useTranslation()
 
   function handleAnnuler() {
     getSocket().emit('quitter')
@@ -17,11 +16,11 @@ export default function SalleAttente({ code, prenom, onAnnuler }) {
 
   return (
     <div style={styles.page}>
-      <h1 style={styles.titre}>{r.salle_titre}</h1>
-      <p style={styles.sous}>{r.salle_sous}</p>
+      <h1 style={styles.titre}>{t('reseau.salle_titre')}</h1>
+      <p style={styles.sous}>{t('reseau.salle_sous')}</p>
 
       <div style={styles.codeBox}>
-        <p style={styles.codeLabel}>{r.code_label}</p>
+        <p style={styles.codeLabel}>{t('reseau.code_label')}</p>
         <div style={styles.codeChars}>
           {code.split('').map((ch, i) => (
             <span key={i} style={styles.codeChar}>{ch}</span>
@@ -30,13 +29,13 @@ export default function SalleAttente({ code, prenom, onAnnuler }) {
       </div>
 
       <div style={styles.joueurs}>
-        <JoueurCard nom={prenom || 'Joueur 1'} label={r.connecte} connected />
-        <JoueurCard nom={r.joueur2} label={r.attente} connected={false} />
+        <JoueurCard nom={prenom || 'Joueur 1'} label={t('reseau.connecte')} connected />
+        <JoueurCard nom={t('reseau.joueur2')} label={t('reseau.attente')} connected={false} />
       </div>
 
       <p style={styles.attente}>
         <span style={styles.attentePoint} />
-        {r.attente_msg}
+        {t('reseau.attente_msg')}
       </p>
 
       <div style={styles.actions}>
@@ -46,7 +45,7 @@ export default function SalleAttente({ code, prenom, onAnnuler }) {
           onMouseEnter={e => e.currentTarget.style.background = C.cardBorder}
           onMouseLeave={e => e.currentTarget.style.background = C.card}
         >
-          <span style={{ fontSize: 16 }}>&#10005;</span> {r.annuler}
+          <span style={{ fontSize: 16 }}>&#10005;</span> {t('reseau.annuler')}
         </button>
         <BoutonMenu onClick={() => { getSocket().emit('quitter'); navigate('/') }} />
       </div>

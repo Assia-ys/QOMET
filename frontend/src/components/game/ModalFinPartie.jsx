@@ -4,14 +4,13 @@ import useGameStore from '../../store/useGameStore'
 import { getSocket } from '../../hooks/useSocket'
 import { Trophy, Frown, Star, RotateCcw, UserX, Eye } from 'lucide-react'
 import BoutonMenu from '../layout/BoutonMenu'
-import { useLangue } from '../../hooks/useLangue'
+import { useTranslation } from 'react-i18next'
 import { palette } from '../../styles/palette'
 import { styles, titreDynStyle, forfaitEmojiStyle } from '../../styles/components/game/ModalFinPartie.styles'
 
 export default function ModalFinPartie({ gagnant, duree }) {
   const navigate = useNavigate()
-  const { t }    = useLangue()
-  const m        = t.modal
+  const { t } = useTranslation()
   const { reinitialiser, prenomJoueur, codeRoom, joueurs } = useGameStore()
   const [forfaitAccepte, setForfaitAccepte] = useState(false)
   const [minimise,       setMinimise]       = useState(false)
@@ -35,13 +34,13 @@ export default function ModalFinPartie({ gagnant, duree }) {
     return (
       <div style={styles.barre}>
         <span style={aGagne ? styles.barreGagnant : styles.barrePerdu}>
-          {aGagne ? m.gagne : m.perdu}
+          {aGagne ? t('modal.gagne') : t('modal.perdu')}
         </span>
         <button style={styles.btnBarre} onClick={() => setMinimise(false)}>
-          {m.voir_resultat}
+          {t('modal.voir_resultat')}
         </button>
         <button style={styles.btnBarreSecondaire} onClick={rejouer}>
-          <RotateCcw size={14} /> {m.rejouer}
+          <RotateCcw size={14} /> {t('modal.rejouer')}
         </button>
         <BoutonMenu onClick={menu} taille="petit" />
       </div>
@@ -55,13 +54,13 @@ export default function ModalFinPartie({ gagnant, duree }) {
           <div style={forfaitEmojiStyle()}>
             <UserX size={48} color={palette.red} />
           </div>
-          <h2 style={{ ...titreDynStyle(false), color: palette.red }}>{m.adversaire_deco}</h2>
+          <h2 style={{ ...titreDynStyle(false), color: palette.red }}>{t('modal.adversaire_deco')}</h2>
           <p style={styles.sous}>
-            {m.adversaire_msg.split('\n')[0]}<br />{m.adversaire_msg.split('\n')[1]}
+            {t('modal.adversaire_msg').split('\n')[0]}<br />{t('modal.adversaire_msg').split('\n')[1]}
           </p>
           <span style={styles.badge}>OPPONENT_DISCONNECTED</span>
           <button style={styles.btnVictoire} onClick={() => setForfaitAccepte(true)}>
-            {m.accepter}
+            {t('modal.accepter')}
           </button>
           <BoutonMenu onClick={menu} fullWidth />
         </div>
@@ -73,8 +72,8 @@ export default function ModalFinPartie({ gagnant, duree }) {
     <div style={styles.overlay}>
       <div style={styles.modal}>
 
-        <button style={styles.btnFermer} onClick={() => setMinimise(true)} title={m.voir_plateau}>
-          <Eye size={16} /> {m.voir_plateau}
+        <button style={styles.btnFermer} onClick={() => setMinimise(true)} title={t('modal.voir_plateau')}>
+          <Eye size={16} /> {t('modal.voir_plateau')}
         </button>
 
         <div style={styles.emoji}>
@@ -93,17 +92,17 @@ export default function ModalFinPartie({ gagnant, duree }) {
           ))}
         </div>
 
-        <h2 style={titreDynStyle(aGagne)}>{aGagne ? m.gagne : m.perdu}</h2>
+        <h2 style={titreDynStyle(aGagne)}>{aGagne ? t('modal.gagne') : t('modal.perdu')}</h2>
 
-        <p style={styles.sous}>{aGagne ? m.gagne_msg : m.perdu_msg}</p>
+        <p style={styles.sous}>{aGagne ? t('modal.gagne_msg') : t('modal.perdu_msg')}</p>
 
         <div style={styles.dureeBox}>
-          <span style={styles.dureeLabel}>{m.duree}</span>
+          <span style={styles.dureeLabel}>{t('modal.duree')}</span>
           <span style={styles.dureeVal}>{duree || '--:--'}</span>
         </div>
 
         <button style={styles.btnRejouer} onClick={rejouer}>
-          <RotateCcw size={18} /> {m.rejouer}
+          <RotateCcw size={18} /> {t('modal.rejouer')}
         </button>
         <BoutonMenu onClick={menu} fullWidth />
 
