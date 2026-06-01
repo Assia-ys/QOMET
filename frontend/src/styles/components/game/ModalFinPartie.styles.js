@@ -9,7 +9,7 @@ export function forfaitEmojiStyle() {
 }
 
 export const styles = {
-  overlay:           { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 },
+  overlay:           { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 },
   modal:             { position: 'relative', background: palette.card, borderRadius: 20, padding: '2.5rem 2rem', width: 320, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 },
   btnFermer:         { position: 'absolute', top: 12, right: 12, background: palette.cardBorder, border: 'none', borderRadius: 8, color: palette.textSub, fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px' },
   emoji:             { background: palette.bg, borderRadius: '50%', width: 90, height: 90, display: 'flex', alignItems: 'center', justifyContent: 'center' },

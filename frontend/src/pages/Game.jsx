@@ -111,10 +111,10 @@ export default function Game() {
 
       <BoutonRetour onClick={() => { actions.abandonner(); navigate(modeIA ? '/ia' : '/reseau') }} />
 
-      {!gagnant && <div style={styles.bandeau}>
+      <div style={{ ...styles.bandeau, display: gagnant ? 'none' : 'flex' }}>
         <span style={styles.bandeauTexte}>{joueurActif?.en_main > 0 ? t('game.poser_ou_deplacer') : t('game.deplacer')}</span>
         <span style={styles.chrono}>&#9203; {tempsJeu}</span>
-      </div>}
+      </div>
 
       {!gagnant && estTourIA && (
         <p style={styles.iaThink}>
@@ -150,7 +150,7 @@ export default function Game() {
         </div>
       )}
 
-      {!gagnant && <div style={styles.actions}>
+      <div style={{ ...styles.actions, display: gagnant ? 'none' : 'flex' }}>
         <BoutonMenu onClick={handleAbandonner} label="Menu" />
         {!modeIA && (
           <Button label={t('game.pause')} couleur="#1e40af" onClick={() => {
@@ -159,7 +159,7 @@ export default function Game() {
           }} />
         )}
         <Button label={t('game.abandonner')} couleur="#dc2626" onClick={() => setAbandonVisible(true)} />
-      </div>}
+      </div>
 
       {pauseVisible && (
         <Modal>
