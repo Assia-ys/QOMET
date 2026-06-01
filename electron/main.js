@@ -4,6 +4,7 @@ const path       = require('path')
 const fs         = require('fs')
 const http       = require('http')
 const net        = require('net')
+const dgram      = require('dgram')
 const os         = require('os')
 
 const isDev  = process.env.NODE_ENV === 'development'
@@ -118,6 +119,8 @@ function log(msg) {
 
 // ── Découverte serveur ─────────────────────────────────────────────────────────
 
+const UDP_PORT = 7778
+
 function serverHasRoom(ip, code) {
   return new Promise((resolve) => {
     const req = http.get(
@@ -137,54 +140,106 @@ function serverHasRoom(ip, code) {
   })
 }
 
+// Étape 1 — UDP broadcast vers tous les segments connus (rapide si même /24)
+function trouverServeurUDP(code, timeoutMs = 3000) {
+  return new Promise((resolve) => {
+    const client = dgram.createSocket({ type: 'udp4', reuseAddr: true })
+    let resolved = false
+    const done = (val) => {
+      if (resolved) return
+      resolved = true
+      try { client.close() } catch {}
+      resolve(val)
+    }
+    client.on('message', (msg, rinfo) => {
+      try {
+        const data = JSON.parse(msg.toString())
+        if (data.type === 'found' && data.code === code) done(`http://${rinfo.address}:${PORT}`)
+      } catch {}
+    })
+    client.on('error', () => done(null))
+    client.bind(0, () => {
+      try {
+        client.setBroadcast(true)
+        const payload = Buffer.from(JSON.stringify({ type: 'find', code }))
+        const targets = ['255.255.255.255', ...getSubnets().map(s => `${s}.255`)]
+        log(`[UDP] Broadcast vers: ${targets.join(', ')}`)
+        targets.forEach(addr => {
+          try { client.send(payload, 0, payload.length, UDP_PORT, addr) } catch {}
+        })
+      } catch { done(null) }
+    })
+    setTimeout(() => done(null), timeoutMs)
+  })
+}
+
 // Retourne : URL string = trouvé | 'INVALID_CODE' = serveur trouvé mais code inexistant | null = pas de serveur
 async function trouverServeur(code) {
   const upperCode = code.toUpperCase()
   const localIPs  = getLocalIPs()
+  log(`[Découverte] Démarrage — code: ${upperCode} | IP locale: ${localIPs[0]}`)
 
-  log(`[Scan] Démarrage — code: ${upperCode} | IP locales: ${localIPs.join(', ')}`)
+  // ── 1. UDP broadcast ────────────────────────────────────────────────────────
+  const udpResult = await trouverServeurUDP(upperCode, 3000)
+  if (udpResult) {
+    log(`[UDP] Réponse reçue: ${udpResult}`)
+    const ip = udpResult.replace('http://', '').replace(`:${PORT}`, '')
+    if (await serverHasRoom(ip, upperCode)) return udpResult
+    return 'INVALID_CODE'
+  }
+  log('[UDP] Aucune réponse — passage ARP')
 
-  const [arpIPs, subnets] = await Promise.all([getArpIPs(), Promise.resolve(getSubnets())])
-  log(`[Scan] ARP: ${arpIPs.length} IPs | Subnets: ${subnets.join(', ')}`)
+  // ── 2. ARP — voisins récents déjà connus ────────────────────────────────────
+  const arpIPs = (await getArpIPs()).filter(ip => !localIPs.includes(ip))
+  log(`[ARP] ${arpIPs.length} voisins: ${arpIPs.slice(0, 5).join(', ')}${arpIPs.length > 5 ? '...' : ''}`)
 
-  const subnetIPs = subnets.flatMap(s =>
-    Array.from({ length: 254 }, (_, i) => `${s}.${i + 1}`)
-  ).filter(ip => !arpIPs.includes(ip))
-  const allIPs = [...arpIPs, ...subnetIPs].filter(ip => !localIPs.includes(ip))
+  const arpServers = (await Promise.all(
+    arpIPs.map(async ip => {
+      if (!await checkPort(ip, PORT, 500)) return null
+      const info = await fetchInfo(ip)
+      if (info?.status === 'ok') log(`[ARP] Serveur QOMET trouvé: ${ip}`)
+      return info?.status === 'ok' ? ip : null
+    })
+  )).filter(Boolean)
 
-  log(`[Scan] Total à tester: ${allIPs.length} IPs (${arpIPs.filter(ip => !localIPs.includes(ip)).length} ARP + ${subnetIPs.filter(ip => !localIPs.includes(ip)).length} subnet)`)
+  for (const ip of arpServers) {
+    if (await serverHasRoom(ip, upperCode)) return `http://${ip}:${PORT}`
+  }
+  if (arpServers.length > 0) {
+    log('[ARP] Serveurs trouvés mais code invalide → INVALID_CODE')
+    return 'INVALID_CODE'
+  }
+  log('[ARP] Aucun serveur — passage scan HTTP')
+
+  // ── 3. HTTP scan complet du sous-réseau ─────────────────────────────────────
+  const subnets = getSubnets()
+  const subnetIPs = subnets
+    .flatMap(s => Array.from({ length: 254 }, (_, i) => `${s}.${i + 1}`))
+    .filter(ip => !localIPs.includes(ip) && !arpIPs.includes(ip))
+  log(`[HTTP] Scan de ${subnetIPs.length} IPs sur ${subnets.join(', ')}`)
 
   const servers = []
-  for (let i = 0; i < allIPs.length; i += 30) {
-    const batch = allIPs.slice(i, i + 30)
-    const found = await Promise.all(batch.map(async ip => {
-      const ouvert = await checkPort(ip, PORT, 400)
-      if (!ouvert) return null
-      log(`[Scan] Port ouvert sur ${ip}, vérification /health...`)
+  for (let i = 0; i < subnetIPs.length; i += 30) {
+    const batch = subnetIPs.slice(i, i + 30)
+    const found = (await Promise.all(batch.map(async ip => {
+      if (!await checkPort(ip, PORT, 400)) return null
       const info = await fetchInfo(ip)
-      if (info?.status === 'ok') log(`[Scan] Serveur QOMET trouvé: ${ip} (${info.hostname})`)
+      if (info?.status === 'ok') log(`[HTTP] Serveur QOMET trouvé: ${ip}`)
       return info?.status === 'ok' ? ip : null
-    }))
-    servers.push(...found.filter(Boolean))
+    }))).filter(Boolean)
+    servers.push(...found)
+    if (servers.length > 0) break
   }
 
-  log(`[Scan] Serveurs QOMET trouvés: ${servers.length > 0 ? servers.join(', ') : 'aucun'}`)
-
+  log(`[HTTP] Serveurs trouvés: ${servers.length > 0 ? servers.join(', ') : 'aucun'}`)
   if (servers.length === 0) return null
 
   for (let attempt = 0; attempt < 3; attempt++) {
     for (const ip of servers) {
-      const ok = await serverHasRoom(ip, upperCode)
-      log(`[Scan] Room ${upperCode} sur ${ip}: ${ok ? 'OUI ✓' : 'non'}`)
-      if (ok) return `http://${ip}:${PORT}`
+      if (await serverHasRoom(ip, upperCode)) return `http://${ip}:${PORT}`
     }
-    if (attempt < 2) {
-      log(`[Scan] Room pas encore prête, tentative ${attempt + 2}/3...`)
-      await new Promise(r => setTimeout(r, 1000))
-    }
+    if (attempt < 2) await new Promise(r => setTimeout(r, 1000))
   }
-
-  log(`[Scan] Serveurs trouvés mais code ${upperCode} introuvable → INVALID_CODE`)
   return 'INVALID_CODE'
 }
 
