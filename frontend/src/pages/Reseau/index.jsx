@@ -75,6 +75,7 @@ export default function Reseau() {
       if (window.electronAPI?.trouverServeur && serverURL === LOCAL_URL) {
         const found = await window.electronAPI.trouverServeur(code)
         if (!found) { setVue('erreur'); return }
+        if (found === 'INVALID_CODE') { setVue('code_invalide'); return }
         resolvedURL = found
       }
       const s    = connecterSocket(resolvedURL)
@@ -92,7 +93,8 @@ export default function Reseau() {
     }
   }
 
-  if (vue === 'attente') return <SalleAttente code={codePartie} prenom={prenomHote} onAnnuler={() => setVue('accueil')} />
-  if (vue === 'erreur')  return <EcranErreur  onReessayer={() => setVue('accueil')} onRetour={() => setVue('accueil')} />
+  if (vue === 'attente')       return <SalleAttente code={codePartie} prenom={prenomHote} onAnnuler={() => setVue('accueil')} />
+  if (vue === 'erreur')        return <EcranErreur  onReessayer={() => setVue('accueil')} onRetour={() => setVue('accueil')} />
+  if (vue === 'code_invalide') return <EcranErreur  onReessayer={() => setVue('accueil')} onRetour={() => setVue('accueil')} codeInvalide />
   return <VueAccueil onCreer={handleCreer} onRejoindre={handleRejoindre} isLoading={isLoading} />
 }

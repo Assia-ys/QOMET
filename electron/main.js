@@ -173,23 +173,24 @@ function trouverServeurUDP(code, timeoutMs = 3000) {
   })
 }
 
+// Retourne : URL string = trouvé | 'INVALID_CODE' = serveur trouvé mais code inexistant | null = pas de serveur
 async function trouverServeur(code) {
   const upperCode = code.toUpperCase()
   const localIPs  = getLocalIPs()
 
-  // ── ARP + UDP en parallèle (rapide) ────────────────────────────────────────
+  // ── ARP + UDP en parallèle ─────────────────────────────────────────────────
   const [arpIPs, udpResult] = await Promise.all([
     getArpIPs(),
     trouverServeurUDP(code),
   ])
 
-  // UDP a répondu directement
   if (udpResult) {
     const ip = udpResult.replace('http://', '').replace(`:${PORT}`, '')
     if (await serverHasRoom(ip, upperCode)) return udpResult
+    return 'INVALID_CODE'
   }
 
-  // Scan HTTP des IPs connues via ARP (voisins directs, très rapide)
+  // Scan HTTP ARP (voisins directs)
   const arpFiltered = arpIPs.filter(ip => !localIPs.includes(ip))
   const arpServers = (await Promise.all(
     arpFiltered.map(async ip => {
@@ -202,6 +203,7 @@ async function trouverServeur(code) {
   for (const ip of arpServers) {
     if (await serverHasRoom(ip, upperCode)) return `http://${ip}:${PORT}`
   }
+  if (arpServers.length > 0) return 'INVALID_CODE'
 
   // ── Fallback : scan complet du sous-réseau ─────────────────────────────────
   const subnets = getSubnets()
@@ -218,7 +220,7 @@ async function trouverServeur(code) {
       return info?.status === 'ok' ? ip : null
     }))).filter(Boolean)
     servers.push(...found)
-    if (servers.length > 0) break  // dès qu'on trouve un serveur, on arrête
+    if (servers.length > 0) break
   }
 
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -227,6 +229,7 @@ async function trouverServeur(code) {
     }
     if (attempt < 2) await new Promise(r => setTimeout(r, 1000))
   }
+  if (servers.length > 0) return 'INVALID_CODE'
 
   return null
 }

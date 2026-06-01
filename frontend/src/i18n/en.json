@@ -64,9 +64,11 @@
     "attente":          "Waiting...",
     "attente_msg":      "Waiting for opponent...",
     "annuler":          "Cancel",
-    "erreur_titre":     "Connection failed",
-    "erreur_sous":      "Unable to join the game.",
-    "reessayer":        "Try again"
+    "erreur_titre":        "Connection failed",
+    "erreur_sous":         "Unable to join the game.",
+    "code_invalide_titre": "Invalid code",
+    "code_invalide_sous":  "No game found with this code. Check the code and try again.",
+    "reessayer":           "Try again"
   },
 
   "game": {

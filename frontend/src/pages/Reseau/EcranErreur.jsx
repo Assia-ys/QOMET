@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { palette as C } from '../../styles/palette'
 import { styles, btnPrimaryStyle } from '../../styles/pages/Reseau/EcranErreur.styles'
 
-export default function EcranErreur({ onReessayer, onRetour }) {
+export default function EcranErreur({ onReessayer, onRetour, codeInvalide = false }) {
   const navigate = useNavigate()
   const { t } = useTranslation()
 
@@ -20,9 +20,9 @@ export default function EcranErreur({ onReessayer, onRetour }) {
         </svg>
       </div>
 
-      <h1 style={styles.titre}>{t('reseau.erreur_titre')}</h1>
-      <p style={styles.sous}>{t('reseau.erreur_sous')}</p>
-      <span style={styles.badge}>ERR_ROOM_NOT_FOUND</span>
+      <h1 style={styles.titre}>{codeInvalide ? t('reseau.code_invalide_titre') : t('reseau.erreur_titre')}</h1>
+      <p style={styles.sous}>{codeInvalide ? t('reseau.code_invalide_sous') : t('reseau.erreur_sous')}</p>
+      <span style={styles.badge}>{codeInvalide ? 'ERR_INVALID_CODE' : 'ERR_ROOM_NOT_FOUND'}</span>
 
       <div style={styles.actions}>
         <button

@@ -64,9 +64,11 @@
     "attente":          "En attente...",
     "attente_msg":      "En attente de l'adversaire...",
     "annuler":          "Annuler",
-    "erreur_titre":     "Connexion impossible",
-    "erreur_sous":      "Impossible de rejoindre la partie.",
-    "reessayer":        "Réessayer"
+    "erreur_titre":        "Connexion impossible",
+    "erreur_sous":         "Impossible de rejoindre la partie.",
+    "code_invalide_titre": "Code invalide",
+    "code_invalide_sous":  "Aucune partie trouvée avec ce code. Vérifie le code et réessaie.",
+    "reessayer":           "Réessayer"
   },
 
   "game": {
