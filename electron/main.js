@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, Menu, shell } = require('electron')
-const { spawn }  = require('child_process')
+const { spawn, exec }  = require('child_process')
 const path       = require('path')
+const fs         = require('fs')
 const http       = require('http')
 const net        = require('net')
 const os         = require('os')
@@ -250,9 +251,30 @@ function creerFenetre() {
   })
 }
 
+// ── Pare-feu Windows (fix silencieux, une seule fois) ─────────────────────
+// Tente de mettre à jour les règles sans UAC. Si l'app tourne en admin
+// (cas courant pour un installeur NSIS one-click), ça passe silencieusement.
+// Sinon, l'utilisateur devra réinstaller avec le nouveau setup.exe.
+
+function fixerParefeuWindows() {
+  if (process.platform !== 'win32') return
+  const flagPath = path.join(app.getPath('userData'), '.fw-any')
+  if (fs.existsSync(flagPath)) return  // Déjà fait
+  const cmds = [
+    'netsh advfirewall firewall delete rule name="QOMET"',
+    'netsh advfirewall firewall delete rule name="QOMET-UDP"',
+    'netsh advfirewall firewall add rule name="QOMET" dir=in action=allow protocol=TCP localport=7777 profile=any',
+    'netsh advfirewall firewall add rule name="QOMET-UDP" dir=in action=allow protocol=UDP localport=7778 profile=any',
+  ].join(' & ')
+  exec(cmds, (err) => {
+    if (!err) fs.writeFileSync(flagPath, '1')
+  })
+}
+
 // ── Cycle de vie de l'app ──────────────────────────────────────────────────
 
 app.whenReady().then(async () => {
+  fixerParefeuWindows()
   demarrerBackend()
   try {
     await attendreBackend()

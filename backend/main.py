@@ -2,13 +2,15 @@ import asyncio
 import json
 import socket as _socket
 import threading
+import time
 import uvicorn
 import socketio
 from pathlib import Path
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from pydantic import BaseModel
 
 from config.settings import HOST, PORT
 from backend.game.rules import Rules
@@ -69,23 +71,46 @@ socket_app = socketio.ASGIApp(sio, other_asgi_app=app)
 
 app.include_router(parties_router)
 
+# ── Signaling réseau local (Railway sert de relai d'annonce) ──────────────────
+# L'hôte Electron enregistre son IP locale ici au moment de créer une partie.
+# Le rejoignant interroge cette route pour obtenir l'IP sans scanner le réseau.
+
+_local_registry: dict[str, dict] = {}   # code → {ip, port, at}
+_LOCAL_TTL = 600                        # 10 minutes
+
+class LocalRegisterBody(BaseModel):
+    code: str
+    ip:   str
+    port: int = 7777
+
+@app.post("/local/register")
+async def local_register(body: LocalRegisterBody):
+    code = body.code.upper().strip()
+    now  = time.time()
+    _local_registry[code] = {"ip": body.ip, "port": body.port, "at": now}
+    # Purge des entrées expirées
+    for k in list(_local_registry):
+        if now - _local_registry[k]["at"] > _LOCAL_TTL:
+            del _local_registry[k]
+    return {"ok": True}
+
+@app.get("/local/find/{code}")
+async def local_find(code: str):
+    entry = _local_registry.get(code.upper().strip())
+    if not entry or time.time() - entry["at"] > _LOCAL_TTL:
+        raise HTTPException(status_code=404, detail="not_found")
+    return {"ip": entry["ip"], "port": entry["port"]}
+
 # ── Endpoint découverte réseau ─────────────────────────────────────────────────
 
 @app.get("/info")
 async def info():
-    """Retourne les infos du serveur pour la découverte réseau locale."""
     hostname = _socket.gethostname()
-    salles_disponibles = [
-        {"code": code, "pleine": room_est_pleine(code)}
-        for code in rooms.keys()
-        if not room_est_pleine(code)
-    ]
     return {
         "hostname": hostname,
         "app":      "QOMET",
         "version":  "1.0.0",
         "port":     PORT,
-        "salles":   salles_disponibles,
     }
 
 # ── Événements Socket.io ───────────────────────────────────────────────────────

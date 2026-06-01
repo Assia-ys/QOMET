@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import useSocket, { getSocket, resetSocketToServer } from '../../hooks/useSocket'
 import useGameStore from '../../store/useGameStore'
 import { creerPartie, verifierPartie } from '../../api/parties'
-import { SERVER_URL, LOCAL_URL } from '../../config/config'
+import { SERVER_URL, LOCAL_URL, ONLINE_URL } from '../../config/config'
 import VueAccueil from './VueAccueil'
 import SalleAttente from './SalleAttente'
 import EcranErreur from './EcranErreur'
@@ -59,6 +59,17 @@ export default function Reseau() {
       setCodePartie(data.code)
       setPrenomHote(prenom)
       setVue('attente')
+      // Enregistrer l'IP locale sur Railway pour que les rejoignants puissent nous trouver
+      if (serverURL === LOCAL_URL && window.electronAPI?.getLocalIP) {
+        window.electronAPI.getLocalIP().then(ip => {
+          if (!ip) return
+          fetch(`${ONLINE_URL}/local/register`, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ code: data.code, ip, port: 7777 }),
+          }).catch(() => {})
+        }).catch(() => {})
+      }
     } catch {
       setVue('erreur')
     } finally {
@@ -73,10 +84,27 @@ export default function Reseau() {
       let resolvedURL = serverURL
       // En Electron sans IP manuelle : découverte automatique du serveur hôte
       if (window.electronAPI?.trouverServeur && serverURL === LOCAL_URL) {
-        const found = await window.electronAPI.trouverServeur(code)
-        if (!found) { setVue('erreur'); return }
-        if (found === 'INVALID_CODE') { setVue('code_invalide'); return }
-        resolvedURL = found
+        // 1) Essai via signaling Railway (fonctionne sur tout réseau, instant)
+        let signalingURL = null
+        try {
+          const res = await fetch(`${ONLINE_URL}/local/find/${code.toUpperCase()}`, {
+            signal: AbortSignal.timeout(4000),
+          })
+          if (res.ok) {
+            const info = await res.json()
+            signalingURL = `http://${info.ip}:${info.port}`
+          }
+        } catch {}
+
+        if (signalingURL) {
+          resolvedURL = signalingURL
+        } else {
+          // 2) Fallback : scan réseau local (ARP + sous-réseau)
+          const found = await window.electronAPI.trouverServeur(code)
+          if (!found) { setVue('erreur'); return }
+          if (found === 'INVALID_CODE') { setVue('code_invalide'); return }
+          resolvedURL = found
+        }
       }
       const s    = connecterSocket(resolvedURL)
       const data = await verifierPartie(code, resolvedURL)
