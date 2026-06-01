@@ -117,9 +117,79 @@ function log(msg) {
   try { win?.webContents?.send('main-log', msg) } catch {}
 }
 
-// ── Découverte serveur ─────────────────────────────────────────────────────────
+// ── Broadcast hôte UDP ────────────────────────────────────────────────────────
+// L'hôte broadcaste son IP + code toutes les 500ms dès qu'il crée la partie.
+// Le rejoignant écoute ce broadcast et se connecte directement.
 
 const UDP_PORT = 7778
+let _broadcastSocket   = null
+let _broadcastInterval = null
+
+function demarrerBroadcastHote(code) {
+  arreterBroadcastHote()
+  const ip  = getLocalIP()
+  const msg = Buffer.from(JSON.stringify({ type: 'QOMET_HOST', ip, port: PORT, code: code.toUpperCase() }))
+
+  _broadcastSocket = dgram.createSocket('udp4')
+  _broadcastSocket.on('error', () => {})
+  _broadcastSocket.bind(0, () => {
+    _broadcastSocket.setBroadcast(true)
+    log(`[UDP] Broadcast hôte démarré — IP: ${ip}, code: ${code}`)
+  })
+
+  _broadcastInterval = setInterval(() => {
+    if (!_broadcastSocket) return
+    _broadcastSocket.send(msg, 0, msg.length, UDP_PORT, '255.255.255.255', () => {})
+    const subnet = ip.split('.').slice(0, 3).join('.')
+    _broadcastSocket.send(msg, 0, msg.length, UDP_PORT, `${subnet}.255`, () => {})
+  }, 500)
+}
+
+function arreterBroadcastHote() {
+  if (_broadcastInterval) { clearInterval(_broadcastInterval); _broadcastInterval = null }
+  if (_broadcastSocket)   { try { _broadcastSocket.close() } catch {} ; _broadcastSocket = null }
+}
+
+// ── Écoute UDP rejoignant ─────────────────────────────────────────────────────
+// Écoute les broadcasts de l'hôte pendant `timeoutMs` ms.
+// Retourne l'URL du serveur si le code correspond, sinon null.
+
+function ecouterBroadcastUDP(code, timeoutMs = 4000) {
+  return new Promise((resolve) => {
+    const upperCode = code.toUpperCase()
+    const sock = dgram.createSocket({ type: 'udp4', reuseAddr: true })
+    let done = false
+
+    const finish = (result) => {
+      if (done) return
+      done = true
+      try { sock.close() } catch {}
+      resolve(result)
+    }
+
+    sock.on('message', (buf) => {
+      try {
+        const data = JSON.parse(buf.toString())
+        if (data.type === 'QOMET_HOST' && data.code === upperCode) {
+          log(`[UDP] Hôte trouvé: ${data.ip}`)
+          finish(`http://${data.ip}:${data.port}`)
+        }
+      } catch {}
+    })
+
+    sock.on('error', () => finish(null))
+
+    sock.bind(UDP_PORT, () => {
+      sock.setBroadcast(true)
+      log(`[UDP] Écoute broadcast sur port ${UDP_PORT}...`)
+    })
+
+    setTimeout(() => finish(null), timeoutMs)
+  })
+}
+
+// ── Découverte serveur ─────────────────────────────────────────────────────────
+// Retourne : URL string = trouvé | 'INVALID_CODE' = code inexistant | null = pas de serveur
 
 function serverHasRoom(ip, code) {
   return new Promise((resolve) => {
@@ -140,64 +210,28 @@ function serverHasRoom(ip, code) {
   })
 }
 
-// Étape 1 — UDP broadcast vers tous les segments connus (rapide si même /24)
-function trouverServeurUDP(code, timeoutMs = 3000) {
-  return new Promise((resolve) => {
-    const client = dgram.createSocket({ type: 'udp4', reuseAddr: true })
-    let resolved = false
-    const done = (val) => {
-      if (resolved) return
-      resolved = true
-      try { client.close() } catch {}
-      resolve(val)
-    }
-    client.on('message', (msg, rinfo) => {
-      try {
-        const data = JSON.parse(msg.toString())
-        if (data.type === 'found' && data.code === code) done(`http://${rinfo.address}:${PORT}`)
-      } catch {}
-    })
-    client.on('error', () => done(null))
-    client.bind(0, () => {
-      try {
-        client.setBroadcast(true)
-        const payload = Buffer.from(JSON.stringify({ type: 'find', code }))
-        const targets = ['255.255.255.255', ...getSubnets().map(s => `${s}.255`)]
-        log(`[UDP] Broadcast vers: ${targets.join(', ')}`)
-        targets.forEach(addr => {
-          try { client.send(payload, 0, payload.length, UDP_PORT, addr) } catch {}
-        })
-      } catch { done(null) }
-    })
-    setTimeout(() => done(null), timeoutMs)
-  })
-}
-
-// Retourne : URL string = trouvé | 'INVALID_CODE' = serveur trouvé mais code inexistant | null = pas de serveur
 async function trouverServeur(code) {
   const upperCode = code.toUpperCase()
   const localIPs  = getLocalIPs()
   log(`[Découverte] Démarrage — code: ${upperCode} | IP locale: ${localIPs[0]}`)
 
-  // ── 1. UDP broadcast ────────────────────────────────────────────────────────
-  const udpResult = await trouverServeurUDP(upperCode, 3000)
+  // ── 1. UDP — écoute le broadcast de l'hôte (4s) ────────────────────────────
+  const udpResult = await ecouterBroadcastUDP(upperCode, 4000)
   if (udpResult) {
-    log(`[UDP] Réponse reçue: ${udpResult}`)
-    const ip = udpResult.replace('http://', '').replace(`:${PORT}`, '')
-    if (await serverHasRoom(ip, upperCode)) return udpResult
-    return 'INVALID_CODE'
+    log(`[UDP] Connexion directe: ${udpResult}`)
+    return udpResult
   }
-  log('[UDP] Aucune réponse — passage ARP')
+  log('[UDP] Aucun broadcast reçu — passage ARP')
 
-  // ── 2. ARP — voisins récents déjà connus ────────────────────────────────────
+  // ── 2. ARP — voisins récents ────────────────────────────────────────────────
   const arpIPs = (await getArpIPs()).filter(ip => !localIPs.includes(ip))
-  log(`[ARP] ${arpIPs.length} voisins: ${arpIPs.slice(0, 5).join(', ')}${arpIPs.length > 5 ? '...' : ''}`)
+  log(`[ARP] ${arpIPs.length} voisins`)
 
   const arpServers = (await Promise.all(
     arpIPs.map(async ip => {
       if (!await checkPort(ip, PORT, 500)) return null
       const info = await fetchInfo(ip)
-      if (info?.status === 'ok') log(`[ARP] Serveur QOMET trouvé: ${ip}`)
+      if (info?.status === 'ok') log(`[ARP] Serveur QOMET: ${ip}`)
       return info?.status === 'ok' ? ip : null
     })
   )).filter(Boolean)
@@ -205,18 +239,15 @@ async function trouverServeur(code) {
   for (const ip of arpServers) {
     if (await serverHasRoom(ip, upperCode)) return `http://${ip}:${PORT}`
   }
-  if (arpServers.length > 0) {
-    log('[ARP] Serveurs trouvés mais code invalide → INVALID_CODE')
-    return 'INVALID_CODE'
-  }
+  if (arpServers.length > 0) return 'INVALID_CODE'
   log('[ARP] Aucun serveur — passage scan HTTP')
 
-  // ── 3. HTTP scan complet du sous-réseau ─────────────────────────────────────
+  // ── 3. HTTP scan du sous-réseau ─────────────────────────────────────────────
   const subnets = getSubnets()
   const subnetIPs = subnets
     .flatMap(s => Array.from({ length: 254 }, (_, i) => `${s}.${i + 1}`))
     .filter(ip => !localIPs.includes(ip) && !arpIPs.includes(ip))
-  log(`[HTTP] Scan de ${subnetIPs.length} IPs sur ${subnets.join(', ')}`)
+  log(`[HTTP] Scan ${subnetIPs.length} IPs sur ${subnets.join(', ')}`)
 
   const servers = []
   for (let i = 0; i < subnetIPs.length; i += 30) {
@@ -224,14 +255,13 @@ async function trouverServeur(code) {
     const found = (await Promise.all(batch.map(async ip => {
       if (!await checkPort(ip, PORT, 400)) return null
       const info = await fetchInfo(ip)
-      if (info?.status === 'ok') log(`[HTTP] Serveur QOMET trouvé: ${ip}`)
+      if (info?.status === 'ok') log(`[HTTP] Serveur QOMET: ${ip}`)
       return info?.status === 'ok' ? ip : null
     }))).filter(Boolean)
     servers.push(...found)
     if (servers.length > 0) break
   }
 
-  log(`[HTTP] Serveurs trouvés: ${servers.length > 0 ? servers.join(', ') : 'aucun'}`)
   if (servers.length === 0) return null
 
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -376,14 +406,16 @@ app.on('will-quit', () => arreterBackend())
 ipcMain.on('close-app',  () => app.quit())
 ipcMain.on('minimize',   () => win?.minimize())
 ipcMain.on('maximize',   () => win?.isMaximized() ? win.unmaximize() : win.maximize())
-ipcMain.handle('scan-reseau',      () => scanReseau())
-ipcMain.handle('get-local-ip',     () => getLocalIP())
-ipcMain.handle('ouvrir-url',       (_, url) => shell.openExternal(url))
-ipcMain.handle('trouver-serveur',  (_, code) => trouverServeur(code))
+ipcMain.handle('scan-reseau',         () => scanReseau())
+ipcMain.handle('get-local-ip',        () => getLocalIP())
+ipcMain.handle('ouvrir-url',          (_, url) => shell.openExternal(url))
+ipcMain.handle('trouver-serveur',     (_, code) => trouverServeur(code))
+ipcMain.handle('demarrer-broadcast',  (_, code) => demarrerBroadcastHote(code))
+ipcMain.handle('arreter-broadcast',   () => arreterBroadcastHote())
 ipcMain.handle('get-network-info', async () => ({
   localIPs: getLocalIPs(),
   subnets:  getSubnets(),
   arpIPs:   await getArpIPs(),
 }))
-ipcMain.handle('set-fullscreen',   (_, val) => win?.setFullScreen(!!val))
-ipcMain.handle('get-fullscreen',   () => win?.isFullScreen() ?? false)
+ipcMain.handle('set-fullscreen',      (_, val) => win?.setFullScreen(!!val))
+ipcMain.handle('get-fullscreen',      () => win?.isFullScreen() ?? false)

@@ -27,6 +27,7 @@ export default function Reseau() {
 
   function connecterSocket(url) {
     const onDemarree = (data) => {
+      window.electronAPI?.arreterBroadcast?.()
       setEtatServeur(data); setCodeRoom(data.code); setEtatPartie('en_cours'); navigate('/jeu')
     }
     if (url !== LOCAL_URL) {
@@ -58,8 +59,10 @@ export default function Reseau() {
       s.emit('rejoindre', { code: data.code, prenom })
       setCodePartie(data.code)
       setPrenomHote(prenom)
+      // Broadcast UDP : le rejoignant trouvera l'hôte automatiquement
+      window.electronAPI?.demarrerBroadcast?.(data.code)
       setVue('attente')
-      // Enregistrer l'IP locale sur Railway pour que les rejoignants puissent nous trouver
+      // Enregistrer l'IP locale sur Railway (fallback si pas de broadcast)
       if (serverURL === LOCAL_URL && window.electronAPI?.getLocalIP) {
         window.electronAPI.getLocalIP().then(ip => {
           if (!ip) return
@@ -131,7 +134,7 @@ export default function Reseau() {
     }
   }
 
-  if (vue === 'attente')       return <SalleAttente code={codePartie} prenom={prenomHote} onAnnuler={() => setVue('accueil')} isLocal={!!window.electronAPI} />
+  if (vue === 'attente')       return <SalleAttente code={codePartie} prenom={prenomHote} onAnnuler={() => { window.electronAPI?.arreterBroadcast?.(); setVue('accueil') }} isLocal={!!window.electronAPI} />
   if (vue === 'erreur')        return <EcranErreur  onReessayer={() => setVue('accueil')} onRetour={() => setVue('accueil')} />
   if (vue === 'code_invalide') return <EcranErreur  onReessayer={() => setVue('accueil')} onRetour={() => setVue('accueil')} codeInvalide />
   return <VueAccueil onCreer={handleCreer} onRejoindre={handleRejoindre} isLoading={isLoading} />
