@@ -37,16 +37,15 @@ export default function SalleAttente({ code, prenom, onAnnuler, isLocal = false 
         </div>
         {isLocal && localIP && (
           <div style={{ marginTop: 14, textAlign: 'center' }}>
-            {!showIP ? (
-              <button
-                onClick={() => setShowIP(true)}
-                style={{ background: 'transparent', border: `1px solid ${C.cardBorder}`, borderRadius: 8, color: C.textMuted, fontSize: 11, padding: '5px 14px', cursor: 'pointer' }}
-                onMouseEnter={e => e.currentTarget.style.borderColor = C.violet}
-                onMouseLeave={e => e.currentTarget.style.borderColor = C.cardBorder}
-              >
-                Afficher mon adresse IP
-              </button>
-            ) : (
+            <button
+              onClick={() => setShowIP(v => !v)}
+              style={{ background: 'transparent', border: `1px solid ${showIP ? C.violet : C.cardBorder}`, borderRadius: 8, color: showIP ? C.violet : C.textMuted, fontSize: 11, padding: '5px 14px', cursor: 'pointer', marginBottom: showIP ? 8 : 0 }}
+              onMouseEnter={e => e.currentTarget.style.borderColor = C.violet}
+              onMouseLeave={e => e.currentTarget.style.borderColor = showIP ? C.violet : C.cardBorder}
+            >
+              {showIP ? 'Masquer mon adresse IP' : 'Afficher mon adresse IP'}
+            </button>
+            {showIP && (
               <div style={{ background: 'rgba(139,92,246,0.12)', border: `1px solid ${C.violet}`, borderRadius: 10, padding: '8px 18px', display: 'inline-block' }}>
                 <p style={{ color: C.textSub, fontSize: 11, margin: '0 0 2px 0' }}>Ton IP (à donner à ton ami)</p>
                 <p style={{ color: C.violet, fontSize: 18, fontWeight: 700, margin: 0, letterSpacing: 2, fontFamily: 'monospace' }}>{localIP}</p>
