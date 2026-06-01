@@ -201,7 +201,7 @@ function VueLocal({ navigate, onCreer, onRejoindre, isLoading, onSwitchOnline })
   const [focusRejoindre,   setFocusRejoindre]   = useState(false)
   const [focusCode,        setFocusCode]        = useState(null)
   const [focusIP,          setFocusIP]          = useState(false)
-  const [showManualIP,     setShowManualIP]      = useState(true)
+  const [showManualIP,     setShowManualIP]      = useState(false)
   const inputsRef = useRef([])
 
   function handleCodeInput(i, val) {
