@@ -64,7 +64,10 @@
       "target": "dmg",
       "icon": "assets/icon.png",
       "identity": null,
-      "gatekeeperAssess": false
+      "gatekeeperAssess": false,
+      "extraResources": [
+        { "from": "backend-dist/qomet-server-mac", "to": "qomet-server" }
+      ]
     },
     "nsis": {
       "oneClick": true,

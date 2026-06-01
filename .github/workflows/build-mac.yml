@@ -1,0 +1,45 @@
+name: Build macOS
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-mac:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Build backend (Mac binary)
+        run: |
+          pip install -r requirements.txt pyinstaller
+          pyinstaller qomet-server.spec --distpath backend-dist-tmp
+          mkdir -p backend-dist
+          cp backend-dist-tmp/qomet-server backend-dist/qomet-server-mac
+          chmod +x backend-dist/qomet-server-mac
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install root dependencies
+        run: npm install
+
+      - name: Install frontend dependencies
+        run: cd frontend/src && npm install
+
+      - name: Build Electron app (Mac)
+        run: npm run electron:mac
+
+      - name: Upload DMG
+        uses: actions/upload-artifact@v4
+        with:
+          name: QOMET-mac
+          path: dist/*.dmg
