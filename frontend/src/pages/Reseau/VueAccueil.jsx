@@ -7,11 +7,18 @@ import { styles, inputStyle, codeInputStyle, primaryButtonStyle, modeTabStyle } 
 import { LOCAL_URL, ONLINE_URL } from '../../config/config'
 
 export default function VueAccueil({ onCreer, onRejoindre, isLoading }) {
+  const isElectron      = !!window.electronAPI
+  const [onglet, setOnglet] = useState('local')
   const navigate        = useNavigate()
   const { t }           = useLangue()
   const r               = t.reseau
-  const [onglet, setOnglet] = useState('local')
 
+  // ── Navigateur (Railway) : page en ligne directe, sans tabs ───────────
+  if (!isElectron) {
+    return <VueOnline r={r} navigate={navigate} onCreer={onCreer} onRejoindre={onRejoindre} isLoading={isLoading} />
+  }
+
+  // ── Electron : tab "En ligne" (lien Railway) ───────────────────────────
   if (onglet === 'online') {
     return (
       <div style={styles.page}>
@@ -33,9 +40,9 @@ export default function VueAccueil({ onCreer, onRejoindre, isLoading }) {
           <button
             style={{ ...primaryButtonStyle(false), marginTop: 4 }}
             onClick={() => window.electronAPI?.ouvrirURL
-            ? window.electronAPI.ouvrirURL(ONLINE_URL)
-            : window.open(ONLINE_URL, '_blank')
-          }
+              ? window.electronAPI.ouvrirURL(ONLINE_URL)
+              : window.open(ONLINE_URL, '_blank')
+            }
             onMouseEnter={e => { e.currentTarget.style.background = C.violetHover }}
             onMouseLeave={e => { e.currentTarget.style.background = C.violet }}
           >
@@ -47,22 +54,19 @@ export default function VueAccueil({ onCreer, onRejoindre, isLoading }) {
     )
   }
 
+  // ── Electron : tab "Réseau local" ──────────────────────────────────────
   return <VueLocal r={r} navigate={navigate} onCreer={onCreer} onRejoindre={onRejoindre}
                    isLoading={isLoading} onSwitchOnline={() => setOnglet('online')} />
 }
 
-function VueLocal({ r, navigate, onCreer, onRejoindre, isLoading, onSwitchOnline }) {
+// ── Page en ligne (navigateur / Railway) — sans tabs, sans IP ─────────────
+function VueOnline({ r, navigate, onCreer, onRejoindre, isLoading }) {
   const [prenomCreateur,   setPrenomCreateur]   = useState('')
   const [prenomRejoignant, setPrenomRejoignant] = useState('')
   const [codeInput,        setCodeInput]        = useState(['', '', '', ''])
-  const [ipHote,           setIpHote]           = useState('')
   const [focusCreer,       setFocusCreer]       = useState(false)
   const [focusRejoindre,   setFocusRejoindre]   = useState(false)
   const [focusCode,        setFocusCode]        = useState(null)
-  const [focusIP,          setFocusIP]          = useState(false)
-  const [showManualIP,     setShowManualIP]      = useState(false)
-
-  const isElectron = !!window.electronAPI
   const inputsRef = useRef([])
 
   function handleCodeInput(i, val) {
@@ -86,9 +90,141 @@ function VueLocal({ r, navigate, onCreer, onRejoindre, isLoading, onSwitchOnline
     e.preventDefault()
   }
 
-  // En Electron sans IP saisie → undefined (déclenchera la découverte auto)
-  // Avec IP saisie → URL explicite
-  // En navigateur → undefined (handleRejoindre utilisera SERVER_URL = window.location.origin)
+  const codeSaisi         = codeInput.join('')
+  const disabledCreer     = isLoading || !prenomCreateur.trim()
+  const disabledRejoindre = isLoading || codeSaisi.length < 4 || !prenomRejoignant.trim()
+
+  return (
+    <div style={styles.page}>
+      <BoutonRetour onClick={() => navigate('/')} />
+      <h1 style={styles.titre}>{r.titre_online}</h1>
+      <p style={styles.sous}>{r.sous_online}</p>
+
+      <div style={styles.cardsRow}>
+
+        {/* ── Créer ── */}
+        <div style={styles.card}>
+          <div style={styles.cardHeader}>
+            <div style={styles.cardAvatar}>+</div>
+            <div>
+              <div style={styles.cardTitre}>{r.creer}</div>
+              <div style={styles.cardSous}>Tu seras l'hôte de la partie</div>
+            </div>
+          </div>
+          <div style={styles.spacer} />
+          <div>
+            <label style={styles.label}><PersonIcon /> {r.prenom}</label>
+            <input
+              style={inputStyle(focusCreer)}
+              placeholder={r.prenom_placeholder}
+              value={prenomCreateur}
+              onChange={e => setPrenomCreateur(e.target.value)}
+              onFocus={() => setFocusCreer(true)}
+              onBlur={() => setFocusCreer(false)}
+              onKeyDown={e => e.key === 'Enter' && !disabledCreer && onCreer(prenomCreateur.trim())}
+            />
+          </div>
+          <button
+            style={primaryButtonStyle(disabledCreer)}
+            onClick={() => !disabledCreer && onCreer(prenomCreateur.trim())}
+            onMouseEnter={e => { if (!disabledCreer) e.currentTarget.style.background = C.violetHover }}
+            onMouseLeave={e => { if (!disabledCreer) e.currentTarget.style.background = C.violet }}
+          >
+            {isLoading ? 'Création…' : r.creer_btn}
+          </button>
+        </div>
+
+        {/* ── Rejoindre ── */}
+        <div style={styles.card}>
+          <div style={styles.cardHeader}>
+            <div style={styles.cardSearchAvatar}><SearchIcon /></div>
+            <div>
+              <div style={styles.cardTitre}>{r.rejoindre}</div>
+              <div style={styles.cardSous}>Entre le code donné par ton ami</div>
+            </div>
+          </div>
+
+          <div>
+            <label style={styles.label}><PersonIcon /> {r.prenom}</label>
+            <input
+              style={inputStyle(focusRejoindre)}
+              placeholder="Bob"
+              value={prenomRejoignant}
+              onChange={e => setPrenomRejoignant(e.target.value)}
+              onFocus={() => setFocusRejoindre(true)}
+              onBlur={() => setFocusRejoindre(false)}
+            />
+          </div>
+
+          <div>
+            <p style={styles.codeLabel}>{r.code_label}</p>
+            <div style={styles.codeRow}>
+              {codeInput.map((ch, i) => (
+                <input
+                  key={i}
+                  ref={el => inputsRef.current[i] = el}
+                  maxLength={1}
+                  value={ch}
+                  onChange={e => handleCodeInput(i, e.target.value)}
+                  onKeyDown={e => handleCodeKeyDown(i, e)}
+                  onPaste={i === 0 ? handlePaste : undefined}
+                  onFocus={() => setFocusCode(i)}
+                  onBlur={() => setFocusCode(null)}
+                  style={codeInputStyle(focusCode === i)}
+                />
+              ))}
+            </div>
+          </div>
+
+          <button
+            style={primaryButtonStyle(disabledRejoindre)}
+            onClick={() => !disabledRejoindre && onRejoindre(prenomRejoignant.trim(), codeSaisi)}
+            onMouseEnter={e => { if (!disabledRejoindre) e.currentTarget.style.background = C.violetHover }}
+            onMouseLeave={e => { if (!disabledRejoindre) e.currentTarget.style.background = C.violet }}
+          >
+            {isLoading ? 'Connexion…' : r.rejoindre_btn}
+          </button>
+        </div>
+
+      </div>
+    </div>
+  )
+}
+
+// ── Page réseau local (Electron) — avec IP optionnelle ────────────────────
+function VueLocal({ r, navigate, onCreer, onRejoindre, isLoading, onSwitchOnline }) {
+  const [prenomCreateur,   setPrenomCreateur]   = useState('')
+  const [prenomRejoignant, setPrenomRejoignant] = useState('')
+  const [codeInput,        setCodeInput]        = useState(['', '', '', ''])
+  const [ipHote,           setIpHote]           = useState('')
+  const [focusCreer,       setFocusCreer]       = useState(false)
+  const [focusRejoindre,   setFocusRejoindre]   = useState(false)
+  const [focusCode,        setFocusCode]        = useState(null)
+  const [focusIP,          setFocusIP]          = useState(false)
+  const [showManualIP,     setShowManualIP]      = useState(false)
+  const inputsRef = useRef([])
+
+  function handleCodeInput(i, val) {
+    const v    = val.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(-1)
+    const next = [...codeInput]
+    next[i] = v
+    setCodeInput(next)
+    if (v && i < 3) inputsRef.current[i + 1]?.focus()
+  }
+
+  function handleCodeKeyDown(i, e) {
+    if (e.key === 'Backspace' && !codeInput[i] && i > 0) inputsRef.current[i - 1]?.focus()
+  }
+
+  function handlePaste(e) {
+    const text = e.clipboardData.getData('text').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4)
+    const next = ['', '', '', '']
+    text.split('').forEach((ch, i) => { next[i] = ch })
+    setCodeInput(next)
+    inputsRef.current[Math.min(text.length, 3)]?.focus()
+    e.preventDefault()
+  }
+
   const joinURL           = ipHote.trim() ? `http://${ipHote.trim()}:7777` : undefined
   const codeSaisi         = codeInput.join('')
   const disabledCreer     = isLoading || !prenomCreateur.trim()
@@ -97,8 +233,8 @@ function VueLocal({ r, navigate, onCreer, onRejoindre, isLoading, onSwitchOnline
   return (
     <div style={styles.page}>
       <BoutonRetour onClick={() => navigate('/')} />
-      <h1 style={styles.titre}>{isElectron ? r.titre : r.titre_online}</h1>
-      <p style={styles.sous}>{isElectron ? r.sous : r.sous_online}</p>
+      <h1 style={styles.titre}>{r.titre}</h1>
+      <p style={styles.sous}>{r.sous}</p>
 
       <div style={{ display: 'flex', gap: 4, background: C.card, borderRadius: 10, padding: 4, marginBottom: 28, width: '100%', maxWidth: 300 }}>
         <button style={modeTabStyle(true)}>🖧 {r.mode_local}</button>
@@ -161,7 +297,7 @@ function VueLocal({ r, navigate, onCreer, onRejoindre, isLoading, onSwitchOnline
             />
           </div>
 
-          {(!isElectron || showManualIP) && (
+          {showManualIP && (
             <div>
               <label style={styles.label}><NetworkIcon /> {r.ip_manuelle}</label>
               <input
@@ -172,19 +308,14 @@ function VueLocal({ r, navigate, onCreer, onRejoindre, isLoading, onSwitchOnline
                 onFocus={() => setFocusIP(true)}
                 onBlur={() => setFocusIP(false)}
               />
-              <p style={{ color: C.textMuted, fontSize: 11, marginTop: 4 }}>
-                Laisser vide si même machine
-              </p>
             </div>
           )}
-          {isElectron && !showManualIP && (
-            <p
-              style={{ color: C.textMuted, fontSize: 11, textAlign: 'center', cursor: 'pointer', textDecoration: 'underline' }}
-              onClick={() => setShowManualIP(true)}
-            >
-              Saisir l'IP manuellement
-            </p>
-          )}
+          <p
+            style={{ color: C.textMuted, fontSize: 11, textAlign: 'center', cursor: 'pointer', textDecoration: 'underline', margin: 0 }}
+            onClick={() => setShowManualIP(v => !v)}
+          >
+            {showManualIP ? "Masquer l'IP manuelle" : "Saisir l'IP manuellement"}
+          </p>
 
           <div>
             <p style={styles.codeLabel}>{r.code_label}</p>
@@ -218,7 +349,7 @@ function VueLocal({ r, navigate, onCreer, onRejoindre, isLoading, onSwitchOnline
 
       </div>
 
-      {isElectron && <p style={styles.footer}><WifiIcon /> {r.info_wifi}</p>}
+      <p style={styles.footer}><WifiIcon /> {r.info_wifi}</p>
     </div>
   )
 }
