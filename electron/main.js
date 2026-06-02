@@ -288,6 +288,13 @@ function demarrerBackend() {
 
   const args = isDev ? [path.join(__dirname, '..', 'app.py')] : []
 
+  // Sur macOS, le binaire téléchargé est mis en quarantaine par Gatekeeper —
+  // on supprime cet attribut avant de le lancer.
+  if (!isDev && process.platform === 'darwin') {
+    try { require('child_process').execSync(`xattr -d com.apple.quarantine "${exe}" 2>/dev/null`) } catch {}
+    try { require('child_process').execSync(`chmod +x "${exe}"`) } catch {}
+  }
+
   console.log('[Backend] Démarrage...', exe, args)
   server = spawn(exe, args, {
     env:   { ...process.env, PORT: String(PORT) },
