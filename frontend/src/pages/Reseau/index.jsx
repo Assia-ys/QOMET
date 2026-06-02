@@ -28,6 +28,14 @@ export default function Reseau() {
     }
   }, [])
 
+  function resetSocketLocal() {
+    const current = getSocket()
+    if (current.io?.uri !== LOCAL_URL) {
+      current.disconnect()
+      resetSocketToServer(LOCAL_URL)
+    }
+  }
+
   function connecterSocket(url) {
     const onDemarree = (data) => {
       window.electronAPI?.arreterBroadcast?.()
@@ -63,19 +71,19 @@ export default function Reseau() {
       s.emit('rejoindre', { code: data.code, prenom })
       setCodePartie(data.code)
       setPrenomHote(prenom)
-      // Broadcast UDP : le rejoignant trouvera l'hôte automatiquement
-      window.electronAPI?.demarrerBroadcast?.(data.code)
       setVue('attente')
-      // Enregistrer l'IP locale sur Railway (fallback si pas de broadcast)
-      if (serverURL === LOCAL_URL && window.electronAPI?.getLocalIP) {
-        window.electronAPI.getLocalIP().then(ip => {
-          if (!ip) return
-          fetch(`${ONLINE_URL}/local/register`, {
-            method:  'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body:    JSON.stringify({ code: data.code, ip, port: 7777 }),
-          }).catch(() => {})
-        }).catch(() => {})
+      // Broadcast UDP + enregistrement Railway avec la MÊME IP (celle retournée par le broadcast)
+      if (serverURL === LOCAL_URL && window.electronAPI?.demarrerBroadcast) {
+        window.electronAPI.demarrerBroadcast(data.code)
+          .then(broadcastIP => {
+            if (!broadcastIP) return
+            fetch(`${ONLINE_URL}/local/register`, {
+              method:  'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body:    JSON.stringify({ code: data.code, ip: broadcastIP, port: 7777 }),
+            }).catch(() => {})
+          })
+          .catch(() => {})
       }
     } catch {
       setVue('erreur')
@@ -115,8 +123,8 @@ export default function Reseau() {
           console.log('[Rejoindre] Lancement scan réseau local...')
           const found = await window.electronAPI.trouverServeur(code)
           console.log('[Rejoindre] Résultat scan:', found)
-          if (!found) { setVue('erreur'); return }
-          if (found === 'INVALID_CODE') { setVue('code_invalide'); return }
+          if (!found) { resetSocketLocal(); setVue('erreur'); return }
+          if (found === 'INVALID_CODE') { resetSocketLocal(); setVue('code_invalide'); return }
           resolvedURL = found
         }
       }
@@ -124,7 +132,7 @@ export default function Reseau() {
       const s    = connecterSocket(resolvedURL)
       const data = await verifierPartie(code, resolvedURL)
       console.log('[Rejoindre] verifierPartie OK:', data)
-      if (data.pleine) { setVue('erreur'); return }
+      if (data.pleine) { resetSocketLocal(); setVue('erreur'); return }
       reinitialiser()
       setMaCouleur('fonce')
       setPrenomJoueur(prenom)
@@ -132,6 +140,7 @@ export default function Reseau() {
       s.emit('rejoindre', { code, prenom })
     } catch (err) {
       console.error('[Rejoindre] Erreur:', err?.message || err)
+      resetSocketLocal()
       setVue('erreur')
     } finally {
       setIsLoading(false)
@@ -139,7 +148,7 @@ export default function Reseau() {
   }
 
   if (vue === 'attente')       return <SalleAttente code={codePartie} prenom={prenomHote} onAnnuler={() => { window.electronAPI?.arreterBroadcast?.(); setVue('accueil') }} isLocal={!!window.electronAPI} />
-  if (vue === 'erreur')        return <EcranErreur  onReessayer={() => setVue('accueil')} onRetour={() => setVue('accueil')} />
-  if (vue === 'code_invalide') return <EcranErreur  onReessayer={() => setVue('accueil')} onRetour={() => setVue('accueil')} codeInvalide />
+  if (vue === 'erreur')        return <EcranErreur  onReessayer={() => { resetSocketLocal(); setVue('accueil') }} onRetour={() => { resetSocketLocal(); setVue('accueil') }} />
+  if (vue === 'code_invalide') return <EcranErreur  onReessayer={() => { resetSocketLocal(); setVue('accueil') }} onRetour={() => { resetSocketLocal(); setVue('accueil') }} codeInvalide />
   return <VueAccueil onCreer={handleCreer} onRejoindre={handleRejoindre} isLoading={isLoading} />
 }

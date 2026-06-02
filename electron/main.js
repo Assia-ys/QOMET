@@ -16,8 +16,10 @@ let   server = null
 
 const ADAPTATEURS_VIRTUELS = ['hyper', 'vethernet', 'vmware', 'virtualbox', 'vbox', 'wsl', 'bluetooth', 'virtual', 'vpn', 'tap', 'tunnel', 'loopback']
 
-// Plages IP réservées aux adaptateurs virtuels (VirtualBox, Docker, etc.)
-const PLAGES_VIRTUELLES = ['192.168.56.', '192.168.99.', '192.168.100.', '10.0.2.']
+// Plages IP réservées aux adaptateurs virtuels ou non-routables
+// 192.0.0.x = USB Apple (iPhone tethering USB sur Windows) — jamais une IP LAN réelle
+// 169.254.x.x = APIPA link-local (pas de DHCP) — jamais utilisable
+const PLAGES_VIRTUELLES = ['192.168.56.', '192.168.99.', '192.168.100.', '10.0.2.', '192.0.0.', '169.254.']
 
 function getLocalIPs() {
   const nets = os.networkInterfaces()
@@ -148,6 +150,8 @@ function demarrerBroadcastHote(code) {
     const subnet = ip.split('.').slice(0, 3).join('.')
     _broadcastSocket.send(msg, 0, msg.length, UDP_PORT, `${subnet}.255`, () => {})
   }, 500)
+
+  return ip
 }
 
 function arreterBroadcastHote() {
