@@ -370,6 +370,14 @@ _dist = Path(__file__).parent.parent / 'frontend' / 'src' / 'dist'
 if _dist.exists():
     app.mount('/assets', StaticFiles(directory=str(_dist / 'assets')), name='assets')
 
+    @app.get('/favicon.png', include_in_schema=False)
+    async def favicon_png():
+        return FileResponse(str(_dist / 'favicon.png'), media_type='image/png')
+
+    @app.get('/favicon.svg', include_in_schema=False)
+    async def favicon_svg():
+        return FileResponse(str(_dist / 'favicon.svg'), media_type='image/svg+xml')
+
     @app.get('/{full_path:path}', include_in_schema=False)
     async def serve_spa(full_path: str = ''):
         return FileResponse(str(_dist / 'index.html'))
