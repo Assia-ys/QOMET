@@ -38,6 +38,7 @@ export default function useSocket() {
     function onCoupsValides(data)   { setCoupsValides(data.destinations || []); setPeutEjecter(data.peut_ejecter || false) }
     function onAdversaireDeconnecte() {
       const { prenomJoueur } = useGameStore.getState()
+      setAdversaireEnPause(false)
       setGagnant({ nom: prenomJoueur, forfait: true })
       setEtatPartie('terminee')
     }
