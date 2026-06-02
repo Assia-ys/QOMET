@@ -375,17 +375,13 @@ function creerFenetre() {
 
 function fixerParefeuWindows() {
   if (process.platform !== 'win32') return
-  const flagPath = path.join(app.getPath('userData'), '.fw-any')
-  if (fs.existsSync(flagPath)) return  // Déjà fait
   const cmds = [
     'netsh advfirewall firewall delete rule name="QOMET"',
     'netsh advfirewall firewall delete rule name="QOMET-UDP"',
     'netsh advfirewall firewall add rule name="QOMET" dir=in action=allow protocol=TCP localport=7777 profile=any',
     'netsh advfirewall firewall add rule name="QOMET-UDP" dir=in action=allow protocol=UDP localport=7778 profile=any',
   ].join(' & ')
-  exec(cmds, (err) => {
-    if (!err) fs.writeFileSync(flagPath, '1')
-  })
+  exec(cmds, () => {})
 }
 
 // ── Cycle de vie de l'app ──────────────────────────────────────────────────

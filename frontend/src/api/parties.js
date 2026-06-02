@@ -1,6 +1,6 @@
 import { SERVER_URL } from '../config/config'
 
-const TIMEOUT_MS = 5000
+const TIMEOUT_MS = 10000
 
 function withTimeout(promise, ms = TIMEOUT_MS) {
   const controller = new AbortController()
