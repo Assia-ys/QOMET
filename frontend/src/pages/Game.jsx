@@ -4,7 +4,7 @@ import Board from '../components/game/Board'
 import PlayerInfo from '../components/game/PlayerInfo'
 import ModalFinPartie from '../components/game/ModalFinPartie'
 import useGameStore from '../store/useGameStore'
-import useSocket, { getSocketIA, getSocket, resetSocketToServer } from '../hooks/useSocket'
+import useSocket, { getSocketIA } from '../hooks/useSocket'
 import useGameTimer from '../hooks/useGameTimer'
 import useGameActions from '../hooks/useGameActions'
 import BoutonRetour from '../components/layout/BoutonRetour'
@@ -54,20 +54,6 @@ export default function Game() {
     if (etatPartie === 'en_attente' && j[1]?.nom !== 'IA') navigate('/')
   }, [])
 
-  // Reset socket vers LOCAL quand on quitte une partie réseau (pas IA)
-  useEffect(() => {
-    return () => {
-      if (!window.electronAPI) return
-      const { codeRoom } = useGameStore.getState()
-      if (!codeRoom) return
-      const LOCAL_URL = 'http://127.0.0.1:7777'
-      const current = getSocket()
-      if (current.io?.uri !== LOCAL_URL) {
-        current.disconnect()
-        resetSocketToServer(LOCAL_URL)
-      }
-    }
-  }, [])
 
   useEffect(() => {
     if (!gagnant) return
