@@ -27,6 +27,17 @@ export default function Reseau() {
         resetSocketToServer(LOCAL_URL)
       }
     }
+    // Cleanup : reset vers local quand on quitte la page (ex: aller jouer en IA)
+    return () => {
+      if (IS_ELECTRON) {
+        window.electronAPI?.arreterBroadcast?.()
+        const current = getSocket()
+        if (current.io?.uri !== LOCAL_URL) {
+          current.disconnect()
+          resetSocketToServer(LOCAL_URL)
+        }
+      }
+    }
   }, [])
 
   function connecterSocket(url) {
