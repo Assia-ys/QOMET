@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import useSocket, { getSocket, resetSocketToServer } from '../../hooks/useSocket'
 import useGameStore from '../../store/useGameStore'
 import { creerPartie, verifierPartie } from '../../api/parties'
-import { SERVER_URL, LOCAL_URL, ONLINE_URL } from '../../config/config'
+import { SERVER_URL, LOCAL_URL, ONLINE_URL, IS_ELECTRON } from '../../config/config'
 import VueAccueil from './VueAccueil'
 import SalleAttente from './SalleAttente'
 import EcranErreur from './EcranErreur'
@@ -19,6 +19,14 @@ export default function Reseau() {
   const [isLoading,  setIsLoading]  = useState(false)
 
   useEffect(() => {
+    // En Electron, toujours revenir au serveur local quand on entre sur la page réseau
+    if (IS_ELECTRON) {
+      const current = getSocket()
+      if (current.io?.uri !== LOCAL_URL) {
+        current.disconnect()
+        resetSocketToServer(LOCAL_URL)
+      }
+    }
     const s       = getSocket()
     const handler = () => navigate('/jeu')
     s.on('partie_demarree', handler)
