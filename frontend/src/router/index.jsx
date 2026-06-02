@@ -6,7 +6,6 @@ import IA from '../pages/IA'
 import Reseau from '../pages/Reseau/index'
 import Parametres from '../pages/Parametres'
 import { getSocket, resetSocketToServer } from '../hooks/useSocket'
-import useGameStore from '../store/useGameStore'
 
 const LOCAL_URL = 'http://127.0.0.1:7777'
 
@@ -19,15 +18,12 @@ export default function AppRouter() {
     const nouvelle = location.pathname
     prevPath.current = nouvelle
 
-    // Dès qu'on quitte /jeu → reset socket vers local si c'était une partie réseau
+    // Dès qu'on quitte /jeu → reset socket vers local si nécessaire
     if (ancienne === '/jeu' && nouvelle !== '/jeu' && window.electronAPI) {
-      const { codeRoom } = useGameStore.getState()
-      if (codeRoom) {
-        const current = getSocket()
-        if (current.io?.uri !== LOCAL_URL) {
-          current.disconnect()
-          resetSocketToServer(LOCAL_URL)
-        }
+      const current = getSocket()
+      if (current.io?.uri !== LOCAL_URL) {
+        current.disconnect()
+        resetSocketToServer(LOCAL_URL)
       }
     }
   }, [location])
