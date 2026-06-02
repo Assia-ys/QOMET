@@ -24,20 +24,22 @@ jobs:
             --onefile \
             --console \
             --paths . \
-            --hidden-import uvicorn.logging \
-            --hidden-import uvicorn.loops \
-            --hidden-import uvicorn.loops.auto \
-            --hidden-import uvicorn.protocols \
-            --hidden-import uvicorn.protocols.http \
-            --hidden-import uvicorn.protocols.http.auto \
-            --hidden-import uvicorn.protocols.websockets \
-            --hidden-import uvicorn.protocols.websockets.auto \
-            --hidden-import uvicorn.lifespan \
-            --hidden-import uvicorn.lifespan.on \
+            --collect-all uvicorn \
+            --collect-all fastapi \
+            --collect-all socketio \
+            --collect-all engineio \
+            --collect-all starlette \
+            --collect-all anyio \
+            --collect-all pydantic \
             --hidden-import engineio.async_drivers.asgi \
             --hidden-import backend.main \
-            --collect-all socketio \
-            --collect-all engineio
+            --hidden-import config.settings \
+            --hidden-import backend.api.routes \
+            --hidden-import backend.network.manager \
+            --hidden-import backend.game.game \
+            --hidden-import backend.game.board \
+            --hidden-import backend.game.rules \
+            --hidden-import backend.ai.minimax
           mkdir -p backend-dist
           cp dist/qomet-server backend-dist/qomet-server-mac
           chmod +x backend-dist/qomet-server-mac
