@@ -6,8 +6,8 @@ src/node_modules/
 .vite/
 src/.vite/
 
-# Build
-dist/
+# Build (on ignore le dist racine Electron, pas le dist frontend pour Railway)
+/dist/
 src/dist/
 
 # Environnement
@@ -39,7 +39,6 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
-dist
 dist-ssr
 *.local
 
