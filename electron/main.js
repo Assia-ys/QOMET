@@ -134,7 +134,8 @@ let _broadcastInterval = null
 
 function demarrerBroadcastHote(code) {
   arreterBroadcastHote()
-  const ip  = getLocalIP()
+  const ip = getLocalIP()
+  if (ip === '127.0.0.1') return null  // aucune IP LAN valide — ne pas broadcaster ni enregistrer
   const msg = Buffer.from(JSON.stringify({ type: 'QOMET_HOST', ip, port: PORT, code: code.toUpperCase() }))
 
   _broadcastSocket = dgram.createSocket('udp4')

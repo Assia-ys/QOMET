@@ -108,8 +108,12 @@ export default function Reseau() {
           })
           if (res.ok) {
             const info = await res.json()
-            signalingURL = `http://${info.ip}:${info.port}`
-            console.log('[Rejoindre] Railway → IP hôte:', signalingURL)
+            if (info.ip && info.ip !== '127.0.0.1') {
+              signalingURL = `http://${info.ip}:${info.port}`
+              console.log('[Rejoindre] Railway → IP hôte:', signalingURL)
+            } else {
+              console.log('[Rejoindre] Railway → IP invalide:', info.ip, '→ fallback scan')
+            }
           } else {
             console.log('[Rejoindre] Railway → code inconnu (HTTP', res.status, '), fallback scan')
           }
@@ -129,13 +133,13 @@ export default function Reseau() {
         }
       }
       console.log('[Rejoindre] Connexion vers:', resolvedURL)
-      const s    = connecterSocket(resolvedURL)
       const data = await verifierPartie(code, resolvedURL)
       console.log('[Rejoindre] verifierPartie OK:', data)
-      if (data.pleine) { resetSocketLocal(); setVue('erreur'); return }
+      if (data.pleine) { setVue('erreur'); return }
       reinitialiser()
       setMaCouleur('fonce')
       setPrenomJoueur(prenom)
+      const s = connecterSocket(resolvedURL)
       if (!s.connected) s.connect()
       s.emit('rejoindre', { code, prenom })
     } catch (err) {
