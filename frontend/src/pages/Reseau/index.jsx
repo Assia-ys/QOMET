@@ -27,10 +27,6 @@ export default function Reseau() {
         resetSocketToServer(LOCAL_URL)
       }
     }
-    const s       = getSocket()
-    const handler = () => navigate('/jeu')
-    s.on('partie_demarree', handler)
-    return () => s.off('partie_demarree', handler)
   }, [])
 
   function connecterSocket(url) {
@@ -50,6 +46,7 @@ export default function Reseau() {
       s.once('partie_demarree', onDemarree)
       return s
     }
+    current.once('partie_demarree', onDemarree)
     return current
   }
 
