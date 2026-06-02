@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import useSocket, { getSocket, resetSocketToServer } from '../../hooks/useSocket'
 import useGameStore from '../../store/useGameStore'
@@ -17,10 +17,7 @@ export default function Reseau() {
   const [codePartie, setCodePartie] = useState('')
   const [prenomHote, setPrenomHote] = useState('')
   const [isLoading,  setIsLoading]  = useState(false)
-  const partieDemarreeRef = useRef(false)
-
   useEffect(() => {
-    partieDemarreeRef.current = false
     // En Electron, toujours revenir au serveur local quand on entre sur la page réseau
     if (IS_ELECTRON) {
       const current = getSocket()
@@ -29,22 +26,10 @@ export default function Reseau() {
         resetSocketToServer(LOCAL_URL)
       }
     }
-    // Cleanup : reset vers local seulement si on quitte SANS partir en jeu (ex: aller en IA)
-    return () => {
-      if (IS_ELECTRON && !partieDemarreeRef.current) {
-        window.electronAPI?.arreterBroadcast?.()
-        const current = getSocket()
-        if (current.io?.uri !== LOCAL_URL) {
-          current.disconnect()
-          resetSocketToServer(LOCAL_URL)
-        }
-      }
-    }
   }, [])
 
   function connecterSocket(url) {
     const onDemarree = (data) => {
-      partieDemarreeRef.current = true
       window.electronAPI?.arreterBroadcast?.()
       setEtatServeur(data); setCodeRoom(data.code); setEtatPartie('en_cours'); navigate('/jeu')
     }
