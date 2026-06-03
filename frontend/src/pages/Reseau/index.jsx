@@ -41,20 +41,9 @@ export default function Reseau() {
       window.electronAPI?.arreterBroadcast?.()
       setEtatServeur(data); setCodeRoom(data.code); setEtatPartie('en_cours'); navigate('/jeu')
     }
-    if (url !== LOCAL_URL) {
-      const s = resetSocketToServer(url)
-      s.once('partie_demarree', onDemarree)
-      return s
-    }
-    // Serveur local : reset si le socket pointait vers un serveur distant (ex: après une partie en joineur)
-    const current = getSocket()
-    if (current.io?.uri !== LOCAL_URL) {
-      const s = resetSocketToServer(LOCAL_URL)
-      s.once('partie_demarree', onDemarree)
-      return s
-    }
-    current.once('partie_demarree', onDemarree)
-    return current
+    const s = resetSocketToServer(url)
+    s.once('partie_demarree', onDemarree)
+    return s
   }
 
   // SERVER_URL = window.location.origin en navigateur, LOCAL_URL en Electron
