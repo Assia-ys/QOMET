@@ -16,12 +16,19 @@ let   server = null
 
 const ADAPTATEURS_VIRTUELS = ['hyper', 'vethernet', 'vmware', 'virtualbox', 'vbox', 'wsl', 'bluetooth', 'virtual', 'vpn', 'tap', 'tunnel', 'loopback']
 
-// Seules les plages IANA-réservées sont filtrées inconditionnellement.
-// 192.168.56/99/100 et 10.0.2 sont retirées : elles sont gérées par le nom d'adaptateur
-// et pourraient être assignées par un vrai hotspot sur Mac.
-// 192.0.0.x = USB Apple (iPhone tethering USB sur Windows) — jamais une IP LAN réelle
-// 169.254.x.x = APIPA link-local (pas de DHCP) — jamais utilisable
-const PLAGES_VIRTUELLES = ['192.0.0.', '169.254.']
+// Plages exclues inconditionnellement :
+// 192.0.0.x   = IANA réservé / USB Apple (iPhone tethering USB Windows)
+// 169.254.x   = APIPA link-local (pas de DHCP)
+// 192.168.56.x = VirtualBox Host-Only (plage par défaut, jamais utilisée par de vrais routeurs)
+const PLAGES_VIRTUELLES = ['192.0.0.', '169.254.', '192.168.56.']
+
+// Priorité : hotspot iPhone (172.x) > WiFi maison (192.168.x) > réseau entreprise (10.x)
+function scoreIP(ip) {
+  if (ip.startsWith('172.')) return 3
+  if (ip.startsWith('192.168.')) return 2
+  if (ip.startsWith('10.')) return 1
+  return 0
+}
 
 function getLocalIPs() {
   const nets = os.networkInterfaces()
@@ -35,7 +42,7 @@ function getLocalIPs() {
       result.push(iface.address)
     }
   }
-  return result
+  return result.sort((a, b) => scoreIP(b) - scoreIP(a))
 }
 
 // Attend jusqu'à 5s que le DHCP assigne une IP valide (utile juste après connexion hotspot)
