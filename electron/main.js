@@ -35,15 +35,26 @@ function getLocalIPs() {
       result.push(iface.address)
     }
   }
-  return result.length ? result : ['127.0.0.1']
+  return result
+}
+
+// Attend jusqu'à 5s que le DHCP assigne une IP valide (utile juste après connexion hotspot)
+async function getLocalIPsAsync() {
+  for (let i = 0; i < 5; i++) {
+    const ips = getLocalIPs()
+    if (ips.length > 0) return ips
+    await new Promise(r => setTimeout(r, 1000))
+  }
+  return []
 }
 
 function getLocalIP() {
-  return getLocalIPs()[0]
+  return getLocalIPs()[0] ?? '127.0.0.1'
 }
 
 function getSubnets() {
   const ips = getLocalIPs()
+  if (ips.length === 0) return []
   return [...new Set(ips.map(ip => ip.split('.').slice(0, 3).join('.')))]
 }
 
@@ -134,10 +145,11 @@ const UDP_PORT = 7778
 let _broadcastSocket   = null
 let _broadcastInterval = null
 
-function demarrerBroadcastHote(code) {
+async function demarrerBroadcastHote(code) {
   arreterBroadcastHote()
-  const ip = getLocalIP()
-  if (ip === '127.0.0.1') return null  // aucune IP LAN valide — ne pas broadcaster ni enregistrer
+  const ips = await getLocalIPsAsync()
+  const ip  = ips[0]
+  if (!ip) return null  // aucune IP LAN valide même après attente DHCP
   const msg = Buffer.from(JSON.stringify({ type: 'QOMET_HOST', ip, port: PORT, code: code.toUpperCase() }))
 
   _broadcastSocket = dgram.createSocket('udp4')
