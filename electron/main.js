@@ -16,10 +16,12 @@ let   server = null
 
 const ADAPTATEURS_VIRTUELS = ['hyper', 'vethernet', 'vmware', 'virtualbox', 'vbox', 'wsl', 'bluetooth', 'virtual', 'vpn', 'tap', 'tunnel', 'loopback']
 
-// Plages IP réservées aux adaptateurs virtuels ou non-routables
+// Seules les plages IANA-réservées sont filtrées inconditionnellement.
+// 192.168.56/99/100 et 10.0.2 sont retirées : elles sont gérées par le nom d'adaptateur
+// et pourraient être assignées par un vrai hotspot sur Mac.
 // 192.0.0.x = USB Apple (iPhone tethering USB sur Windows) — jamais une IP LAN réelle
 // 169.254.x.x = APIPA link-local (pas de DHCP) — jamais utilisable
-const PLAGES_VIRTUELLES = ['192.168.56.', '192.168.99.', '192.168.100.', '10.0.2.', '192.0.0.', '169.254.']
+const PLAGES_VIRTUELLES = ['192.0.0.', '169.254.']
 
 function getLocalIPs() {
   const nets = os.networkInterfaces()
