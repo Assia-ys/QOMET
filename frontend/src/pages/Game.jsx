@@ -162,7 +162,7 @@ export default function Game() {
         <Button label={t('game.abandonner')} couleur="#dc2626" onClick={() => setAbandonVisible(true)} />
       </div>
 
-      {pauseVisible && (
+      {pauseVisible && !gagnant && (
         <Modal>
           <div style={styles.modaleIcone}>II</div>
           <h2 style={styles.modaleTitre}>{t('game.pause_titre')}</h2>
@@ -185,7 +185,7 @@ export default function Game() {
         </Modal>
       )}
 
-      {abandonVisible && (
+      {abandonVisible && !gagnant && (
         <Modal>
           <div style={styles.abandonIcone}>!</div>
           <h2 style={styles.modaleTitre}>{t('game.abandon_titre')}</h2>
