@@ -293,6 +293,15 @@ function demarrerBackend() {
 
   const args = isDev ? [path.join(__dirname, '..', 'app.py')] : []
 
+  // Libérer le port si une instance précédente tourne encore
+  try {
+    if (process.platform === 'win32') {
+      exec(`for /f "tokens=5" %a in ('netstat -aon ^| findstr :${PORT}') do taskkill /F /PID %a`, () => {})
+    } else {
+      exec(`lsof -ti:${PORT} | xargs kill -9 2>/dev/null || true`, () => {})
+    }
+  } catch {}
+
   // Sur macOS, le binaire téléchargé est mis en quarantaine par Gatekeeper —
   // on supprime cet attribut avant de le lancer.
   if (!isDev && process.platform === 'darwin') {
