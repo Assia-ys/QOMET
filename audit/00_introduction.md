@@ -62,9 +62,9 @@ QOMET est un projet étudiant développé dans le cadre d'un module de développ
 | Technologie | Version | Rôle |
 |-------------|---------|------|
 | Python | 3.x | Langage principal du serveur |
-| FastAPI | latest | Framework HTTP REST (routes `/parties`, `/health`, `/local`) |
-| python-socketio | latest | Serveur WebSocket temps réel (événements de jeu) |
-| Uvicorn | latest | Serveur ASGI (interface FastAPI ↔ OS) |
+| FastAPI | 0.115.0 | Framework HTTP REST (routes `/parties`, `/health`, `/local`) |
+| python-socketio | 5.11.3 | Serveur WebSocket temps réel (événements de jeu) |
+| Uvicorn | 0.30.6 | Serveur ASGI (interface FastAPI ↔ OS) |
 | asyncio | stdlib | Gestion des coroutines et concurrence |
 | threading | stdlib | Thread démon UDP pour la découverte LAN |
 
@@ -74,10 +74,10 @@ QOMET est un projet étudiant développé dans le cadre d'un module de développ
 |-------------|---------|------|
 | React | 19.2.4 | Interface utilisateur |
 | Vite | 8.0.1 | Bundler et serveur de développement |
-| Zustand | latest | Gestion de l'état global (store de jeu) |
-| socket.io-client | latest | Client WebSocket |
+| Zustand | 5.0.13 | Gestion de l'état global (store de jeu) |
+| socket.io-client | 4.8.3 | Client WebSocket |
 | Tailwind CSS | 4.2.2 | Styles utilitaires |
-| React Router | latest | Navigation entre les pages |
+| React Router DOM | 7.15.0 | Navigation entre les pages |
 
 #### Couche applicative (Electron)
 
@@ -89,20 +89,7 @@ QOMET est un projet étudiant développé dans le cadre d'un module de développ
 
 ---
 
-## 3. Objectifs de l'audit
-
-L'audit vise à évaluer la qualité du code source selon quatre axes :
-
-| Axe | Questions posées |
-|-----|-----------------|
-| **Correction** | Le code fait-il ce qu'il est censé faire ? Y a-t-il des bugs identifiables sans exécution ? |
-| **Robustesse** | Comment le code se comporte-t-il face aux cas limites (déconnexion, réseau lent, crash) ? |
-| **Sécurité** | Y a-t-il des vecteurs d'attaque exploitables (injection, CORS, force brute) ? |
-| **Maintenabilité** | Le code est-il lisible, structuré et testable ? La couverture de tests est-elle suffisante ? |
-
----
-
-## 4. Périmètre de l'audit
+## 3. Périmètre de l'audit
 
 ### Inclus
 
@@ -120,19 +107,7 @@ L'audit vise à évaluer la qualité du code source selon quatre axes :
 
 ---
 
-## 5. Méthode
-
-L'audit a été conduit par **lecture statique du code source** (sans exécution de tests de pénétration ni de profiling runtime). Chaque problème identifié est classé selon trois niveaux de sévérité :
-
-| Niveau | Signification |
-|--------|--------------|
-| 🔴 **Élevée** | Bug fonctionnel avéré ou faille de sécurité pouvant impacter directement les utilisateurs |
-| 🟡 **Moyenne** | Comportement incorrect dans un cas limite, dégradation possible de l'expérience |
-| 🟢 **Faible** | Mauvaise pratique, redondance, ou amélioration de qualité sans impact fonctionnel immédiat |
-
----
-
-## 6. Résumé exécutif
+## 4. Résumé exécutif
 
 QOMET est une application bien structurée avec une séparation claire des responsabilités entre le serveur de jeu (Python), l'interface (React) et le conteneur système (Electron). Le moteur de jeu est pur, lisible et bien couvert par les tests unitaires.
 
