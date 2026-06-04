@@ -1,5 +1,5 @@
 /**
- * Moteur audio synthétisé — Web Audio API uniquement, aucun fichier externe.
+ * Moteur audio synthétisé, Web Audio API uniquement, aucun fichier externe.
  * Chaque son est généré par oscillateurs + enveloppes + bruit.
  */
 
@@ -7,7 +7,7 @@ let _ctx    = null
 let _master = null
 let _volume = Number(localStorage.getItem('qomet_volume') ?? 65) / 100
 
-// ── Contexte audio ─────────────────────────────────────────────────────────
+// Contexte audio 
 
 function ctx() {
   if (!_ctx || _ctx.state === 'closed') {
@@ -41,7 +41,7 @@ export function setEffectsVolume(pct) {
 
 function out() { return _master }
 
-// ── Helpers ────────────────────────────────────────────────────────────────
+// Helpers 
 
 function osc(c, type, freq, start, stop, gainStart, gainEnd) {
   const o = c.createOscillator()
@@ -80,9 +80,9 @@ function noise(c, start, dur, gain) {
   src.start(start); src.stop(start + dur)
 }
 
-// ── Sons ───────────────────────────────────────────────────────────────────
+// Sons 
 
-/** Pose d'une étoile : clic net et satisfaisant */
+// Pose d'une étoile 
 export function playPlace() {
   try {
     const c = ctx(), t = c.currentTime
@@ -91,7 +91,7 @@ export function playPlace() {
   } catch (_) {}
 }
 
-/** Glissement d'une pièce : whoosh doux */
+// Glissement d'une pièce  
 export function playSlide() {
   try {
     const c = ctx(), t = c.currentTime
@@ -100,7 +100,7 @@ export function playSlide() {
   } catch (_) {}
 }
 
-/** Poussée : impact lourd + projection */
+//Poussée  
 export function playPush() {
   try {
     const c = ctx(), t = c.currentTime
@@ -111,7 +111,7 @@ export function playPush() {
   } catch (_) {}
 }
 
-/** Éjection : envol dramatique hors du plateau */
+// Éjection 
 export function playEject() {
   try {
     const c = ctx(), t = c.currentTime
@@ -121,7 +121,7 @@ export function playEject() {
   } catch (_) {}
 }
 
-/** Victoire : fanfare montante + accord final */
+// Victoire 
 export function playWin() {
   try {
     const c = ctx(), t = c.currentTime
@@ -139,7 +139,7 @@ export function playWin() {
   } catch (_) {}
 }
 
-/** Défaite : descente chromatique mélancolique */
+//Défaite
 export function playLose() {
   try {
     const c = ctx(), t = c.currentTime
@@ -152,7 +152,7 @@ export function playLose() {
   } catch (_) {}
 }
 
-// ── Hook ───────────────────────────────────────────────────────────────────
+// Hook 
 
 export default function useSounds() {
   return { playPlace, playSlide, playPush, playEject, playWin, playLose }

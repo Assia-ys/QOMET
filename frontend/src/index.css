@@ -4,7 +4,7 @@
   box-sizing: border-box;
 }
 
-/* ── Responsive mobile ─────────────────────────────────────────────── */
+/* Responsive mobile  */
 @media (max-width: 640px) {
   input, button, select { font-size: 16px !important; } /* évite le zoom iOS */
 }
@@ -68,4 +68,3 @@ body {
   60%  { transform: scale(1.2); opacity: 1; }
   100% { transform: scale(1); opacity: 1; }
 }
-

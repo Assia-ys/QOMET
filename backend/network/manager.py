@@ -5,13 +5,11 @@ CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 
 rooms = {}
 
-
 def _generer_code():
     while True:
         code = ''.join(random.choices(CHARS, k=4))
         if code not in rooms:
             return code
-
 
 def creer_room(prenom):
     code = _generer_code()
@@ -22,7 +20,6 @@ def creer_room(prenom):
     }
     return code
 
-
 def quitter_room(sid):
     """Retire un joueur de la room dans laquelle il se trouve, sans supprimer la room."""
     for room in rooms.values():
@@ -32,7 +29,6 @@ def quitter_room(sid):
         if room["joueurs"]["fonce"] == sid:
             room["joueurs"]["fonce"] = None
             return
-
 
 def rejoindre_room(sid, code, prenom):
     if code not in rooms:
@@ -57,13 +53,11 @@ def rejoindre_room(sid, code, prenom):
     else:
         return False, "ERR_ROOM_FULL"
 
-
 def room_est_pleine(code):
     if code not in rooms:
         return False
     r = rooms[code]
     return r["joueurs"]["clair"] is not None and r["joueurs"]["fonce"] is not None
-
 
 def couleur_du_joueur(sid):
     for code, room in rooms.items():
@@ -72,7 +66,6 @@ def couleur_du_joueur(sid):
         if room["joueurs"]["fonce"] == sid:
             return code, "fonce"
     return None, None
-
 
 def supprimer_room(code):
     if code in rooms:

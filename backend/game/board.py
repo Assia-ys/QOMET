@@ -1,7 +1,7 @@
 TAILLE = 7
 CASE_HORS_PLATEAU = "hors_plateau"
 
-# Les 25 cases jouables du plateau en losange
+# Les 25 cases jouables du plateau
 CASES_JOUABLES = {
     (0,0), (0,3), (0,6),
     (1,1), (1,3), (1,5),
@@ -23,7 +23,7 @@ class Board:
         self.dernier_coup = None
 
     def est_jouable(self, row, col):
-        """Case existe ET fait partie du plateau"""
+        """Case existe et fait partie du plateau"""
         return (row, col) in CASES_JOUABLES
 
     def est_valide(self, row, col):
@@ -31,7 +31,7 @@ class Board:
         return 0 <= row < TAILLE and 0 <= col < TAILLE
 
     def est_libre(self, row, col):
-        """Case jouable ET vide"""
+        """Case jouable et vide"""
         return self.est_jouable(row, col) and self.grille[row][col] is None
 
     def poser(self, row, col, couleur):

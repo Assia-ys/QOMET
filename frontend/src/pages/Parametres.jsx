@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Music, Globe, Monitor } from 'lucide-react'
+import { Music, Monitor } from 'lucide-react'
 import BoutonRetour from '../components/layout/BoutonRetour'
 import { setEffectsVolume } from '../hooks/useSounds'
 import { useTranslation } from 'react-i18next'
@@ -8,7 +8,6 @@ import { styles, toggleStyle, boutonLangueStyle } from '../styles/pages/Parametr
 
 const KEYS = {
   volumeEffets: 'qomet_volume',
-  port:         'qomet_port',
   pleinEcran:   'qomet_plein_ecran',
 }
 
@@ -18,7 +17,6 @@ export default function Parametres() {
   const langueOriginale = useRef(i18n.language)
 
   const [volumeEffets, setVolumeEffets] = useState(() => Number(localStorage.getItem(KEYS.volumeEffets) ?? 65))
-  const [port,          setPort]          = useState(() => localStorage.getItem(KEYS.port) ?? '7777')
   const [pleinEcran,    setPleinEcran]    = useState(() => localStorage.getItem(KEYS.pleinEcran) === 'true')
 
   useEffect(() => {
@@ -49,7 +47,6 @@ export default function Parametres() {
 
   function sauvegarder() {
     localStorage.setItem(KEYS.volumeEffets, volumeEffets)
-    localStorage.setItem(KEYS.port,         port)
     setEffectsVolume(volumeEffets)
     navigate('/')
   }
@@ -70,18 +67,6 @@ export default function Parametres() {
             setEffectsVolume(v)
           }}
         />
-      </Section>
-
-      <Section icone={<Globe size={24} color="#6366f1" />} label={t('params.reseau')}>
-        <div style={styles.rangee}>
-          <span style={styles.champLabel}>{t('params.port')}</span>
-          <input
-            value={port}
-            onChange={e => setPort(e.target.value)}
-            style={styles.inputPetit}
-          />
-        </div>
-        <p style={styles.hint}>{t('params.port_hint')}</p>
       </Section>
 
       <Section icone={<Monitor size={24} color="#6366f1" />} label={t('params.affichage')}>

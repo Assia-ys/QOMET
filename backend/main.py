@@ -11,19 +11,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
-
 from config.settings import HOST, PORT
 from backend.game.rules import Rules
-from backend.network.manager import (
-    rejoindre_room, room_est_pleine,
-    couleur_du_joueur, supprimer_room, quitter_room, rooms,
-)
+from backend.network.manager import rejoindre_room, room_est_pleine, couleur_du_joueur, supprimer_room, quitter_room, rooms
 from backend.api.routes import router as parties_router
 from backend.ai.minimax import coup_facile, coup_minimax
 
-# ── UDP découverte LAN ─────────────────────────────────────────────────────────
-# socketio.ASGIApp absorbe les lifespan events sans les propager à FastAPI,
-# donc on démarre le serveur UDP dans un thread daemon au chargement du module.
+# Serveur UDP pour la découverte réseau locale.
+# Lancé dans un thread daemon car socketio.ASGIApp ne transmet pas les events de démarrage FastAPI.
+
 UDP_PORT = 7778
 
 def _udp_server_thread():
@@ -32,7 +28,7 @@ def _udp_server_thread():
     sock.setsockopt(_socket.SOL_SOCKET, _socket.SO_BROADCAST, 1)
     try:
         sock.bind(('0.0.0.0', UDP_PORT))
-        print(f'[UDP] Découverte active sur port {UDP_PORT}')
+        print(f'[UDP] Découverte active sur port {UDP_PORT}') 
         while True:
             try:
                 data, addr = sock.recvfrom(1024)
@@ -51,13 +47,13 @@ def _udp_server_thread():
 
 threading.Thread(target=_udp_server_thread, daemon=True).start()
 
-# ── Socket.io ──────────────────────────────────────────────────────────────────
+# Socket.io 
 sio = socketio.AsyncServer(
     async_mode='asgi',
     cors_allowed_origins='*',
 )
 
-# ── FastAPI ────────────────────────────────────────────────────────────────────
+# FastAPI 
 app = FastAPI(title="QOMET API")
 
 app.add_middleware(
@@ -71,12 +67,12 @@ socket_app = socketio.ASGIApp(sio, other_asgi_app=app)
 
 app.include_router(parties_router)
 
-# ── Signaling réseau local (Railway sert de relai d'annonce) ──────────────────
+# Signaling Railway
 # L'hôte Electron enregistre son IP locale ici au moment de créer une partie.
 # Le rejoignant interroge cette route pour obtenir l'IP sans scanner le réseau.
 
-_local_registry: dict[str, dict] = {}   # code → {ip, port, at}
-_LOCAL_TTL = 600                        # 10 minutes
+_local_registry: dict[str, dict] = {}   # code => {ip, port, at}
+_LOCAL_TTL = 600  # 10 minutes
 
 class LocalRegisterBody(BaseModel):
     code: str
@@ -101,7 +97,7 @@ async def local_find(code: str):
         raise HTTPException(status_code=404, detail="not_found")
     return {"ip": entry["ip"], "port": entry["port"]}
 
-# ── Endpoint découverte réseau ─────────────────────────────────────────────────
+# Endpoint découverte réseau 
 
 @app.get("/info")
 async def info():
@@ -113,12 +109,11 @@ async def info():
         "port":     PORT,
     }
 
-# ── Événements Socket.io ───────────────────────────────────────────────────────
+# Evénements socket.io 
 
 @sio.event
 async def connect(sid, _environ):
     print(f"[WS] Connecté : {sid}")
-
 
 @sio.event
 async def disconnect(sid):
@@ -127,25 +122,22 @@ async def disconnect(sid):
     if not code:
         return
     game = rooms[code]["game"]
-    # Ne supprimer la room que si la partie était déjà en cours (les deux joueurs présents)
-    # En salle d'attente, une déconnexion temporaire ne doit pas tuer la room
+    # ne supprimer la room que si la partie était déjà en cours (les deux joueurs présents)
+    # en salle d'attente, une déconnexion temporaire ne doit pas tuer la room
     if room_est_pleine(code) or game.termine:
         await sio.emit("adversaire_deconnecte", {
             "message": "Ton adversaire a quitté la partie. Tu remportes la victoire !"
-        }, room=code)
+        }, room=code, skip_sid=sid)
         supprimer_room(code)
     else:
-        # Salle d'attente : libère juste la place du joueur déconnecté
+        # Dans la salle d'attente, onlibère juste la place du joueur déconnecté
         quitter_room(sid)
- 
-
 
 @sio.event
 async def rejoindre(sid, data):
     """
-    Reçu quand un joueur veut rejoindre une room existante.
-    data = { "code": "AS58", "prenom": "Bob" }
-    La room doit avoir été créée via POST /parties au préalable.
+    Un joueur rejoint une room avec son prénom et le code de la partie
+    si les deux joueurs sont présents, la partie démarre automatiquement.
     """
     prenom = data.get("prenom", "Joueur")
     code   = data.get("code", "").upper().strip()
@@ -165,18 +157,15 @@ async def rejoindre(sid, data):
         etat["code"] = code
         await sio.emit("partie_demarree", etat, room=code)
 
-
 @sio.event
 async def quitter(sid):
-    """Le joueur quitte sa room volontairement (ex : annuler depuis la salle d'attente)."""
+    """Le joueur quitte sa room volontairement"""
     quitter_room(sid)
-
 
 @sio.event
 async def deplacements_valides(sid, data):
     """
     Retourne les destinations valides pour une étoile.
-    data = { "row": r, "col": c }
     """
     code, _ = couleur_du_joueur(sid)
     if not code:
@@ -195,17 +184,15 @@ async def deplacements_valides(sid, data):
     peut_ejecter = any(c[0] == "ejecter" for c in coups)
     await sio.emit("coups_valides", {"destinations": destinations, "peut_ejecter": peut_ejecter}, to=sid)
 
-
 @sio.event
 async def abandonner(sid):
-    """Un joueur abandonne volontairement la partie."""
+    # un joueur abandonne volontairement la partie
     code, _ = couleur_du_joueur(sid)
     if code:
         await sio.emit("adversaire_deconnecte", {
             "message": "Ton adversaire a abandonné. Tu remportes la victoire !"
         }, room=code)
         supprimer_room(code)
-
 
 @sio.event
 async def pause(sid):
@@ -227,7 +214,6 @@ async def reprendre(sid):
 async def coup_ia(sid, data):
     """
     Calcule et joue le meilleur coup pour le joueur IA.
-    data = { "niveau": "facile"|"moyen"|"difficile" }
     Le coup est appliqué côté serveur puis l'état est diffusé à tous.
     """
     code, couleur = couleur_du_joueur(sid)
@@ -273,13 +259,10 @@ async def coup_ia(sid, data):
         }, room=code)
         supprimer_room(code)
 
-
 @sio.event
 async def jouer(sid, data):
     """
     Reçu quand un joueur joue un coup.
-    data = { "type": "poser",       "row": 3, "col": 3 }
-        ou { "type": "deplacement", "coup": [...] }
     """
     code, couleur = couleur_du_joueur(sid)
 
@@ -339,7 +322,7 @@ async def jouer(sid, data):
     # Broadcast le nouvel état aux 2 joueurs
     await sio.emit("etat", game.etat(), room=code)
 
-    # Fin de partie : envoie les cellules gagnantes puis le modal
+    # Fin de partie, on envoie les cellules gagnantes puis le modal
     if game.termine:
         carre = Rules.trouver_carre_gagnant(game.board)
         if carre:
@@ -353,7 +336,7 @@ async def jouer(sid, data):
         supprimer_room(code)
 
 
-# ── Routes HTTP ────────────────────────────────────────────────────────────────
+# Routes HTTP 
 @app.get("/health")
 async def health():
     return {
@@ -365,7 +348,7 @@ async def health():
     }
 
 
-# ── Frontend statique (production Railway) ─────────────────────────────────────
+# Frontend (Railway) 
 _dist = Path(__file__).parent.parent / 'frontend' / 'src' / 'dist'
 if _dist.exists():
     app.mount('/assets', StaticFiles(directory=str(_dist / 'assets')), name='assets')
@@ -382,7 +365,6 @@ if _dist.exists():
     async def serve_spa(full_path: str = ''):
         return FileResponse(str(_dist / 'index.html'))
 
-
-# ── Lancement ──────────────────────────────────────────────────────────────────
+# Lancement 
 if __name__ == "__main__":
     uvicorn.run("backend.main:socket_app", host=HOST, port=PORT, reload=True)

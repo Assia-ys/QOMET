@@ -16,7 +16,7 @@ export function getSocketIA() {
   return socketIA
 }
 
-// Recrée le socket vers un serveur distant (mode réseau 2 machines)
+// Recrée le socket vers un serveur distant (
 export function resetSocketToServer(serverUrl) {
   if (socket) { socket.disconnect(); socket = null }
   socket = io(serverUrl, { autoConnect: false })

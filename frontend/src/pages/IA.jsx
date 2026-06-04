@@ -49,7 +49,7 @@ export default function IA() {
         navigate('/jeu')
       })
 
-      // On envoie les deux join — l'ordre côté serveur détermine les couleurs
+      // On envoie les deux join, l'ordre côté serveur détermine les couleurs
       const iaCommence = Math.random() < 0.5
       if (iaCommence) {
         sIA.emit('rejoindre', { code, prenom: 'IA' })

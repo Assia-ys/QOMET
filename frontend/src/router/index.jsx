@@ -18,7 +18,7 @@ export default function AppRouter() {
     const nouvelle = location.pathname
     prevPath.current = nouvelle
 
-    // Dès qu'on quitte /jeu → reset socket vers local si nécessaire
+    // Dès qu'on quitte /jeu => reset socket vers local si nécessaire
     if (ancienne === '/jeu' && nouvelle !== '/jeu' && window.electronAPI) {
       const current = getSocket()
       if (current.io?.uri !== LOCAL_URL) {

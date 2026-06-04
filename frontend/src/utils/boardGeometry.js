@@ -1,24 +1,14 @@
-/**
- * boardGeometry.js
- * Source unique pour la géométrie du plateau QOMET.
- * Utilisé par Board.jsx (affichage) et Game.jsx (heuristique IA).
- */
-
 import { CASES_JOUABLES } from '../constants/board'
-
 export const TAILLE = 7
-
 export const SET_JOUABLES = new Set(CASES_JOUABLES.map(([r, c]) => `${r},${c}`))
-
 export function estJouable(r, c) {
   return SET_JOUABLES.has(`${r},${c}`)
 }
-
 export function estValide(r, c) {
   return r >= 0 && r < TAILLE && c >= 0 && c < TAILLE
 }
 
-// ── Arêtes : horizontal, vertical, 2 diagonales ───────────────────────────────
+// Arêtes : horizontal, vertical, 2 diagonales 
 function buildEdgesAndNeighbors() {
   const edges = []
   const neighbors = {}
@@ -50,11 +40,11 @@ function buildEdgesAndNeighbors() {
     for (let i = 0; i < rows.length - 1; i++) add(rows[i], c, rows[i + 1], c)
   }
 
-  // Diagonale ↘ r == c
+  // Diagonale  r == c
   const diag1 = CASES_JOUABLES.filter(([r, c]) => r === c).sort(([r1], [r2]) => r1 - r2)
   for (let i = 0; i < diag1.length - 1; i++) add(...diag1[i], ...diag1[i + 1])
 
-  // Diagonale ↙ r + c == 6
+  // Diagonale  r + c == 6
   const diag2 = CASES_JOUABLES.filter(([r, c]) => r + c === 6).sort(([r1], [r2]) => r1 - r2)
   for (let i = 0; i < diag2.length - 1; i++) add(...diag2[i], ...diag2[i + 1])
 

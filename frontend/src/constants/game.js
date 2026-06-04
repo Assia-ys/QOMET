@@ -1,4 +1,4 @@
-// État initial d'un joueur
+// Etat initial d'un joueur
 export const joueurInitial = (nom, couleur) => ({
   nom,
   couleur,

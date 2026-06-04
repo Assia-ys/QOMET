@@ -44,15 +44,13 @@ def _calculer_carres():
 
 CARRES_POSSIBLES = _calculer_carres()
 
-
 class Rules:
 
     @staticmethod
     def prochaine_case_jouable(board, row, col, dr, dc):
         """
-        Depuis (row,col) dans la direction (dr,dc),
-        retourne la prochaine case jouable rencontrée.
-        Retourne None si on sort du plateau sans en trouver.
+        Depuis (row,col) dans la direction (dr,dc), retourne la prochaine case jouable rencontrée.
+        sinon retourne None si on sort du plateau sans la trouver.
         """
         r, c = row + dr, col + dc
         while board.est_valide(r, c):
@@ -60,7 +58,7 @@ class Rules:
                 return (r, c)
             r += dr
             c += dc
-        return None  # sorti du plateau
+        return None  
 
     @staticmethod
     def deplacements_valides(board, row, col, dernier_coup):
@@ -78,7 +76,7 @@ class Rules:
         for dr, dc in _directions_pour(row, col):
             cible = Rules.prochaine_case_jouable(board, row, col, dr, dc)
 
-            # --- Pas de case jouable dans cette direction → éjection volontaire ---
+            # Pas de case jouable dans cette direction => éjection volontaire
             if cible is None:
                 if (row, col) in CASES_CARRE_EXTERIEUR:
                     coup = ("ejecter", row, col, dr, dc)
@@ -88,13 +86,13 @@ class Rules:
 
             r2, c2 = cible
 
-            # --- Case jouable libre → glissement ---
+            # Case jouable libre => glissement
             if board.est_libre(r2, c2):
                 coup = ("glisser", row, col, r2, c2, dr, dc)
                 if not Rules._est_annulation(coup, dernier_coup):
                     resultats.append(coup)
 
-            # --- Case jouable occupée → tentative de poussée ---
+            # Case jouable occupée => tentative de poussée 
             else:
                 cible2 = Rules.prochaine_case_jouable(board, r2, c2, dr, dc)
 
@@ -105,13 +103,13 @@ class Rules:
                         resultats.append(coup)
 
                 elif cible2 is None:
-                    # pousser hors plateau uniquement si la case poussée est physiquement au bord
+                    # pousser hors plateau uniquement si la case poussée est au bord
                     if not board.est_valide(r2 + dr, c2 + dc):
                         coup = ("pousser_ejecter", row, col, r2, c2, dr, dc)
                         if not Rules._est_annulation(coup, dernier_coup):
                             resultats.append(coup)
 
-                # si cible2 est occupée → on ne peut pas pousser 2 étoiles
+                # si cible2 est occupée => on ne peut pas pousser 2 étoiles
 
         return resultats
 
@@ -119,22 +117,17 @@ class Rules:
     def _est_annulation(coup, dernier_coup):
         """
         Vérifie si le coup annule exactement le coup précédent.
-        Ex: glisser A→B puis B→A = annulation interdite.
-        Ex: pousser A→B→C puis pousser C→B→A = annulation interdite.
+        exemple: glisser A->B puis B->A = annulation interdite.
         """
         if dernier_coup is None:
             return False
 
-        # glisser A→B puis B→A
+        # glisser A->B puis B->A
         if coup[0] == "glisser" and dernier_coup[0] == "glisser":
             if (coup[1], coup[2]) == (dernier_coup[3], dernier_coup[4]) and \
                (coup[3], coup[4]) == (dernier_coup[1], dernier_coup[2]):
                 return True
 
-        # pousser A→B→C puis pousser C→B→A (remet les deux étoiles à leur place)
-        # dernier_coup: ("pousser", r1,c1, r2,c2, r3,c3, dr,dc)
-        #   → actif allait de r1,c1 à r2,c2 ; adverse poussé de r2,c2 à r3,c3
-        # coup annulant: ("pousser", r3,c3, r2,c2, r1,c1, -dr,-dc)
         if coup[0] == "pousser" and dernier_coup[0] == "pousser":
             if coup[1:3] == dernier_coup[5:7] and \
                coup[3:5] == dernier_coup[3:5] and \
@@ -146,7 +139,6 @@ class Rules:
     @staticmethod
     def appliquer_coup(board, coup, joueur_actif, joueur_adverse):
         """
-        Applique le coup sur une copie du board.
         Retourne le nouveau board sans modifier l'original.
         """
         b = board.copier()
@@ -189,7 +181,7 @@ class Rules:
 
     @staticmethod
     def verifier_victoire(board):
-        """Retourne un set des couleurs gagnantes (peut contenir 0, 1 ou 2)."""
+        """Retourne un set des couleurs gagnantes"""
         gagnants = set()
         for (p1, p2, p3, p4) in CARRES_POSSIBLES:
             coins = [board.get(*p) for p in (p1, p2, p3, p4)]
