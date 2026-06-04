@@ -16,7 +16,6 @@ class Game:
         """Crée une copie indépendante du jeu pour le Minimax."""
         g = Game.__new__(Game)
         g.board = self.board.copier()
-        # Copie manuelle des joueurs (plus rapide que deepcopy)
         g.joueur1 = Player(self.joueur1.nom, self.joueur1.couleur)
         g.joueur1.etoiles_en_main    = self.joueur1.etoiles_en_main
         g.joueur1.etoiles_sur_plateau = self.joueur1.etoiles_sur_plateau
@@ -50,7 +49,7 @@ class Game:
         return True, "OK"
 
     def jouer_deplacement(self, coup):
-        """Le joueur déplace une étoile (coup validé par Rules)"""
+        """Le joueur déplace une étoile"""
         coups_legaux = Rules.deplacements_valides(
             self.board, coup[1], coup[2], self.board.dernier_coup
         )
@@ -73,7 +72,7 @@ class Game:
         couleur_actif = self.joueur_actif.couleur
         couleur_adverse = self.joueur_adverse.couleur
 
-        # Carré involontaire ou simultané → adversaire gagne
+        # Carré involontaire ou simultané => adversaire gagne
         if couleur_adverse in gagnants:
             self.gagnant = self.joueur_adverse
         elif couleur_actif in gagnants:

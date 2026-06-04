@@ -12,12 +12,12 @@ export default function VueAccueil({ onCreer, onRejoindre, isLoading }) {
   const navigate        = useNavigate()
   const { t }           = useTranslation()
 
-  // ── Navigateur (Railway) : page en ligne directe, sans tabs ───────────
+  // Navigateur (Railway) : page en ligne directe
   if (!isElectron) {
     return <VueOnline navigate={navigate} onCreer={onCreer} onRejoindre={onRejoindre} isLoading={isLoading} />
   }
 
-  // ── Electron : tab "En ligne" (lien Railway) ───────────────────────────
+  // Electron : "En ligne" (lien Railway) 
   if (onglet === 'online') {
     return (
       <div style={styles.page}>
@@ -52,12 +52,12 @@ export default function VueAccueil({ onCreer, onRejoindre, isLoading }) {
     )
   }
 
-  // ── Electron : tab "Réseau local" ──────────────────────────────────────
+  // Electron : "Réseau local" 
   return <VueLocal navigate={navigate} onCreer={onCreer} onRejoindre={onRejoindre}
                    isLoading={isLoading} onSwitchOnline={() => setOnglet('online')} />
 }
 
-// ── Page en ligne (navigateur / Railway) — sans tabs, sans IP ─────────────
+//  Page en ligne (navigateur / Railway)  
 function VueOnline({ navigate, onCreer, onRejoindre, isLoading }) {
   const { t } = useTranslation()
   const [prenomCreateur,   setPrenomCreateur]   = useState('')
@@ -190,7 +190,7 @@ function VueOnline({ navigate, onCreer, onRejoindre, isLoading }) {
   )
 }
 
-// ── Page réseau local (Electron) — avec IP optionnelle ────────────────────
+//  Page réseau local (Electron) avec IP optionnelle 
 function VueLocal({ navigate, onCreer, onRejoindre, isLoading, onSwitchOnline }) {
   const { t } = useTranslation()
   const [prenomCreateur,   setPrenomCreateur]   = useState('')

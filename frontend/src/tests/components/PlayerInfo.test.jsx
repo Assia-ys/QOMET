@@ -47,7 +47,7 @@ describe('PlayerInfo — badge IA', () => {
       <PlayerInfo joueur={joueurIA} estActif={false} niveauIA="facile" />,
       { wrapper }
     )
-    // Le texte "Facile" est affiché en vert — on vérifie juste la présence
+    // Le texte "Facile" est affiché en vert,  on vérifie juste la présence
     const badge = screen.getByText(/Facile/i)
     expect(badge).toBeInTheDocument()
     // Le style contient une couleur (pas blanc)

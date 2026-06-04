@@ -39,7 +39,7 @@ const useGameStore = create((set, get) => ({
   setGagnant: (gagnant) =>
     set({ gagnant, etatPartie: 'terminee' }),
 
-  // Mise à jour complète depuis le serveur (événement "etat" ou "partie_demarree")
+  // Mise à jour complète depuis le serveur
   setEtatServeur: (data) =>
     set((state) => {
       let plateau = state.plateau
@@ -61,7 +61,7 @@ const useGameStore = create((set, get) => ({
           }))
         : state.joueurs
 
-      // Utilise couleur_active pour identifier le joueur actif (robuste même si les noms sont identiques)
+      // Utilise couleur_active pour identifier le joueur actif (même si les noms sont identiques)
       const indexActif = data.couleur_active
         ? joueurs.findIndex(j => j.couleur === data.couleur_active)
         : joueurs.findIndex(j => j.nom === data.joueur_actif)

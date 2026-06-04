@@ -15,7 +15,7 @@ i18n.use(initReactI18next).init({
   interpolation: { escapeValue: false },
 })
 
-// Ne sauvegarder qu'après l'init — pas pendant le chargement initial
+// Ne sauvegarder qu'après l'init, pas pendant le chargement initial
 let initialized = false
 i18n.on('initialized', () => { initialized = true })
 i18n.on('languageChanged', (lng) => {

@@ -1,5 +1,5 @@
 export const palette = {
-  // ── Fonds ─────────────────────────────────────────────────────────────
+  // Fonds 
   bg:            '#0f172a',
   card:          '#1e293b',
   cardDark:      '#111827',
@@ -8,14 +8,14 @@ export const palette = {
   inputBorder:   '#475569',
   inputFocus:    '#7c3aed',
 
-  // ── Violet (couleur primaire) ──────────────────────────────────────────
+  //  Violet  
   violet:        '#7c3aed',
   violetHover:   '#6d28d9',
   violetLight:   '#a78bfa',
   violetDark:    '#312e81',
   violetFaded:   '#6366f1',
 
-  // ── Statuts ────────────────────────────────────────────────────────────
+  // Statuts 
   green:         '#22c55e',
   greenSolid:    '#16a34a',
   red:           '#ef4444',
@@ -26,16 +26,16 @@ export const palette = {
   yellow:        '#eab308',
   orange:        '#f97316',
 
-  // ── Textes ─────────────────────────────────────────────────────────────
+  // Textes 
   textPrimary:   '#f1f5f9',
   textSub:       '#94a3b8',
   textMuted:     '#64748b',
   textDisabled:  '#475569',
 
-  // ── Gradients ──────────────────────────────────────────────────────────
+  // Gradients 
   gradientViolet: 'linear-gradient(90deg, #6366f1, #8b5cf6)',
 
-  // ── Étoiles joueurs ─────────────────────────────────────────────────────
+  // Étoiles joueurs 
   clair: {
     fill:      '#f59e0b',
     stroke:    '#fde68a',
@@ -52,7 +52,7 @@ export const palette = {
   },
   etoileVide: { fill: '#1f2937', stroke: '#374151' },
 
-  // ── IA niveaux ─────────────────────────────────────────────────────────
+  // IA niveaux 
   niveauFacile:    '#22c55e',
   niveauMoyen:     '#eab308',
   niveauDifficile: '#ef4444',
@@ -62,7 +62,7 @@ export const palette = {
     difficile: '#ef4444',
   },
 
-  // ── Plateau (Board) ────────────────────────────────────────────────────
+  // Plateau 
   board: {
     vide:            { fill: '#1e1b4b', stroke: '#6d28d9', glow: 'rgba(124,58,237,0.2)' },
     videHover:       { fill: '#2d1f5e', stroke: '#7c3aed', glow: 'rgba(124,58,237,0.4)' },

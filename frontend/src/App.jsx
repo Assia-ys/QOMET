@@ -7,7 +7,6 @@ export default function App() {
     if (window.electronAPI?.setFullScreen) {
       window.electronAPI.setFullScreen(pref)
     }
-    // Affiche les logs du processus principal dans la console DevTools
     if (window.electronAPI?.onMainLog) {
       window.electronAPI.onMainLog((msg) => console.log('[Main]', msg))
     }

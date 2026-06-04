@@ -88,7 +88,7 @@ export default function Reseau() {
       let resolvedURL = serverURL
       // En Electron sans IP manuelle : découverte automatique du serveur hôte
       if (window.electronAPI?.trouverServeur && serverURL === LOCAL_URL) {
-        // 1) Essai via signaling Railway (fonctionne sur tout réseau, instant)
+        // Essai via signaling Railway (fonctionne sur tout réseau, instant)
         let signalingURL = null
         try {
           console.log('[Rejoindre] Interrogation Railway pour code', code.toUpperCase())

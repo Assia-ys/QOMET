@@ -4,13 +4,9 @@ from backend.game.rules import CARRES_POSSIBLES
 
 def evaluer(board, couleur):
     """
-    Évalue la position du plateau pour le joueur 'couleur'.
-
-    Pour chacun des 15 carrés possibles :
-    - Si aucun coin adversaire → score += friendly²
-    - Si au moins 1 coin adversaire → carré mort, score += 0
-
-    Retourne un entier positif ou nul.
+    Retourne un score à la position actuelle pour 'couleur'.
+    Pour chaque carré possible: si l'adversaire y est présent, le carré est mort (0 point).
+    Sinon, score += (pièces amies)² , ce qui favorise les carrés presque complets.
     """
     score = 0
 

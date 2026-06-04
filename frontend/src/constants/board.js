@@ -1,4 +1,4 @@
-// Les 25 cases jouables du plateau en losange 7x7
+// Les 25 cases jouables du plateau 7x7
 export const CASES_JOUABLES = [
   [0,0], [0,3], [0,6],
   [1,1], [1,3], [1,5],
@@ -9,11 +9,11 @@ export const CASES_JOUABLES = [
   [6,0], [6,3], [6,6],
 ]
 
-// Grille vide 7x7 (toutes les cases à null)
+// Grille vide 7x7 
 export const GRILLE_VIDE = () =>
   Array.from({ length: 7 }, () => Array.from({ length: 7 }, () => null))
 
-// ── Géométrie du plateau ───────────────────────────────────────────────────
+// Géométrie du plateau 
 export const CELL     = 54   // taille d'une cellule en px
 export const GAP      = 14   // espace entre cellules en px
 export const PADDING  = 36   // marge interne du plateau en px

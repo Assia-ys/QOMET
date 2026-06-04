@@ -6,23 +6,21 @@ const http       = require('http')
 const net        = require('net')
 const dgram      = require('dgram')
 const os         = require('os')
-
 const isDev  = process.env.NODE_ENV === 'development'
+const ADAPTATEURS_VIRTUELS = ['hyper', 'vethernet', 'vmware', 'virtualbox', 'vbox', 'wsl', 'bluetooth', 'virtual', 'vpn', 'tap', 'tunnel', 'loopback']
 const PORT   = 7777
+const UDP_PORT = 7778
 let   win    = null
 let   server = null
-
-// ── Utilitaires réseau ─────────────────────────────────────────────────────────
-
-const ADAPTATEURS_VIRTUELS = ['hyper', 'vethernet', 'vmware', 'virtualbox', 'vbox', 'wsl', 'bluetooth', 'virtual', 'vpn', 'tap', 'tunnel', 'loopback']
+let _broadcastSocket   = null
+let _broadcastInterval = null
 
 // Plages exclues inconditionnellement :
-// 192.0.0.x   = IANA réservé / USB Apple (iPhone tethering USB Windows)
-// 169.254.x   = APIPA link-local (pas de DHCP)
+// 192.0.0.x   = IANA (plages réservées)
+// 169.254.x   = APIPA : Automatic Private IP Addressing (pas de DHCP)
 // 192.168.56.x = VirtualBox Host-Only (plage par défaut, jamais utilisée par de vrais routeurs)
 const PLAGES_VIRTUELLES = ['192.0.0.', '169.254.', '192.168.56.']
 
-// Priorité : hotspot iPhone (172.x) > WiFi maison (192.168.x) > réseau entreprise (10.x)
 function scoreIP(ip) {
   if (ip.startsWith('172.')) return 3
   if (ip.startsWith('192.168.')) return 2
@@ -45,7 +43,7 @@ function getLocalIPs() {
   return result.sort((a, b) => scoreIP(b) - scoreIP(a))
 }
 
-// Attend jusqu'à 5s que le DHCP assigne une IP valide (utile juste après connexion hotspot)
+// Attend jusqu'à 5s que le DHCP assigne une IP valide (hotspot)
 async function getLocalIPsAsync() {
   for (let i = 0; i < 5; i++) {
     const ips = getLocalIPs()
@@ -65,6 +63,8 @@ function getSubnets() {
   return [...new Set(ips.map(ip => ip.split('.').slice(0, 3).join('.')))]
 }
 
+// Vérifie si un port est ouvert sur une IP donnée via une connexion TCP.
+// Retourne true si quelque chose répond, false si le port est fermé ou le timeout dépassé.
 function checkPort(ip, port, timeout = 300) {
   return new Promise((resolve) => {
     const sock = new net.Socket()
@@ -76,6 +76,7 @@ function checkPort(ip, port, timeout = 300) {
   })
 }
 
+// Vérifie si requête HTTP GET /health : OK ==> serveur Qomet
 function fetchInfo(ip) {
   return new Promise((resolve) => {
     const req = http.get(
@@ -94,6 +95,7 @@ function fetchInfo(ip) {
   })
 }
 
+// Lister les IPs du réseau LAN via ARP
 function getArpIPs() {
   return new Promise((resolve) => {
     const { exec } = require('child_process')
@@ -113,6 +115,9 @@ function getArpIPs() {
   })
 }
 
+
+// Scanne le réseau local pour trouver tous les serveurs QOMET actifs.
+// Combine les voisins ARP et toutes les IPs du sous-réseau, testés par lots de 30 en parallèle.
 async function scanReseau() {
   const [arpIPs, subnets] = await Promise.all([getArpIPs(), Promise.resolve(getSubnets())])
 
@@ -138,19 +143,16 @@ async function scanReseau() {
   return results
 }
 
-// ── Logs vers renderer (visibles dans DevTools via Ctrl+Shift+I) ──────────────
+//  Logs vers renderer 
 function log(msg) {
   console.log(msg)
   try { win?.webContents?.send('main-log', msg) } catch {}
 }
 
-// ── Broadcast hôte UDP ────────────────────────────────────────────────────────
+// Broadcast hôte UDP 
+
 // L'hôte broadcaste son IP + code toutes les 500ms dès qu'il crée la partie.
 // Le rejoignant écoute ce broadcast et se connecte directement.
-
-const UDP_PORT = 7778
-let _broadcastSocket   = null
-let _broadcastInterval = null
 
 async function demarrerBroadcastHote(code) {
   arreterBroadcastHote()
@@ -181,7 +183,8 @@ function arreterBroadcastHote() {
   if (_broadcastSocket)   { try { _broadcastSocket.close() } catch {} ; _broadcastSocket = null }
 }
 
-// ── Écoute UDP rejoignant ─────────────────────────────────────────────────────
+// Ecoute UDP rejoignant 
+
 // Écoute les broadcasts de l'hôte pendant `timeoutMs` ms.
 // Retourne l'URL du serveur si le code correspond, sinon null.
 
@@ -219,7 +222,7 @@ function ecouterBroadcastUDP(code, timeoutMs = 4000) {
   })
 }
 
-// ── Découverte serveur ─────────────────────────────────────────────────────────
+// Découverte serveur 
 // Retourne : URL string = trouvé | 'INVALID_CODE' = code inexistant | null = pas de serveur
 
 function serverHasRoom(ip, code) {
@@ -246,7 +249,7 @@ async function trouverServeur(code) {
   const localIPs  = getLocalIPs()
   log(`[Découverte] Démarrage — code: ${upperCode} | IP locale: ${localIPs[0]}`)
 
-  // ── 1. UDP — écoute le broadcast de l'hôte (4s) ────────────────────────────
+  // UDP : écoute le broadcast de l'hôte (4s) 
   const udpResult = await ecouterBroadcastUDP(upperCode, 4000)
   if (udpResult) {
     log(`[UDP] Connexion directe: ${udpResult}`)
@@ -254,7 +257,7 @@ async function trouverServeur(code) {
   }
   log('[UDP] Aucun broadcast reçu — passage ARP')
 
-  // ── 2. ARP — voisins récents ────────────────────────────────────────────────
+  // ARP : voisins récents 
   const arpIPs = (await getArpIPs()).filter(ip => !localIPs.includes(ip))
   log(`[ARP] ${arpIPs.length} voisins`)
 
@@ -273,7 +276,7 @@ async function trouverServeur(code) {
   if (arpServers.length > 0) return 'INVALID_CODE'
   log('[ARP] Aucun serveur — passage scan HTTP')
 
-  // ── 3. HTTP scan du sous-réseau ─────────────────────────────────────────────
+  //  HTTP scan du sous-réseau 
   const subnets = getSubnets()
   const subnetIPs = subnets
     .flatMap(s => Array.from({ length: 254 }, (_, i) => `${s}.${i + 1}`))
@@ -304,7 +307,7 @@ async function trouverServeur(code) {
   return 'INVALID_CODE'
 }
 
-// ── Démarrer le backend Python ─────────────────────────────────────────────
+// Démarrer le backend Python 
 
 function demarrerBackend() {
   const binName = process.platform === 'win32' ? 'qomet-server.exe' : 'qomet-server'
@@ -323,7 +326,7 @@ function demarrerBackend() {
     }
   } catch {}
 
-  // Sur macOS, le binaire téléchargé est mis en quarantaine par Gatekeeper —
+  // Sur macOS, le binaire téléchargé est mis en quarantaine par Gatekeeper 
   // on supprime cet attribut avant de le lancer.
   if (!isDev && process.platform === 'darwin') {
     try { require('child_process').execSync(`xattr -d com.apple.quarantine "${exe}" 2>/dev/null`) } catch {}
@@ -348,7 +351,7 @@ function arreterBackend() {
   }
 }
 
-// ── Attendre que le backend réponde ────────────────────────────────────────
+// Attendre que le backend réponde 
 
 function attendreBackend(tentatives = 0) {
   return new Promise((resolve, reject) => {
@@ -369,7 +372,7 @@ function attendreBackend(tentatives = 0) {
   })
 }
 
-// ── Créer la fenêtre principale ─────────────────────────────────────────────
+// Créer la fenêtre principale 
 
 function creerFenetre() {
   win = new BrowserWindow({
@@ -397,17 +400,16 @@ function creerFenetre() {
   win.on('closed', () => { win = null })
 
   // Empêche Chromium de throttler le JS quand la fenêtre est minimisée
-  // (sinon les heartbeats socket.io s'arrêtent → serveur croit que le joueur est déconnecté)
+  // (sinon les heartbeats socket.io s'arrêtent => serveur croit que le joueur est déconnecté)
   win.webContents.setBackgroundThrottling(false)
 
-  // Ctrl+Shift+I pour ouvrir les DevTools (debug réseau)
   win.webContents.on('before-input-event', (_, input) => {
     if (input.control && input.shift && input.key === 'I')
       win.webContents.openDevTools()
   })
 }
 
-// ── Pare-feu Windows (fix silencieux, une seule fois) ─────────────────────
+// Pare-feu Windows (fix silencieux, une seule fois) 
 // Tente de mettre à jour les règles sans UAC. Si l'app tourne en admin
 // (cas courant pour un installeur NSIS one-click), ça passe silencieusement.
 // Sinon, l'utilisateur devra réinstaller avec le nouveau setup.exe.
@@ -423,7 +425,7 @@ function fixerParefeuWindows() {
   exec(cmds, () => {})
 }
 
-// ── Cycle de vie de l'app ──────────────────────────────────────────────────
+// Cycle de vie de l'app
 
 app.whenReady().then(async () => {
   fixerParefeuWindows()
@@ -448,7 +450,7 @@ app.on('activate', () => {
 
 app.on('will-quit', () => arreterBackend())
 
-// ── IPC ────────────────────────────────────────────────────────────────────
+// IPC 
 
 ipcMain.on('close-app',  () => app.quit())
 ipcMain.on('minimize',   () => win?.minimize())
