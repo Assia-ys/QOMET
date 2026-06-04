@@ -3,368 +3,339 @@
 
 ---
 
-## Vue d'ensemble
+## 1. Vue d'ensemble
 
-Le backend est composé de **cinq modules** indépendants qui communiquent uniquement par appels de fonctions Python. Aucune dépendance circulaire n'existe entre eux.
+Le backend est structuré en trois domaines fonctionnels indépendants :
 
 ```
 backend/
 │
-├── main.py          Serveur principal — Socket.io + FastAPI + signaling + UDP
-├── api/routes.py    Routes HTTP REST (/parties)
-├── network/
-│   └── manager.py   Gestion des rooms (CRUD + état)
-├── game/
-│   ├── board.py     Plateau de jeu (grille 7×7, 25 cases jouables)
-│   ├── rules.py     Règles du jeu (coups légaux, victoire, annulation)
-│   ├── game.py      Orchestrateur de partie (tours, fin, copie Minimax)
-│   └── player.py    Modèle joueur (nom, couleur, réserve d'étoiles)
-└── ai/
-    ├── minimax.py   Algorithme Minimax + alpha-bêta
-    └── evaluator.py Fonction heuristique d'évaluation du plateau
-```
-
-**Dépendances entre modules :**
-
-```
-main.py
-  └── manager.py  ──► game.py
-  └── routes.py   ──►     └── board.py ◄── rules.py ◄── evaluator.py
-                              player.py
-                          minimax.py ──► rules.py
-                                     ──► evaluator.py
-                                     ──► game.py
+├── MOTEUR DE JEU          board.py · rules.py · game.py · player.py
+├── INTELLIGENCE ARTIFICIELLE   minimax.py · evaluator.py
+└── RÉSEAU & SERVEUR       main.py · manager.py · api/routes.py
 ```
 
 ---
 
-## 1. `backend/main.py` — Serveur principal
+## 2. Moteur de jeu
 
-### Rôle
+Le moteur de jeu est la partie la plus pure du backend : **aucune dépendance réseau**, aucun appel socket. Il peut être exécuté et testé en totale isolation.
 
-C'est le point d'entrée du serveur. Il regroupe trois responsabilités :
-1. Les **événements Socket.io** (logique temps réel du jeu)
-2. Le **signaling Railway** (routes `/local/register` et `/local/find`)
-3. Le **thread UDP** (réponse aux broadcasts de découverte)
+### `board.py` — Le plateau
 
-### Points forts
+Représente la grille 7×7 dont seulement **25 cases sont jouables**, disposées en forme de losange.
 
-- Séparation claire entre les événements WS et les routes REST (inclus via `app.include_router`)
-- `asyncio.to_thread` utilisé correctement pour l'IA — ne bloque jamais la boucle événements
-- `skip_sid=sid` sur `adversaire_en_pause` et `adversaire_deconnecte` — le joueur concerné ne reçoit pas son propre événement
-- Purge opportuniste du `_local_registry` à chaque écriture
+**Fonctions importantes :**
 
-### Bugs identifiés
+| Fonction | Rôle |
+|----------|------|
+| `est_jouable(r, c)` | Vérifie qu'une case fait partie du plateau jouable |
+| `est_libre(r, c)` | Vérifie qu'une case est jouable ET vide |
+| `poser(r, c, couleur)` | Place une étoile sur une case, met à jour `dernier_coup` |
+| `copier()` | Crée une copie indépendante du plateau (utilisée par le Minimax) |
 
-| Sévérité | Localisation | Description |
-|----------|-------------|-------------|
-| 🔴 Élevée | `disconnect()` — branche `else` | Si l'hôte crée une partie et ferme l'app avant qu'un 2e joueur rejoigne, `quitter_room(sid)` est appelé mais la room reste dans `rooms` indéfiniment. La room ne sera jamais supprimée. |
-| 🟡 Moyenne | `_udp_server_thread()` | Le thread UDP daemon lit le dictionnaire `rooms` depuis un thread OS différent du thread asyncio. Pas de `threading.Lock`. Race condition théorique si une room est supprimée pendant la lecture. |
-| 🟡 Moyenne | `_local_registry` | La purge des entrées expirées ne se fait qu'à l'écriture (`POST /local/register`). Si aucune nouvelle partie n'est créée pendant 10 minutes, les entrées périmées restent en mémoire indéfiniment. |
-| 🟢 Faible | `POST /local/register` | Aucune validation du format de l'IP. N'importe quelle chaîne est acceptée (ex: `"pas_une_ip"`). |
-| 🟢 Faible | CORS `allow_origins=["*"]` | Acceptable pour un usage local, mais dangereux si l'API Railway est exposée publiquement. |
+**Points forts :**
+- `CASES_JOUABLES` est un `set` Python → test d'appartenance en O(1), optimal pour les vérifications répétées dans le Minimax
+- `copier()` utilise `[row[:] for row in self.grille]` — copie légère et suffisante car la grille ne contient que des valeurs primitives
 
-### Bug critique — Fuite de room en salle d'attente
+**Problème identifié :**
 
-```python
-# Code actuel (backend/main.py)
-@sio.event
-async def disconnect(sid):
-    code, _ = couleur_du_joueur(sid)
-    if not code:
-        return
-    game = rooms[code]["game"]
-    if room_est_pleine(code) or game.termine:
-        await sio.emit("adversaire_deconnecte", {...}, room=code, skip_sid=sid)
-        supprimer_room(code)
-    else:
-        quitter_room(sid)   # ← libère le slot mais ne supprime pas la room
-                             #   si elle devient vide → fuite mémoire
-
-# Correction proposée
-    else:
-        quitter_room(sid)
-        if code in rooms:
-            r = rooms[code]
-            if r["joueurs"]["clair"] is None and r["joueurs"]["fonce"] is None:
-                supprimer_room(code)   # supprime la room si plus aucun joueur
-```
-
-### Bug moyen — Thread-safety du dictionnaire rooms
-
-```python
-# Correction proposée (backend/main.py)
-import threading
-_rooms_lock = threading.Lock()
-
-# Dans _udp_server_thread() :
-with _rooms_lock:
-    if code in rooms and not room_est_pleine(code):
-        resp = json.dumps({'type': 'found', 'code': code}).encode()
-        sock.sendto(resp, addr)
-
-# Dans les fonctions asyncio, rooms est accédé en single-thread → pas de lock nécessaire
-```
+| Sévérité | Description |
+|----------|-------------|
+| 🟢 Faible | `Board.set()` utilise un `assert` désactivé en production (`python -O`) — une écriture invalide passerait silencieusement |
 
 ---
 
-## 2. `backend/api/routes.py` — Routes HTTP REST
+### `rules.py` — Les règles
 
-### Rôle
+Module le plus critique du projet. Calcule tous les coups légaux, applique les déplacements et détecte la victoire.
 
-Expose quatre routes HTTP pour la gestion des rooms :
+**Fonctions importantes :**
 
-| Méthode | Route | Description |
-|---------|-------|-------------|
-| `POST` | `/parties` | Crée une nouvelle room, retourne le code à 4 caractères |
-| `GET` | `/parties/{code}` | Vérifie si une room existe et si elle est pleine |
-| `GET` | `/parties/{code}/etat` | Retourne l'état complet du jeu (debug) |
-| `DELETE` | `/parties/{code}` | Supprime une room (admin / debug) |
+| Fonction | Rôle |
+|----------|------|
+| `deplacements_valides(board, r, c, dernier_coup)` | Retourne tous les coups légaux depuis une case (glisser, pousser, éjecter) |
+| `appliquer_coup(board, coup, j_actif, j_adverse)` | Applique un coup sur une **copie** du board sans modifier l'original |
+| `verifier_victoire(board)` | Retourne les couleurs gagnantes en vérifiant les 15 carrés possibles |
+| `_est_annulation(coup, dernier_coup)` | Bloque les coups qui annulent exactement le coup précédent |
+| `_calculer_carres()` | Pré-calcule les 15 carrés possibles au chargement du module |
 
-### Points forts
+**Types de coups gérés :**
+```
+glisser        → déplace une étoile vers une case vide
+pousser        → pousse une étoile adverse vers une case libre
+pousser_ejecter→ pousse une étoile hors du plateau
+ejecter        → éjecte volontairement sa propre étoile d'un coin
+```
 
-- Validation automatique des entrées via Pydantic (`CreerPartieBody`)
-- Codes HTTP corrects : 404 si room inexistante, 200 sinon
-- Normalisation du code en majuscules (`code.upper()`) avant recherche
+**Points forts :**
+- `CARRES_POSSIBLES` pré-calculé une seule fois au chargement — jamais recalculé pendant une partie
+- `appliquer_coup()` retourne toujours une copie du board — immutabilité garantie, essentielle pour la sécurité du Minimax
+- Gestion du double carré simultané : si les deux joueurs complètent un carré au même coup, c'est l'adversaire qui gagne
 
-### Bugs identifiés
+**Problème identifié :**
 
-| Sévérité | Localisation | Description |
-|----------|-------------|-------------|
-| 🟡 Moyenne | `POST /parties` | Aucun rate-limiting — un script malveillant peut créer des milliers de rooms et saturer la mémoire du serveur |
-| 🟢 Faible | `DELETE /parties/{code}` | Route de debug laissée accessible en production — n'importe qui connaissant le code peut supprimer une room en cours |
-| 🟢 Faible | `GET /parties/{code}/etat` | Expose l'état complet du jeu à n'importe qui connaissant le code — un joueur adverse peut lire le board côté serveur |
+| Sévérité | Description |
+|----------|-------------|
+| 🟡 Moyenne | `_est_annulation()` couvre `glisser` et `pousser` mais pas `pousser_ejecter` — cas théoriquement possible mais sans impact réel |
 
 ---
 
-## 3. `backend/network/manager.py` — Gestion des rooms
+### `game.py` — L'orchestrateur
 
-### Rôle
+Coordonne le déroulement d'une partie : alternance des tours, validation des coups, détection de fin de partie.
+
+**Fonctions importantes :**
+
+| Fonction | Rôle |
+|----------|------|
+| `jouer_poser(r, c)` | Le joueur pose une étoile depuis sa main |
+| `jouer_deplacement(coup)` | Le joueur déplace une étoile — re-valide côté serveur |
+| `_verifier_fin()` | Détecte si la partie est terminée après chaque coup |
+| `copier()` | Copie complète et légère du jeu pour le Minimax |
+| `etat()` | Sérialise l'état complet pour l'envoyer au frontend |
+
+**Points forts :**
+- `copier()` copie manuellement les champs `Player` sans `deepcopy` — décision de performance critique pour le Minimax
+- `jouer_deplacement()` re-valide le coup via `Rules.deplacements_valides()` — le client ne peut pas envoyer un coup illégal
+- `_verifier_fin()` gère le carré involontaire : si le coup du joueur actif crée un carré pour l'adversaire, c'est l'adversaire qui gagne
+
+**Problème identifié :**
+
+| Sévérité | Description |
+|----------|-------------|
+| 🟢 Faible | `etat()` identifie le joueur actif par son nom — ambigu si deux joueurs ont le même prénom. `couleur_active` est plus fiable |
+
+---
+
+### `player.py` — Le joueur
+
+Modèle simple qui représente un joueur : son nom, sa couleur et sa réserve d'étoiles.
+
+**Informations importantes :**
+- Chaque joueur commence avec **8 étoiles en main**
+- `peut_poser()` retourne `True` tant qu'il reste des étoiles en main
+- `recuperer_etoile()` est appelé lors d'une éjection — l'étoile retourne en main
+
+---
+
+## 3. Intelligence Artificielle
+
+L'IA est implémentée avec l'algorithme **Minimax** et l'élagage **alpha-bêta**. Elle tourne dans un thread séparé pour ne jamais bloquer le serveur.
+
+### `minimax.py` — L'algorithme
+
+**Niveaux de difficulté :**
+
+| Niveau | Algorithme | Profondeur |
+|--------|-----------|-----------|
+| Facile | Coup aléatoire parmi les coups légaux | — |
+| Moyen | Minimax + alpha-bêta | 2 |
+| Difficile | Minimax + alpha-bêta + coups de déplacement en pose | 4 (limitée à 2 en phase de pose) |
+
+**Fonctions importantes :**
+
+| Fonction | Rôle |
+|----------|------|
+| `coup_facile(game)` | Tire un coup aléatoire parmi les coups légaux |
+| `coup_minimax(game, profondeur)` | Choisit le meilleur coup selon le Minimax |
+| `_minimax(game, prof, maximise, alpha, beta, couleur)` | Cœur de l'algorithme — exploration récursive avec coupures |
+| `_trier_coups(game, coups, maximise, couleur)` | Trie les coups par score superficiel avant exploration |
+| `_cases_strategiques(board, couleur)` | Filtre les cases de pose offensives et défensives |
+| `_appliquer_board(board, coup, couleur)` | Copie légère du board pour le tri — sans overhead Player/Game |
+
+**Comment fonctionne l'élagage alpha-bêta :**
+```
+Sans alpha-bêta : explore tous les nœuds → lent
+Avec alpha-bêta : abandonne les branches perdantes → ~75% de nœuds en moins
+
+Exemple à profondeur 4 avec 10 coups par nœud :
+  Sans → 10 000 nœuds explorés
+  Avec →  ~320 nœuds explorés
+```
+
+**Points forts :**
+- Le move ordering (`_trier_coups`) trie les coups du meilleur au moins bon avant de les explorer — maximise les coupures alpha-bêta
+- `_cases_strategiques()` réduit le branching factor en phase de pose en ne gardant que les cases offensives et défensives pertinentes
+- Profondeur adaptative : limitée à 2 en phase de pose (trop de combinaisons) et étendue à 4 en phase de déplacement
+
+**Problème identifié :**
+
+| Sévérité | Description |
+|----------|-------------|
+| 🟡 Moyenne | `_appliquer_board()` ne met pas à jour `dernier_coup` — le tri des coups ignore la règle d'anti-annulation, sans affecter la validation finale |
+
+---
+
+### `evaluator.py` — L'heuristique
+
+Évalue la valeur d'une position pour une couleur donnée. Utilisée par le Minimax pour estimer les états non terminaux.
+
+**Formule :**
+```
+Pour chacun des 15 carrés possibles :
+  Si aucun coin adverse → score += (coins amis)²
+  Si au moins 1 coin adverse → carré mort → +0
+
+Exemples :
+  1 coin ami  → +1       3 coins amis → +9
+  2 coins amis → +4      4 coins amis → victoire → +16
+```
+
+**Points forts :**
+- Fonction pure sans effet de bord — testable et prévisible
+- La progression quadratique récompense davantage les carrés presque complets
+- Utilisée en différentiel (`evaluer(ia) - evaluer(adverse)`) — vision relative, pas absolue
+
+**Problème identifié :**
+
+| Sévérité | Description |
+|----------|-------------|
+| 🟢 Faible | Ne prend pas en compte les étoiles restantes en main — évaluation partielle en tout début de partie |
+
+---
+
+## 4. Réseau & Serveur
+
+### `main.py` — Fonctions importantes
+
+`main.py` est le point d'entrée du serveur. Il gère trois responsabilités : les événements Socket.io temps réel, le signaling Railway et le thread UDP de découverte réseau.
+
+**Événements Socket.io (fonctions clés) :**
+
+| Événement | Rôle |
+|-----------|------|
+| `connect(sid)` | Enregistre la connexion d'un nouveau client |
+| `disconnect(sid)` | Détecte qu'un joueur a quitté — notifie l'adversaire ou libère la room |
+| `rejoindre(sid, data)` | Fait entrer un joueur dans une room et démarre la partie si pleine |
+| `jouer(sid, data)` | Reçoit un coup, vérifie que c'est le bon tour, l'applique et diffuse le nouvel état |
+| `pause(sid)` / `reprendre(sid)` | Met en pause ou reprend la partie |
+| `abandonner(sid)` | Le joueur abandonne — l'adversaire gagne par forfait |
+| `coup_ia(sid, data)` | Calcule et joue le meilleur coup IA via `asyncio.to_thread` |
+
+**Signaling Railway (routes locales) :**
+
+| Route | Rôle |
+|-------|------|
+| `POST /local/register` | L'hôte dépose son IP sur le cloud Railway |
+| `GET /local/find/{code}` | Le rejoignant récupère l'IP de l'hôte |
+
+**Thread UDP :**
+Lance un serveur UDP sur le port 7778 qui répond aux broadcasts de découverte des rejoignants sur le réseau local.
+
+**Points forts :**
+- `asyncio.to_thread` pour l'IA — le serveur reste réactif pendant le calcul
+- `skip_sid=sid` sur les émissions ciblées — le joueur concerné ne reçoit pas son propre événement
+
+**Problèmes identifiés :**
+
+| Sévérité | Description |
+|----------|-------------|
+| 🔴 Élevée | Room non supprimée quand l'hôte quitte seul la salle d'attente — fuite mémoire |
+| 🟡 Moyenne | Thread UDP accède à `rooms` sans `threading.Lock` — risque de race condition |
+| 🟡 Moyenne | `_local_registry` non purgé si aucune nouvelle partie créée pendant 10 min |
+
+---
+
+### `manager.py` — Gestion des rooms
 
 Contient le dictionnaire global `rooms` et toutes les fonctions qui le manipulent.
 
-```python
-rooms = {
-    "ABCD": {
-        "game":    Game(...),
-        "joueurs": { "clair": sid_A, "fonce": sid_B },
-        "prenoms": { "clair": "Alice", "fonce": "Bob" }
-    }
-}
-```
+**Fonctions importantes :**
 
-### Points forts
+| Fonction | Rôle |
+|----------|------|
+| `creer_room(prenom)` | Crée une room avec un code unique à 4 caractères |
+| `rejoindre_room(sid, code, prenom)` | Ajoute un joueur dans la room |
+| `quitter_room(sid)` | Libère le slot d'un joueur sans supprimer la room |
+| `supprimer_room(code)` | Supprime définitivement une room |
+| `room_est_pleine(code)` | Retourne `True` si les deux slots sont occupés |
+| `couleur_du_joueur(sid)` | Retourne `(code, couleur)` du joueur identifié par son sid |
 
-- Code court et lisible (80 lignes)
-- `rejoindre_room` appelle `quitter_room(sid)` en début pour éviter qu'un même sid soit dans deux rooms simultanément
-- `couleur_du_joueur(sid)` retourne `(code, couleur)` en une seule passe — utilisé partout dans `main.py`
-- Génération du code à 4 caractères sans collision (boucle `while True` avec vérification)
-
-### Bugs identifiés
-
-| Sévérité | Localisation | Description |
-|----------|-------------|-------------|
-| 🟡 Moyenne | `rooms` (dict global) | Accédé depuis le thread asyncio ET depuis le thread UDP daemon sans verrou (`Lock`). Risque théorique de corruption lors d'une suppression concurrente. |
-| 🟢 Faible | `prenoms` dans la room | Redondant avec `game.joueur1.nom` / `game.joueur2.nom`. Les deux sont mis à jour séparément dans `rejoindre_room`, risque de désynchronisation. |
+**Points forts :**
+- Code court, sans logique superflue
+- `rejoindre_room()` appelle `quitter_room(sid)` en entrée — évite qu'un même client soit dans deux rooms en même temps
 
 ---
 
-## 4. `backend/game/board.py` — Plateau de jeu
+### `routes.py` — API REST
 
-### Rôle
+| Route | Méthode | Rôle |
+|-------|---------|------|
+| `/parties` | `POST` | Crée une room, retourne le code à 4 caractères |
+| `/parties/{code}` | `GET` | Vérifie si une room existe et si elle est pleine |
+| `/parties/{code}/etat` | `GET` | Retourne l'état complet du jeu *(debug)* |
+| `/parties/{code}` | `DELETE` | Supprime une room *(debug)* |
 
-Représente la grille 7×7 dont seulement **25 cases sont jouables** (disposition en losange). Les autres cases contiennent la valeur `"hors_plateau"`.
+**Problèmes identifiés :**
 
-```
-Représentation du plateau (O = jouable, . = hors plateau) :
-
-    0   1   2   3   4   5   6
-0 [ O   .   .   O   .   .   O ]
-1 [ .   O   .   O   .   O   . ]
-2 [ .   .   O   O   O   .   . ]
-3 [ O   O   O   O   O   O   O ]
-4 [ .   .   O   O   O   .   . ]
-5 [ .   O   .   O   .   O   . ]
-6 [ O   .   .   O   .   .   O ]
-```
-
-### Points forts
-
-- `CASES_JOUABLES` est un `set` Python → membership test en O(1)
-- `copier()` utilise une list comprehension (`[row[:] for row in self.grille]`) — copie superficielle efficace, suffisante car la grille ne contient que des valeurs primitives
-- `set()` dans `Board.__init__` génère la grille en compréhension sans boucle explicite
-- `assert` dans `set()` protège contre les écritures sur des cases invalides en développement
-
-### Bugs identifiés
-
-| Sévérité | Localisation | Description |
-|----------|-------------|-------------|
-| 🟢 Faible | `Board.set()` | Le `assert` est désactivé en production Python (`python -O`). En production, une écriture sur une case hors plateau passerait silencieusement. |
-
----
-
-## 5. `backend/game/rules.py` — Règles du jeu
-
-### Rôle
-
-Contient toute la logique des règles : quels coups sont légaux, comment les appliquer, comment détecter la victoire.
-
-### Fonctions principales
-
-| Fonction | Description |
+| Sévérité | Description |
 |----------|-------------|
-| `deplacements_valides(board, row, col, dernier_coup)` | Retourne la liste de tous les coups légaux depuis une case |
-| `appliquer_coup(board, coup, joueur_actif, joueur_adverse)` | Applique un coup sur une copie du board |
-| `verifier_victoire(board)` | Retourne les couleurs gagnantes (0, 1 ou 2) |
-| `trouver_carre_gagnant(board)` | Retourne les coordonnées du carré gagnant pour l'animation |
-| `_est_annulation(coup, dernier_coup)` | Vérifie si un coup annule exactement le précédent |
-
-### Types de coups
-
-```
-"poser"          → place une étoile de la main sur une case vide
-"glisser"        → déplace une étoile vers une case vide (glissement)
-"pousser"        → pousse une étoile adverse vers une case libre
-"pousser_ejecter"→ pousse une étoile hors du plateau (éjection forcée)
-"ejecter"        → éjecte volontairement sa propre étoile d'un coin
-```
-
-### Points forts
-
-- `CARRES_POSSIBLES` pré-calculé **une seule fois** au chargement du module → pas de recalcul à chaque coup
-- `_directions_pour(row, col)` ajoute les diagonales seulement sur les cases concernées (diagonale principale si `r==c`, secondaire si `r+c==6`) — logique élégante
-- `appliquer_coup` crée toujours une **copie du board** sans modifier l'original — immutabilité garantie
-- `verifier_victoire` gère le cas rare d'un **double carré simultané** (les deux couleurs dans `gagnants`)
-
-### Bugs identifiés
-
-| Sévérité | Localisation | Description |
-|----------|-------------|-------------|
-| 🟡 Moyenne | `_est_annulation()` | Ne couvre pas le cas `pousser_ejecter`. Un coup `pousser_ejecter` suivi de son "inverse" théorique n'est pas bloqué — mais ce cas est quasi-impossible en pratique car l'étoile éjectée quitte le plateau. Impact réel : nul. |
-| 🟢 Faible | `_calculer_carres()` | Itère en O(n²) sur les paires de cases jouables pour trouver les 15 carrés. Correct mais verbeux — une liste codée en dur serait plus lisible, même si la performance est identique (exécuté une seule fois). |
+| 🟡 Moyenne | Routes de debug (`DELETE`, `GET /etat`) accessibles sans authentification en production |
+| 🟡 Moyenne | Aucun rate-limiting sur `POST /parties` |
 
 ---
 
-## 6. `backend/game/game.py` — Orchestrateur de partie
+## 5. Sécurité
 
-### Rôle
-
-Coordonne le déroulement d'une partie : gestion des tours, validation des coups, détection de fin, copie pour le Minimax.
-
-### Points forts
-
-- `copier()` crée une copie **manuelle** des champs Player au lieu de `deepcopy` — gain de performance significatif pour le Minimax qui copie des centaines de fois
-- `_verifier_fin()` gère correctement le cas du **carré involontaire** : si l'adversaire a complété un carré, c'est l'adversaire qui gagne
-- `etat()` sérialise le plateau dans un format directement utilisable par le frontend (`"r,c": couleur`)
-- `jouer_deplacement()` re-valide le coup via `Rules.deplacements_valides()` — double vérification serveur
-
-### Bugs identifiés
-
-| Sévérité | Localisation | Description |
-|----------|-------------|-------------|
-| 🟢 Faible | `etat()` | `joueur_actif` est retourné comme `nom` (string). Si deux joueurs ont le même prénom, le frontend ne peut pas distinguer lequel est actif. `couleur_active` est déjà retourné — le frontend devrait se baser sur ça plutôt que sur le nom. |
+| Sévérité | Risque | Fichier |
+|----------|--------|---------|
+| 🟡 Moyenne | Routes de debug accessibles sans auth en production | `routes.py` |
+| 🟡 Moyenne | Pas de rate-limiting sur la création de rooms | `routes.py` |
+| 🟡 Moyenne | CORS `allow_origins=["*"]` — risqué si l'API est exposée publiquement | `main.py` |
+| 🟢 Faible | `POST /local/register` accepte n'importe quelle chaîne comme IP | `main.py` |
 
 ---
 
-## 7. `backend/ai/minimax.py` — Intelligence artificielle
+## 6. Couverture des tests
 
-### Rôle
+Les tests sont dans `tests/` à la racine du projet et couvrent l'ensemble du backend via **pytest**.
 
-Implémente l'algorithme **Minimax avec élagage alpha-bêta** pour les niveaux Moyen et Difficile. Le niveau Facile tire un coup aléatoire.
+| Fichier | Module testé | Tests |
+|---------|-------------|-------|
+| `test_board.py` | `board.py` | 19 |
+| `test_rules.py` | `rules.py` | 32 |
+| `test_game.py` | `game.py` | 23 |
+| `test_player.py` | `player.py` | 6 |
+| `test_minimax.py` | `minimax.py` | 14 |
+| `test_evaluator.py` | `evaluator.py` | 5 |
+| `test_manager_routes.py` | `manager.py` + routes | 16 |
+| `test_ia_bataille.py` | Scénarios de parties IA | — |
+| `test_ia_temps.py` | Performance IA | — |
+| **Total** | | **115 tests** |
 
-### Fonctionnement
-
-```
-Niveau Facile    → coup_facile()    : coup aléatoire parmi les coups légaux
-Niveau Moyen     → coup_minimax(profondeur=2) : Minimax depth 2
-Niveau Difficile → coup_minimax(profondeur=4) : Minimax depth 4
-
-Profondeur adaptative :
-  Phase de pose      → profondeur limitée à 2 (branching factor élevé)
-  Phase de déplacement → profondeur complète (branching factor réduit)
-```
-
-### Points forts
-
-- **Alpha-bêta** bien implémenté — réduit l'espace de recherche de O(b^d) à O(b^(d/2))
-- **Move ordering** : les coups sont triés par score superficiel avant exploration — améliore les coupures alpha-bêta
-- **`asyncio.to_thread`** dans `main.py` : le calcul Minimax tourne dans un thread séparé et ne bloque jamais les autres événements WebSocket
-- **`_cases_strategiques()`** filtre les cases de pose pertinentes : coins de carrés offensifs ou défensifs — réduit le branching factor en phase de pose
-- Fallback sur `coups[0]` si `meilleur_coup` reste `None` — pas de plantage même en cas dégénéré
-
-### Bugs identifiés
-
-| Sévérité | Localisation | Description |
-|----------|-------------|-------------|
-| 🟡 Moyenne | `_appliquer_board()` | Cette fonction copie le board sans mettre à jour `dernier_coup`. Les coups légaux calculés dessus pour le tri (`_trier_coups`) ignorent donc la règle d'annulation. L'IA peut inclure dans son tri des coups qu'elle n'aurait pas le droit de jouer. L'impact est limité (c'est le tri, pas la vraie validation) mais introduit une légère incohérence. |
-| 🟢 Faible | `coup_minimax()` | En phase de pose niveau Difficile, la profondeur effective est plafonnée à 2 même si `profondeur=4`. C'est un choix délibéré (branching trop élevé) mais non documenté dans le code. |
-
-### Illustration de l'élagage alpha-bêta
-
-```
-                   MAX (IA)
-                  /    \
-               MIN      MIN
-              / \       / \
-           MAX  MAX   MAX  MAX
-           3    5     2    9
-
-Sans alpha-bêta : évalue 8 nœuds
-Avec alpha-bêta : évalue 5 nœuds (économie de ~40%)
-À profondeur 4 avec 10+ coups par nœud : économie de ~75%
-```
+**Ce qui n'est pas testé :** les événements Socket.io de `main.py` (`jouer`, `disconnect`, `rejoindre`). Un bug dans la gestion des rooms WebSocket ne serait détecté qu'à l'exécution.
 
 ---
 
-## 8. `backend/ai/evaluator.py` — Heuristique
+## 7. Récapitulatif
 
-### Rôle
+### Bugs corrigés
 
-Évalue une position du plateau pour une couleur donnée. Utilisée par le Minimax pour estimer la valeur d'un état non terminal.
+| Commit | Description | Correction |
+|--------|-------------|-----------|
+| `af78b37` | Règles dupliquées côté client | Suppression de `rulesClient.js` — validation uniquement serveur |
+| `abe7b56` | Port 7777 déjà occupé au redémarrage | Kill du processus existant avant chaque lancement |
+| `7fc310c` | IP `127.0.0.1` enregistrée sur Railway | Retry DHCP 5s + suppression filtre `192.168.100.x` |
+| `87d4994` | Déconnexion socket sur minimisation fenêtre | `setBackgroundThrottling(false)` + `skip_sid` |
+| `960fa7a` | 2e partie ne démarrait pas (listeners périmés) | `resetSocketToServer()` systématique à chaque connexion |
+| `5beb5cb` | Modal pause bloqué après déconnexion | `setAdversaireEnPause(false)` dans `onAdversaireDeconnecte` |
+| `e6e2569` | Modals superposés à la fin de partie | Fermeture de tous les modals avant affichage du résultat |
+| `eab285b` `e541639` | Pare-feu Windows bloquait le port en hotspot | `profile=any` + `perMachine=true` |
 
-### Formule
+### Points restants
 
-```
-Pour chacun des 15 carrés possibles :
-  Si aucun coin adverse → score += (nombre de coins amis)²
-  Si au moins 1 coin adverse → carré mort, score += 0
-
-Exemples :
-  1 coin ami, 0 adverse → +1
-  2 coins amis, 0 adverse → +4
-  3 coins amis, 0 adverse → +9
-  4 coins amis (victoire) → +16
-  1 coin ami, 1 adverse → +0 (carré mort)
-```
-
-### Points forts
-
-- Fonction **pure** (pas d'état global, pas d'effets de bord) — testable et prévisible
-- La progression quadratique (`friendly²`) récompense davantage les carrés presque complets
-- Différence `evaluer(board, ia) - evaluer(board, adverse)` dans le Minimax → vision relative, pas absolue
-
-### Bugs identifiés
-
-| Sévérité | Localisation | Description |
-|----------|-------------|-------------|
-| 🟢 Faible | `evaluer()` | Ne tient pas compte des étoiles en main des joueurs. Un joueur avec 6 étoiles posées est évalué de la même façon qu'un joueur avec 0 étoile posée si les carrés sont identiques. L'heuristique est fonctionnelle mais perfectible. |
-
----
-
-## 9. Synthèse des problèmes backend
-
-| ID | Sévérité | Fichier | Description | Statut |
-|----|----------|---------|-------------|--------|
-| B-01 | 🔴 Élevée | `main.py` | Room non supprimée quand l'hôte déconnecte seul en salle d'attente | À corriger |
-| B-02 | 🟡 Moyenne | `main.py` + `manager.py` | Accès au dict `rooms` sans `Lock` depuis le thread UDP | À corriger |
-| B-03 | 🟡 Moyenne | `main.py` | `_local_registry` non purgé si aucune partie créée pendant 10 min | À corriger |
-| B-04 | 🟡 Moyenne | `minimax.py` | `_appliquer_board()` ignore `dernier_coup` → tri des coups légèrement incohérent | À corriger |
-| B-05 | 🟡 Moyenne | `routes.py` | Pas de rate-limiting sur `POST /parties` | À corriger |
-| B-06 | 🟢 Faible | `routes.py` | Route `DELETE /parties/{code}` accessible sans authentification | Optionnel |
-| B-07 | 🟢 Faible | `routes.py` | Route `GET /parties/{code}/etat` expose le board à tous | Optionnel |
-| B-08 | 🟢 Faible | `main.py` | `POST /local/register` accepte n'importe quel format d'IP | Optionnel |
-| B-09 | 🟢 Faible | `board.py` | `assert` dans `set()` désactivé avec `python -O` | Optionnel |
-| B-10 | 🟢 Faible | `evaluator.py` | Heuristique ne prend pas en compte les étoiles en main | Optionnel |
+| Sévérité | Fichier | Description |
+|----------|---------|-------------|
+| 🔴 Élevée | `main.py` | Room non supprimée quand l'hôte quitte seul la salle d'attente |
+| 🟡 Moyenne | `main.py` | Thread UDP accède à `rooms` sans `Lock` |
+| 🟡 Moyenne | `main.py` | `_local_registry` non purgé si aucune partie créée |
+| 🟡 Moyenne | `routes.py` | Routes de debug accessibles en production |
+| 🟡 Moyenne | `routes.py` | Pas de rate-limiting sur `POST /parties` |
+| 🟡 Moyenne | `rules.py` | `_est_annulation` ne couvre pas `pousser_ejecter` |
+| 🟡 Moyenne | `minimax.py` | Move ordering ignore la règle d'anti-annulation |
+| 🟢 Faible | `board.py` | `assert` inactif en production |
+| 🟢 Faible | `evaluator.py` | Heuristique ignore les étoiles en main |
 
 ---
 
