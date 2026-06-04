@@ -50,11 +50,11 @@ function buildEdgesAndNeighbors() {
     for (let i = 0; i < rows.length - 1; i++) add(rows[i], c, rows[i + 1], c)
   }
 
-  // Diagonale ↘ r == c
+  // Diagonale  r == c
   const diag1 = CASES_JOUABLES.filter(([r, c]) => r === c).sort(([r1], [r2]) => r1 - r2)
   for (let i = 0; i < diag1.length - 1; i++) add(...diag1[i], ...diag1[i + 1])
 
-  // Diagonale ↙ r + c == 6
+  // Diagonale  r + c == 6
   const diag2 = CASES_JOUABLES.filter(([r, c]) => r + c === 6).sort(([r1], [r2]) => r1 - r2)
   for (let i = 0; i < diag2.length - 1; i++) add(...diag2[i], ...diag2[i + 1])
 
