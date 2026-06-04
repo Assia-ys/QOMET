@@ -132,7 +132,7 @@ async def disconnect(sid):
     if room_est_pleine(code) or game.termine:
         await sio.emit("adversaire_deconnecte", {
             "message": "Ton adversaire a quitté la partie. Tu remportes la victoire !"
-        }, room=code)
+        }, room=code, skip_sid=sid)
         supprimer_room(code)
     else:
         # Salle d'attente : libère juste la place du joueur déconnecté

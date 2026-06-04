@@ -396,6 +396,10 @@ function creerFenetre() {
 
   win.on('closed', () => { win = null })
 
+  // Empêche Chromium de throttler le JS quand la fenêtre est minimisée
+  // (sinon les heartbeats socket.io s'arrêtent → serveur croit que le joueur est déconnecté)
+  win.webContents.setBackgroundThrottling(false)
+
   // Ctrl+Shift+I pour ouvrir les DevTools (debug réseau)
   win.webContents.on('before-input-event', (_, input) => {
     if (input.control && input.shift && input.key === 'I')
