@@ -191,16 +191,13 @@ try {
     Write-Warn "Erreur creation python.path — continue quand meme"
 }
 
-# ETAPE 6 - npm install + build (frontend)
+# ETAPE 6 - npm install (frontend)
 Write-Step "Installation des dependances React (frontend/src)..."
 Set-Location "frontend\src"
 npm install
 if ($LASTEXITCODE -ne 0) { Set-Location "..\.."; Write-Fail "npm install frontend a echoue" }
-Write-Step "Build du frontend React (genere dist/)..."
-npm run build
-if ($LASTEXITCODE -ne 0) { Set-Location "..\.."; Write-Fail "npm run build a echoue" }
 Set-Location "..\.."
-Write-Ok "Frontend installe et compile"
+Write-Ok "Dependances React installees"
 
 # ETAPE 7 - venv Python
 Write-Step "Creation de l'environnement virtuel Python..."
@@ -233,11 +230,11 @@ if ($reponse -match "^[Oo]$") {
     Write-Host "  Lancement de QOMET..." -ForegroundColor Cyan
     Write-Host "  (Ctrl+C pour arreter l'application)" -ForegroundColor Yellow
     Write-Host ""
-    npm run electron:dev
+    npm run electron:start
 } else {
     Write-Host ""
     Write-Host "  Pour lancer plus tard :" -ForegroundColor White
-    Write-Host "    npm run electron:dev" -ForegroundColor Yellow
+    Write-Host "    npm run electron:start" -ForegroundColor Yellow
     Write-Host ""
     Write-Host "  Pour builder le .exe :" -ForegroundColor White
     Write-Host "    npm run electron:build" -ForegroundColor Yellow
@@ -246,3 +243,5 @@ if ($reponse -match "^[Oo]$") {
     Write-Host "    .\venv\Scripts\activate  puis  pytest tests/" -ForegroundColor Yellow
     Write-Host ""
 }
+
+
