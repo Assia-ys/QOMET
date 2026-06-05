@@ -311,9 +311,17 @@ async function trouverServeur(code) {
 
 function demarrerBackend() {
   const binName = process.platform === 'win32' ? 'qomet-server.exe' : 'qomet-server'
-  const exe = isDev
-    ? (process.platform === 'win32' ? 'python' : 'python3')
-    : path.join(process.resourcesPath, binName)
+
+  let exe
+  if (!isDev) {
+    exe = path.join(process.resourcesPath, binName)
+  } else if (process.platform === 'win32') {
+    const venvPy = path.join(__dirname, '..', 'venv', 'Scripts', 'python.exe')
+    exe = fs.existsSync(venvPy) ? venvPy : 'python'
+  } else {
+    const venvPy = path.join(__dirname, '..', 'venv', 'bin', 'python3')
+    exe = fs.existsSync(venvPy) ? venvPy : 'python3'
+  }
 
   const args = isDev ? [path.join(__dirname, '..', 'app.py')] : []
 
