@@ -201,9 +201,9 @@ step "Installation des dependances Python..."
 ok "Dependances Python installees (FastAPI, socketio, uvicorn...)"
 
 # macOS — supprime la quarantaine du binaire backend si present
-if [ "$DISTRO" = "macos" ] && [ -f "backend-dist/qomet-server-mac" ]; then
-    xattr -d com.apple.quarantine backend-dist/qomet-server-mac 2>/dev/null || true
-    chmod +x backend-dist/qomet-server-mac
+if [ "$DISTRO" = "macos" ] && [ -f "backend-dist/qomet-server" ]; then
+    xattr -d com.apple.quarantine backend-dist/qomet-server 2>/dev/null || true
+    chmod +x backend-dist/qomet-server
     ok "Binaire backend macOS configure"
 fi
 
@@ -233,7 +233,7 @@ if [[ "$reponse" =~ ^[Oo]$ ]]; then
     export PATH="/opt/homebrew/opt/python@3.11/bin:$PATH"
     export PATH="/opt/homebrew/bin:$PATH"
 
-    # Demande si on veut le mode dev ou builder un executable de production
+    # Demande si on veut le mode dev ou builder un executables de production
     echo ""
     echo -e "  ${CYAN}Que veux-tu faire ?${NC}"
     echo -e "    ${YELLOW}1${NC} — Lancer en mode developpement (npm run electron:dev)"
@@ -241,97 +241,59 @@ if [[ "$reponse" =~ ^[Oo]$ ]]; then
     read -rp "  Ton choix (1 ou 2) : " choix_mode
 
     if [[ "$choix_mode" == "2" ]]; then
-        # ── BUILD DE PRODUCTION ─────────────────────────────────────────
-        # Desactive les erreurs fatales : electron-builder emet des warnings
-        # qui feraient planter le script avec set -e
-        set +e
-
-        # 1. Build du frontend React
-        step "Build du frontend React..."
-        (cd frontend/src && npm run build)
-        if [ $? -ne 0 ]; then fail "Build frontend echoue"; fi
-        ok "Frontend construit dans frontend/src/dist/"
-
-        # 2. Build du binaire Python (PyInstaller)
+        # ── BUILD DE PRODUCTION ──────────────────────────────────────
         step "Construction du binaire Python (PyInstaller)..."
         ./venv/bin/pip install pyinstaller -q
-        if [ $? -ne 0 ]; then fail "Impossible d'installer PyInstaller"; fi
         ok "PyInstaller installe"
-
-        ./venv/bin/pyinstaller qomet-server.spec \
-            --distpath dist-py \
-            --workpath build-py \
-            --noconfirm \
-            --clean
-        if [ $? -ne 0 ]; then fail "PyInstaller a echoue — voir les erreurs ci-dessus"; fi
-        ok "Binaire Python construit dans dist-py/qomet-server"
 
         mkdir -p backend-dist
 
         if [ "$DISTRO" = "macos" ]; then
-            # 3a. Copie du binaire Mac
-            cp dist-py/qomet-server backend-dist/qomet-server-mac
-            chmod +x backend-dist/qomet-server-mac
-            # Supprime la quarantaine Gatekeeper si presente
-            xattr -d com.apple.quarantine backend-dist/qomet-server-mac 2>/dev/null || true
-            ok "Binaire copie dans backend-dist/qomet-server-mac"
-
-            # 4a. electron-builder sans signature de code
+            ./venv/bin/pyinstaller --name qomet-server --onefile --distpath ./backend-dist --noconfirm \
+              --hidden-import uvicorn.logging --hidden-import uvicorn.loops \
+              --hidden-import uvicorn.loops.auto --hidden-import uvicorn.protocols \
+              --hidden-import uvicorn.protocols.http --hidden-import uvicorn.protocols.http.auto \
+              --hidden-import uvicorn.protocols.websockets --hidden-import uvicorn.protocols.websockets.auto \
+              --hidden-import engineio.async_drivers.asgi backend/main.py
+            
+            chmod +x backend-dist/qomet-server
+            ok "Binaire macOS construit dans backend-dist/qomet-server"
+            
             step "Construction de l'application macOS (.dmg)..."
-            export CSC_IDENTITY_AUTO_DISCOVERY=false
-            export CSC_LINK=""
-            ./node_modules/.bin/electron-builder --mac --publish never
-            BUILD_STATUS=$?
+            npm run electron:mac
+            ok "Application macOS construite dans dist/"
         else
-            # 3b. Copie du binaire Linux
-            cp dist-py/qomet-server backend-dist/qomet-server-static
+            ./venv/bin/pyinstaller --name qomet-server-static --onefile --distpath ./backend-dist --noconfirm \
+              --hidden-import uvicorn.logging --hidden-import uvicorn.loops \
+              --hidden-import uvicorn.loops.auto --hidden-import uvicorn.protocols \
+              --hidden-import uvicorn.protocols.http --hidden-import uvicorn.protocols.http.auto \
+              --hidden-import uvicorn.protocols.websockets --hidden-import uvicorn.protocols.websockets.auto \
+              --hidden-import engineio.async_drivers.asgi backend/main.py
+              
             chmod +x backend-dist/qomet-server-static
-            ok "Binaire copie dans backend-dist/qomet-server-static"
-
-            # 4b. electron-builder Linux
+            ok "Binaire Linux construit dans backend-dist/qomet-server-static"
+            
             step "Construction de l'application Linux (.AppImage)..."
-            export CSC_IDENTITY_AUTO_DISCOVERY=false
-            ./node_modules/.bin/electron-builder --linux --publish never
-            BUILD_STATUS=$?
+            npm run electron:linux
+            ok "Application Linux construite dans dist/"
         fi
-
-        if [ $BUILD_STATUS -eq 0 ]; then
-            echo ""
-            echo -e "  ${GREEN}============================================${NC}"
-            echo -e "  ${GREEN} Build termine avec succes !${NC}"
-            echo -e "  ${GREEN} Executable dans le dossier dist/${NC}"
-            echo -e "  ${GREEN}============================================${NC}"
-            echo ""
-            ls -lh dist/*.dmg dist/*.AppImage 2>/dev/null || true
-        else
-            fail "electron-builder a echoue (code $BUILD_STATUS)"
-        fi
-
-        set -e
+        echo ""
+        echo -e "  ${GREEN}Executable de production cree dans le dossier dist/  ${NC}"
+        echo ""
     else
         # ── MODE DEVELOPPEMENT ───────────────────────────────────────
         echo ""
         echo -e "  ${CYAN}Lancement de QOMET...${NC}"
         echo -e "  ${YELLOW}(Ctrl+C pour arreter l'application)${NC}"
         echo ""
-        npm run electron:dev
     fi
 else
     echo ""
     echo -e "  Etapes pour lancer QOMET :"
     echo -e "    1. ${CYAN}source ~/.zshrc${NC}          ← recharge le PATH"
-    echo -e "    2. ${YELLOW}npm run electron:dev${NC}     ← lance l'application"
     echo ""
-    echo -e "  Pour builder l'appli de production manuellement :"
-    echo -e "    ${YELLOW}./venv/bin/pip install pyinstaller${NC}"
-    echo -e "    ${YELLOW}./venv/bin/pyinstaller qomet-server.spec --distpath dist-py --workpath build-py --noconfirm --clean${NC}"
-    echo -e "    macOS  : ${YELLOW}cp dist-py/qomet-server backend-dist/qomet-server-mac${NC}"
-    echo -e "    Linux  : ${YELLOW}cp dist-py/qomet-server backend-dist/qomet-server-static${NC}"
-    echo -e "    ${YELLOW}export CSC_IDENTITY_AUTO_DISCOVERY=false${NC}"
-    echo -e "    macOS  : ${YELLOW}./node_modules/.bin/electron-builder --mac --publish never${NC}"
-    echo -e "    Linux  : ${YELLOW}./node_modules/.bin/electron-builder --linux --publish never${NC}"
-    echo ""
-    echo -e "  Pour les tests :"
-    echo -e "    ${YELLOW}source venv/bin/activate && pytest tests/${NC}"
+    echo -e "  Pour builder l'appli de production :"
+    echo -e "    macOS  : ${YELLOW}npm run electron:mac${NC}"
+    echo -e "    Linux  : ${YELLOW}npm run electron:linux${NC}"
     echo ""
 fi

@@ -367,4 +367,6 @@ if _dist.exists():
 
 # Lancement 
 if __name__ == "__main__":
-    uvicorn.run("backend.main:socket_app", host=HOST, port=PORT, reload=True)
+    import multiprocessing
+    multiprocessing.freeze_support() 
+    uvicorn.run(socket_app, host=HOST, port=PORT)
