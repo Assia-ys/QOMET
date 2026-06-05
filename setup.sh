@@ -226,75 +226,11 @@ echo -e "    ${CYAN}source ~/.zshrc${NC}   (ou ouvre un nouveau terminal)"
 echo -e "  Cela active le PATH de node et python correctement."
 echo ""
 
-read -rp "  As-tu deja lance 'source ~/.zshrc' ou veux-tu lancer QOMET maintenant ? (o/n) : " reponse
-if [[ "$reponse" =~ ^[Oo]$ ]]; then
-    # Recharge le PATH dans ce script avant de lancer
-    export PATH="/opt/homebrew/opt/node@22/bin:$PATH"
-    export PATH="/opt/homebrew/opt/python@3.11/bin:$PATH"
-    export PATH="/opt/homebrew/bin:$PATH"
-    export PATH="$PWD/venv/bin:$PATH"
-
-    # Demande si on veut le mode dev ou builder un executables de production
-    echo ""
-    echo -e "  ${CYAN}Que veux-tu faire ?${NC}"
-    echo -e "    ${YELLOW}1${NC} — Lancer en mode developpement (npm run electron:dev)"
-    echo -e "    ${YELLOW}2${NC} — Construire l'application de production (.dmg / .AppImage)"
-    read -rp "  Ton choix (1 ou 2) : " choix_mode
-
-    if [[ "$choix_mode" == "2" ]]; then
-        # ── BUILD DE PRODUCTION ──────────────────────────────────────
-        step "Construction du binaire Python (PyInstaller)..."
-        ./venv/bin/pip install pyinstaller -q
-        ok "PyInstaller installe"
-
-        mkdir -p backend-dist
-
-        if [ "$DISTRO" = "macos" ]; then
-            ./venv/bin/pyinstaller --name qomet-server --onefile --distpath ./backend-dist --noconfirm \
-              --hidden-import uvicorn.logging --hidden-import uvicorn.loops \
-              --hidden-import uvicorn.loops.auto --hidden-import uvicorn.protocols \
-              --hidden-import uvicorn.protocols.http --hidden-import uvicorn.protocols.http.auto \
-              --hidden-import uvicorn.protocols.websockets --hidden-import uvicorn.protocols.websockets.auto \
-              --hidden-import engineio.async_drivers.asgi backend/main.py
-            
-            chmod +x backend-dist/qomet-server
-            ok "Binaire macOS construit dans backend-dist/qomet-server"
-            
-            step "Construction de l'application macOS (.dmg)..."
-            npm run electron:mac
-            ok "Application macOS construite dans dist/"
-        else
-            ./venv/bin/pyinstaller --name qomet-server-static --onefile --distpath ./backend-dist --noconfirm \
-              --hidden-import uvicorn.logging --hidden-import uvicorn.loops \
-              --hidden-import uvicorn.loops.auto --hidden-import uvicorn.protocols \
-              --hidden-import uvicorn.protocols.http --hidden-import uvicorn.protocols.http.auto \
-              --hidden-import uvicorn.protocols.websockets --hidden-import uvicorn.protocols.websockets.auto \
-              --hidden-import engineio.async_drivers.asgi backend/main.py
-              
-            chmod +x backend-dist/qomet-server-static
-            ok "Binaire Linux construit dans backend-dist/qomet-server-static"
-            
-            step "Construction de l'application Linux (.AppImage)..."
-            npm run electron:linux
-            ok "Application Linux construite dans dist/"
-        fi
-        echo ""
-        echo -e "  ${GREEN}Executable de production cree dans le dossier dist/  ${NC}"
-        echo ""
-    else
-        # ── MODE DEVELOPPEMENT ───────────────────────────────────────
-        echo ""
-        echo -e "  ${CYAN}Lancement de QOMET...${NC}"
-        echo -e "  ${YELLOW}(Ctrl+C pour arreter l'application)${NC}"
-        echo ""
-    fi
-else
-    echo ""
-    echo -e "  Etapes pour lancer QOMET :"
-    echo -e "    1. ${CYAN}source ~/.zshrc${NC}          ← recharge le PATH"
-    echo ""
-    echo -e "  Pour builder l'appli de production :"
-    echo -e "    macOS  : ${YELLOW}npm run electron:mac${NC}"
-    echo -e "    Linux  : ${YELLOW}npm run electron:linux${NC}"
-    echo ""
-fi
+echo ""
+echo -e "  Etapes pour lancer QOMET :"
+echo -e "    1. ${CYAN}source ~/.zshrc${NC}          ← recharge le PATH"
+echo ""
+echo -e "  Pour builder l'appli de production :"
+echo -e "    macOS  : ${YELLOW}npm run electron:mac${NC}"
+echo -e "    Linux  : ${YELLOW}npm run electron:linux${NC}"
+echo ""

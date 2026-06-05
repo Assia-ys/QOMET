@@ -224,23 +224,6 @@ Write-Host "   Installation terminee avec succes !" -ForegroundColor Green
 Write-Host "  ============================================" -ForegroundColor Green
 Write-Host ""
 
-$reponse = Read-Host "  Lancer QOMET maintenant ? (O/N)"
-if ($reponse -match "^[Oo]$") {
-    Write-Host ""
-    Write-Host "  Lancement de QOMET..." -ForegroundColor Cyan
-    Write-Host "  (Ctrl+C pour arreter l'application)" -ForegroundColor Yellow
-    Write-Host ""
-    npm run electron:start
-} else {
-    Write-Host ""
-    Write-Host "  Pour lancer plus tard :" -ForegroundColor White
-    Write-Host "    npm run electron:start" -ForegroundColor Yellow
-    Write-Host ""
-    Write-Host "  Pour builder le .exe :" -ForegroundColor White
-    Write-Host "    npm run electron:build" -ForegroundColor Yellow
-    Write-Host ""
-    Write-Host "  Pour les tests :" -ForegroundColor White
-    Write-Host "    .\venv\Scripts\activate  puis  pytest tests/" -ForegroundColor Yellow
-    Write-Host ""
-}
-
+Write-Host "  Pour builder le .exe :" -ForegroundColor White
+Write-Host "    npm run electron:build" -ForegroundColor Yellow
+Write-Host ""
