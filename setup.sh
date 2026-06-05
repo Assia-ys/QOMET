@@ -232,6 +232,7 @@ if [[ "$reponse" =~ ^[Oo]$ ]]; then
     export PATH="/opt/homebrew/opt/node@22/bin:$PATH"
     export PATH="/opt/homebrew/opt/python@3.11/bin:$PATH"
     export PATH="/opt/homebrew/bin:$PATH"
+    export PATH="$PWD/venv/bin:$PATH"
 
     # Demande si on veut le mode dev ou builder un executables de production
     echo ""
