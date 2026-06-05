@@ -1,8 +1,7 @@
 # ============================================================
 #  QOMET — Script d'installation et lancement (Windows)
 #  Lance depuis la racine du projet QOMET :
-#    Set-ExecutionPolicy -Scope CurrentUser RemoteSigned -Force
-#    .\setup.ps1
+#    powershell -ExecutionPolicy Bypass -File .\setup.ps1
 # ============================================================
 
 $ErrorActionPreference = "Stop"
@@ -12,16 +11,13 @@ function Write-Ok   { param($msg) Write-Host "  [OK] $msg" -ForegroundColor Gree
 function Write-Warn { param($msg) Write-Host "  [!]  $msg" -ForegroundColor Yellow }
 function Write-Fail { param($msg) Write-Host "  [X]  $msg" -ForegroundColor Red; exit 1 }
 
-# Recharge le PATH sans redemarrer le terminal
 function Refresh-Path {
     $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" +
                 [System.Environment]::GetEnvironmentVariable("Path","User")
 }
 
-# ── Autorise l'execution des scripts PowerShell ───────────────────────────────
 Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force
 
-# ── Verifie qu'on est bien dans le dossier QOMET ──────────────────────────────
 if (-not (Test-Path "package.json") -or -not (Test-Path "requirements.txt")) {
     Write-Fail "Lance ce script depuis la racine du projet QOMET"
 }
@@ -32,40 +28,29 @@ Write-Host "  ============================================" -ForegroundColor Mag
 Write-Host ""
 
 # ══════════════════════════════════════════════════════════════
-# WINGET — verifie que le gestionnaire de paquets est disponible
+# WINGET
 # ══════════════════════════════════════════════════════════════
 Write-Step "Verification de winget..."
-$wingetOk = $false
 try {
     $wg = winget --version 2>$null
-    if ($wg) { Write-Ok "winget disponible : $wg"; $wingetOk = $true }
-} catch {}
-
-if (-not $wingetOk) {
-    Write-Warn "winget non disponible. Installation manuelle requise :"
-    Write-Host "  1. Node.js   : https://nodejs.org" -ForegroundColor Yellow
-    Write-Host "  2. Python    : https://www.python.org (cocher 'Add to PATH')" -ForegroundColor Yellow
-    Write-Host "  Puis relance ce script." -ForegroundColor Yellow
+    if ($wg) { Write-Ok "winget : $wg" }
+} catch {
+    Write-Host "  winget non disponible. Installe Node.js et Python manuellement puis relance." -ForegroundColor Yellow
     exit 1
 }
 
 # ══════════════════════════════════════════════════════════════
-# ETAPE 1 — Git
+# GIT
 # ══════════════════════════════════════════════════════════════
 Write-Step "Verification Git..."
-$gitOk = $false
-try { $v = git --version 2>$null; if ($v) { Write-Ok "Git : $v"; $gitOk = $true } } catch {}
-
-if (-not $gitOk) {
+try { $v = git --version 2>$null; Write-Ok "Git : $v" } catch {
     Write-Warn "Git non trouve — installation..."
     winget install -e --id Git.Git --accept-source-agreements --accept-package-agreements
     Refresh-Path
-    try { $v = git --version 2>$null; if ($v) { Write-Ok "Git installe : $v"; $gitOk = $true } } catch {}
-    if (-not $gitOk) { Write-Warn "Git installe mais non detecte. Continue quand meme..." }
 }
 
 # ══════════════════════════════════════════════════════════════
-# ETAPE 2 — Node.js
+# NODE.JS
 # ══════════════════════════════════════════════════════════════
 Write-Step "Verification Node.js..."
 $nodeOk = $false
@@ -76,70 +61,69 @@ if (-not $nodeOk) {
     winget install -e --id OpenJS.NodeJS.LTS --accept-source-agreements --accept-package-agreements
     Refresh-Path
     try { $v = node --version 2>$null; if ($v) { Write-Ok "Node.js installe : $v"; $nodeOk = $true } } catch {}
-    if (-not $nodeOk) { Write-Fail "Node.js installe mais non detecte. Ferme et reouvre ce terminal puis relance le script." }
+    if (-not $nodeOk) { Write-Fail "Ferme et reouvre ce terminal puis relance le script." }
 }
-
-# Verifie npm
-try { $v = npm --version 2>$null; Write-Ok "npm : $v" } catch { Write-Fail "npm non detecte apres installation de Node.js" }
+try { $v = npm --version 2>$null; Write-Ok "npm : $v" } catch { Write-Fail "npm non detecte" }
 
 # ══════════════════════════════════════════════════════════════
-# ETAPE 3 — Python 3.11
+# PYTHON
 # ══════════════════════════════════════════════════════════════
 Write-Step "Verification Python..."
 $pythonCmd = $null
-
 foreach ($cmd in @("python", "python3", "py")) {
     try {
         $ver = & $cmd --version 2>$null
-        if ($ver -match "Python 3") {
-            Write-Ok "Python trouve ($cmd) : $ver"
-            $pythonCmd = $cmd
-            break
-        }
+        if ($ver -match "Python 3") { Write-Ok "Python ($cmd) : $ver"; $pythonCmd = $cmd; break }
     } catch {}
 }
-
 if (-not $pythonCmd) {
-    Write-Warn "Python non trouve — installation de Python 3.11..."
+    Write-Warn "Python non trouve — installation..."
     winget install -e --id Python.Python.3.11 --accept-source-agreements --accept-package-agreements
     Refresh-Path
-    foreach ($cmd in @("python", "python3", "py")) {
+    foreach ($cmd in @("python", "py")) {
         try {
             $ver = & $cmd --version 2>$null
-            if ($ver -match "Python 3") {
-                Write-Ok "Python installe ($cmd) : $ver"
-                $pythonCmd = $cmd
-                break
-            }
+            if ($ver -match "Python 3") { Write-Ok "Python installe : $ver"; $pythonCmd = $cmd; break }
         } catch {}
     }
-    if (-not $pythonCmd) { Write-Fail "Python installe mais non detecte. Ferme et reouvre ce terminal puis relance." }
+    if (-not $pythonCmd) { Write-Fail "Python non detecte apres installation. Relance le script." }
 }
 
 # ══════════════════════════════════════════════════════════════
-# ETAPE 4 — Visual C++ Build Tools (requis par certains modules npm)
-# ══════════════════════════════════════════════════════════════
-Write-Step "Verification des outils de compilation C++..."
-try {
-    $vs = Get-Command "cl.exe" -ErrorAction SilentlyContinue
-    if ($vs) { Write-Ok "Outils C++ disponibles" }
-    else {
-        Write-Warn "Outils C++ non detectes — installation des Build Tools..."
-        winget install -e --id Microsoft.VisualStudio.2022.BuildTools --accept-source-agreements --accept-package-agreements
-        Write-Ok "Build Tools installes"
-    }
-} catch { Write-Warn "Verification C++ ignoree — continue..." }
-
-# ══════════════════════════════════════════════════════════════
-# ETAPE 5 — Dependances npm (racine — Electron)
+# DEPENDANCES NPM — ELECTRON (racine)
+# ELECTRON_MIRROR evite l'echec de telechargement du binaire
 # ══════════════════════════════════════════════════════════════
 Write-Step "Installation des dependances Electron (racine)..."
+$env:ELECTRON_MIRROR = "https://npmmirror.com/mirrors/electron/"
 npm install
-if ($LASTEXITCODE -ne 0) { Write-Fail "npm install racine a echoue" }
+if ($LASTEXITCODE -ne 0) { Write-Fail "npm install a echoue" }
+
+# Verifie que le binaire Electron est bien present apres npm install
+$electronBin = "node_modules\electron\dist\electron.exe"
+if (-not (Test-Path $electronBin)) {
+    Write-Warn "Binaire Electron manquant — reinstallation forcee..."
+    Remove-Item -Recurse -Force "node_modules\electron" -ErrorAction SilentlyContinue
+    $env:ELECTRON_MIRROR = "https://npmmirror.com/mirrors/electron/"
+    npm install electron
+}
+
+if (-not (Test-Path $electronBin)) {
+    Write-Warn "npmmirror echoue — tentative miroir officiel GitHub..."
+    Remove-Item -Recurse -Force "node_modules\electron" -ErrorAction SilentlyContinue
+    Remove-Item -Force "node_modules\electron" -ErrorAction SilentlyContinue
+    $env:ELECTRON_MIRROR = "https://github.com/electron/electron/releases/download/"
+    npm install electron
+}
+
+if (Test-Path $electronBin) {
+    Write-Ok "Binaire Electron OK"
+} else {
+    Write-Fail "Binaire Electron introuvable. Verifie ta connexion internet et relance."
+}
 Write-Ok "Dependances Electron installees"
 
 # ══════════════════════════════════════════════════════════════
-# ETAPE 6 — Dependances npm (frontend/src — React)
+# DEPENDANCES NPM — REACT (frontend/src)
 # ══════════════════════════════════════════════════════════════
 Write-Step "Installation des dependances React (frontend/src)..."
 Set-Location "frontend\src"
@@ -149,29 +133,37 @@ Set-Location "..\.."
 Write-Ok "Dependances React installees"
 
 # ══════════════════════════════════════════════════════════════
-# ETAPE 7 — Environnement virtuel Python
+# ENVIRONNEMENT VIRTUEL PYTHON
 # ══════════════════════════════════════════════════════════════
 Write-Step "Creation de l'environnement virtuel Python..."
 if (Test-Path "venv") {
-    Write-Ok "Environnement virtuel deja present — reutilise"
+    $venvVer = & ".\venv\Scripts\python.exe" --version 2>$null
+    if ($venvVer -match "3\.([0-9]+)" -and [int]$Matches[1] -lt 10) {
+        Write-Warn "Venv trop ancien ($venvVer) — recreation..."
+        Remove-Item -Recurse -Force "venv"
+        & $pythonCmd -m venv venv
+        Write-Ok "Venv recree"
+    } else {
+        Write-Ok "Venv OK ($venvVer) — reutilise"
+    }
 } else {
     & $pythonCmd -m venv venv
     if ($LASTEXITCODE -ne 0) { Write-Fail "Creation du venv echouee" }
-    Write-Ok "Environnement virtuel cree dans ./venv"
+    Write-Ok "Venv cree dans ./venv"
 }
 
 # ══════════════════════════════════════════════════════════════
-# ETAPE 8 — Dependances Python
+# DEPENDANCES PYTHON
 # ══════════════════════════════════════════════════════════════
 Write-Step "Installation des dependances Python..."
 $pip = ".\venv\Scripts\pip.exe"
-& $pip install --upgrade pip -q
+& $pip install --upgrade pip -q 2>$null
 & $pip install -r requirements.txt
 if ($LASTEXITCODE -ne 0) { Write-Fail "pip install a echoue" }
-Write-Ok "Dependances Python installees (FastAPI, socketio, uvicorn...)"
+Write-Ok "Dependances Python installees"
 
 # ══════════════════════════════════════════════════════════════
-# RESUME + PROPOSITION DE LANCEMENT
+# RESUME + LANCEMENT
 # ══════════════════════════════════════════════════════════════
 Write-Host ""
 Write-Host "  ============================================" -ForegroundColor Green
@@ -183,18 +175,18 @@ $reponse = Read-Host "  Lancer QOMET maintenant ? (O/N)"
 if ($reponse -match "^[Oo]$") {
     Write-Host ""
     Write-Host "  Lancement de QOMET..." -ForegroundColor Cyan
-    Write-Host "  (Ctrl+C pour arreter l'application)" -ForegroundColor Yellow
+    Write-Host "  (Ctrl+C pour arreter)" -ForegroundColor Yellow
     Write-Host ""
     npm run electron:dev
 } else {
     Write-Host ""
-    Write-Host "  Pour lancer plus tard :" -ForegroundColor White
-    Write-Host "    npm run electron:dev" -ForegroundColor Yellow
+    Write-Host "  Pour lancer :"      -ForegroundColor White
+    Write-Host "    npm run electron:dev"   -ForegroundColor Yellow
     Write-Host ""
-    Write-Host "  Pour builder le .exe :" -ForegroundColor White
+    Write-Host "  Pour builder .exe :" -ForegroundColor White
     Write-Host "    npm run electron:build" -ForegroundColor Yellow
     Write-Host ""
-    Write-Host "  Pour les tests :" -ForegroundColor White
-    Write-Host "    .\venv\Scripts\activate  puis  pytest tests/" -ForegroundColor Yellow
+    Write-Host "  Pour les tests :"    -ForegroundColor White
+    Write-Host "    .\venv\Scripts\activate ; pytest tests/" -ForegroundColor Yellow
     Write-Host ""
 }
