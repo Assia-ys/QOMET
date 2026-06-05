@@ -91,7 +91,6 @@ export default function Reseau() {
         // Essai via signaling Railway (fonctionne sur tout réseau, instant)
         let signalingURL = null
         try {
-          console.log('[Rejoindre] Interrogation Railway pour code', code.toUpperCase())
           const res = await fetch(`${ONLINE_URL}/local/find/${code.toUpperCase()}`, {
             signal: AbortSignal.timeout(4000),
           })
@@ -99,31 +98,36 @@ export default function Reseau() {
             const info = await res.json()
             if (info.ip && info.ip !== '127.0.0.1') {
               signalingURL = `http://${info.ip}:${info.port}`
-              console.log('[Rejoindre] Railway → IP hôte:', signalingURL)
-            } else {
-              console.log('[Rejoindre] Railway → IP invalide:', info.ip, '→ fallback scan')
             }
-          } else {
-            console.log('[Rejoindre] Railway → code inconnu (HTTP', res.status, '), fallback scan')
           }
-        } catch (e) {
-          console.log('[Rejoindre] Railway injoignable:', e?.message, '→ fallback scan')
-        }
+        } catch {}
 
         if (signalingURL) {
           resolvedURL = signalingURL
         } else {
-          console.log('[Rejoindre] Lancement scan réseau local...')
           const found = await window.electronAPI.trouverServeur(code)
-          console.log('[Rejoindre] Résultat scan:', found)
           if (!found) { resetSocketLocal(); setVue('erreur'); return }
           if (found === 'INVALID_CODE') { resetSocketLocal(); setVue('code_invalide'); return }
           resolvedURL = found
         }
       }
-      console.log('[Rejoindre] Connexion vers:', resolvedURL)
-      const data = await verifierPartie(code, resolvedURL)
-      console.log('[Rejoindre] verifierPartie OK:', data)
+
+      // Si Railway avait fourni l'IP mais qu'elle ne répond pas → fallback découverte locale
+      let data
+      try {
+        data = await verifierPartie(code, resolvedURL)
+      } catch {
+        if (signalingURL && window.electronAPI?.trouverServeur) {
+          const found = await window.electronAPI.trouverServeur(code)
+          if (!found) { resetSocketLocal(); setVue('erreur'); return }
+          if (found === 'INVALID_CODE') { resetSocketLocal(); setVue('code_invalide'); return }
+          resolvedURL = found
+          data = await verifierPartie(code, resolvedURL)
+        } else {
+          throw new Error('verifierPartie échouée')
+        }
+      }
+
       if (data.pleine) { setVue('erreur'); return }
       reinitialiser()
       setMaCouleur('fonce')
@@ -132,7 +136,6 @@ export default function Reseau() {
       if (!s.connected) s.connect()
       s.emit('rejoindre', { code, prenom })
     } catch (err) {
-      console.error('[Rejoindre] Erreur:', err?.message || err)
       resetSocketLocal()
       setVue('erreur')
     } finally {
