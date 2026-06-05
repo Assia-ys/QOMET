@@ -16,7 +16,7 @@ function Refresh-Path {
                 [System.Environment]::GetEnvironmentVariable("Path","User")
 }
 
-# ── Verifie qu'on est bien dans le dossier QOMET ──────────────────────────────
+# -- Verifie qu'on est bien dans le dossier QOMET ------------------------------
 if (-not (Test-Path "package.json") -or -not (Test-Path "requirements.txt")) {
     Write-Fail "Lance ce script depuis la racine du projet QOMET"
 }
@@ -48,7 +48,7 @@ $gitOk = $false
 try { $v = git --version 2>$null; if ($v) { Write-Ok "Git : $v"; $gitOk = $true } } catch {}
 
 if (-not $gitOk) {
-    Write-Warn "Git non trouve — installation..."
+    Write-Warn "Git non trouve -- installation..."
     winget install -e --id Git.Git --accept-source-agreements --accept-package-agreements
     Refresh-Path
     try { $v = git --version 2>$null; if ($v) { Write-Ok "Git installe : $v"; $gitOk = $true } } catch {}
@@ -61,7 +61,7 @@ $nodeOk = $false
 try { $v = node --version 2>$null; if ($v) { Write-Ok "Node.js : $v"; $nodeOk = $true } } catch {}
 
 if (-not $nodeOk) {
-    Write-Warn "Node.js non trouve — installation..."
+    Write-Warn "Node.js non trouve -- installation..."
     winget install -e --id OpenJS.NodeJS.LTS --accept-source-agreements --accept-package-agreements
     Refresh-Path
     try { $v = node --version 2>$null; if ($v) { Write-Ok "Node.js installe : $v"; $nodeOk = $true } } catch {}
@@ -86,7 +86,7 @@ foreach ($cmd in @("python", "python3", "py")) {
 }
 
 if (-not $pythonCmd) {
-    Write-Warn "Python non trouve — installation de Python 3.11..."
+    Write-Warn "Python non trouve -- installation de Python 3.11..."
     winget install -e --id Python.Python.3.11 --accept-source-agreements --accept-package-agreements
     Refresh-Path
     foreach ($cmd in @("python", "python3", "py")) {
@@ -108,11 +108,11 @@ try {
     $vs = Get-Command "cl.exe" -ErrorAction SilentlyContinue
     if ($vs) { Write-Ok "Outils C++ disponibles" }
     else {
-        Write-Warn "Outils C++ non detectes — installation des Build Tools..."
+        Write-Warn "Outils C++ non detectes -- installation des Build Tools..."
         winget install -e --id Microsoft.VisualStudio.2022.BuildTools --accept-source-agreements --accept-package-agreements
         Write-Ok "Build Tools installes"
     }
-} catch { Write-Warn "Verification C++ ignoree — continue..." }
+} catch { Write-Warn "Verification C++ ignoree -- continue..." }
 
 # ETAPE 5 - npm install (racine)
 Write-Step "Installation des dependances Electron (racine)..."
@@ -126,7 +126,7 @@ Write-Step "Verification du binaire Electron..."
 $electronExe = "node_modules\electron\dist\electron.exe"
 
 if (-not (Test-Path $electronExe)) {
-    Write-Warn "Binaire Electron manquant — telechargement manuel..."
+    Write-Warn "Binaire Electron manquant -- telechargement manuel..."
     $electronPkg = Get-Content "node_modules\electron\package.json" | ConvertFrom-Json
     $electronVersion = $electronPkg.version
     Write-Ok "Version Electron detectee : $electronVersion"
@@ -168,7 +168,7 @@ if (-not (Test-Path $electronExe)) {
         "electron.exe" | Out-File -FilePath "node_modules\electron\path.txt" -Encoding ascii -NoNewline
         Write-Ok "Binaire Electron installe avec succes"
     } else {
-        Write-Fail "Extraction echouee — electron.exe introuvable dans dist/"
+        Write-Fail "Extraction echouee -- electron.exe introuvable dans dist/"
     }
 } else {
     Write-Ok "Binaire Electron deja present"
@@ -185,27 +185,24 @@ try {
         [System.IO.File]::WriteAllText((Join-Path (Get-Location) "python.path"), $pythonExe, [System.Text.Encoding]::ASCII)
         Write-Ok "python.path cree : $pythonExe"
     } else {
-        Write-Warn "Chemin Python non detecte — continue quand meme"
+        Write-Warn "Chemin Python non detecte -- continue quand meme"
     }
 } catch {
-    Write-Warn "Erreur creation python.path — continue quand meme"
+    Write-Warn "Erreur creation python.path -- continue quand meme"
 }
 
-# ETAPE 6 - npm install + build (frontend)
+# ETAPE 6 - npm install (frontend)
 Write-Step "Installation des dependances React (frontend/src)..."
 Set-Location "frontend\src"
 npm install
 if ($LASTEXITCODE -ne 0) { Set-Location "..\.."; Write-Fail "npm install frontend a echoue" }
-Write-Step "Build du frontend React (genere dist/)..."
-npm run build
-if ($LASTEXITCODE -ne 0) { Set-Location "..\.."; Write-Fail "npm run build a echoue" }
 Set-Location "..\.."
-Write-Ok "Frontend installe et compile"
+Write-Ok "Dependances React installees"
 
 # ETAPE 7 - venv Python
 Write-Step "Creation de l'environnement virtuel Python..."
 if (Test-Path "venv") {
-    Write-Ok "Environnement virtuel deja present — reutilise"
+    Write-Ok "Environnement virtuel deja present -- reutilise"
 } else {
     & $pythonCmd -m venv venv
     if ($LASTEXITCODE -ne 0) { Write-Fail "Creation du venv echouee" }
@@ -233,11 +230,11 @@ if ($reponse -match "^[Oo]$") {
     Write-Host "  Lancement de QOMET..." -ForegroundColor Cyan
     Write-Host "  (Ctrl+C pour arreter l'application)" -ForegroundColor Yellow
     Write-Host ""
-    npm run electron:dev
+    npm run electron:start
 } else {
     Write-Host ""
     Write-Host "  Pour lancer plus tard :" -ForegroundColor White
-    Write-Host "    npm run electron:dev" -ForegroundColor Yellow
+    Write-Host "    npm run electron:start" -ForegroundColor Yellow
     Write-Host ""
     Write-Host "  Pour builder le .exe :" -ForegroundColor White
     Write-Host "    npm run electron:build" -ForegroundColor Yellow
@@ -246,3 +243,4 @@ if ($reponse -match "^[Oo]$") {
     Write-Host "    .\venv\Scripts\activate  puis  pytest tests/" -ForegroundColor Yellow
     Write-Host ""
 }
+
