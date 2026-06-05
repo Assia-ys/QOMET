@@ -316,11 +316,9 @@ function demarrerBackend() {
   if (!isDev) {
     exe = path.join(process.resourcesPath, binName)
   } else if (process.platform === 'win32') {
-    // Dev Windows : venv d'abord, sinon python global
     const venvPy = path.join(__dirname, '..', 'venv', 'Scripts', 'python.exe')
     exe = fs.existsSync(venvPy) ? venvPy : 'python'
   } else {
-    // Dev macOS/Linux : venv d'abord, sinon python3 global
     const venvPy = path.join(__dirname, '..', 'venv', 'bin', 'python3')
     exe = fs.existsSync(venvPy) ? venvPy : 'python3'
   }
@@ -410,11 +408,16 @@ function creerFenetre() {
 
   Menu.setApplicationMenu(null)
 
+  const distIndex = path.join(__dirname, '..', 'frontend', 'src', 'dist', 'index.html')
   if (isDev) {
-    win.loadURL('http://localhost:5173')
+    // Vite lancé → charge depuis le serveur dev (hot reload)
+    // Vite absent → charge depuis le build statique
+    win.loadURL('http://localhost:5173').catch(() => {
+      win.loadFile(distIndex)
+    })
     win.webContents.openDevTools()
   } else {
-    win.loadFile(path.join(__dirname, '..', 'frontend', 'src', 'dist', 'index.html'))
+    win.loadFile(distIndex)
   }
 
   win.on('closed', () => { win = null })
