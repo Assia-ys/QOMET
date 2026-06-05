@@ -63,16 +63,14 @@ Le plateau est composé de **25 cases** reliées par des lignes. Chaque joueur d
 
 ---
 
-## Lancer en développement
+## Commandes essentielles
 
 ```bash
-# Installer les dépendances
-npm install
-cd frontend/src && npm install && cd ../..
-pip install -r requirements.txt
-
-# Lancer (Electron + Vite + backend Python)
-npm run electron:dev
+npm run electron:dev        # lancer l'application (dev)
+python app.py               # backend seul  →  localhost:7777
+cd frontend/src && npm run dev  # frontend seul  →  localhost:5173
+npm run electron:build      # build Windows (.exe)
+./setup.sh                  # installation + build Mac/Linux (script automatique)
 ```
 
 ---
@@ -86,6 +84,20 @@ pytest tests/
 # Tests JavaScript (frontend)
 cd frontend/src && npm test
 ```
+
+---
+
+## Remarques sur l'utilisation de l'IA
+
+Dans le cadre de ce projet, nous avons eu recours à des outils d'intelligence artificielle à des fins de **montée en compétence** et d'**apprentissage**, dans les domaines suivants :
+
+- **Architecture réseau** : nous avons utilisé l'IA pour comprendre les mécanismes sous-jacents de notre couche réseau — diffusion UDP, table ARP, plages RFC 1918, cascade de découverte, signaling via Railway — afin de maîtriser les concepts avant de les coder et de les expliquer.
+
+- **Frontend React** : l'IA nous a accompagnées dans l'écriture du code React (hooks, Zustand, Socket.IO côté client) et nous a permis d'apprendre React en pratiquant, en comprenant les patterns utilisés plutôt qu'en les copiant.
+
+- **Tests unitaires** : nous avons utilisé l'IA pour apprendre à structurer des tests unitaires Python (`pytest`) et JavaScript (`vitest`), comprendre ce qu'il faut tester et comment isoler les cas limites.
+
+L'IA a été un outil de formation et d'assistance technique, pas un substitut à la compréhension : chaque concept généré a été relu, discuté et intégré dans notre apprentissage collectif.
 
 ---
 
