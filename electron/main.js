@@ -336,7 +336,14 @@ function demarrerBackend() {
     }
   } catch {}
 
-  // Sur macOS, le binaire téléchargé est mis en quarantaine par Gatekeeper 
+  // Vérifie que le binaire existe avant de le lancer (évite les échecs silencieux)
+  if (!isDev && !fs.existsSync(exe)) {
+    console.error(`[Backend] Binaire introuvable : ${exe}`)
+    console.error('[Backend] Rebuild requis : pyinstaller qomet-server.spec → backend-dist/')
+    return
+  }
+
+  // Sur macOS, le binaire téléchargé est mis en quarantaine par Gatekeeper
   // on supprime cet attribut avant de le lancer.
   if (!isDev && process.platform === 'darwin') {
     try { require('child_process').execSync(`xattr -d com.apple.quarantine "${exe}" 2>/dev/null`) } catch {}
@@ -347,11 +354,14 @@ function demarrerBackend() {
   server = spawn(exe, args, {
     env:   { ...process.env, PORT: String(PORT) },
     stdio: 'pipe',
+    // En dev : forcer le CWD à la racine du projet pour que Python trouve le module backend/
+    ...(isDev ? { cwd: path.join(__dirname, '..') } : {}),
   })
 
   server.stdout.on('data', d => console.log('[Backend]', d.toString()))
   server.stderr.on('data', d => console.error('[Backend ERR]', d.toString()))
   server.on('close', code => console.log('[Backend] Arrêté, code:', code))
+  server.on('error', err  => console.error('[Backend] Échec spawn:', err.message))
 }
 
 function arreterBackend() {

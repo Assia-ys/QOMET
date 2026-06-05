@@ -62,7 +62,10 @@ backend-dist/
 
 # PyInstaller
 build/
+build-py/
+dist-py/
 *.spec
+!qomet-server.spec
 
 # Backend dist
 qomet-server.exe
