@@ -191,13 +191,16 @@ try {
     Write-Warn "Erreur creation python.path — continue quand meme"
 }
 
-# ETAPE 6 - npm install (frontend)
+# ETAPE 6 - npm install + build (frontend)
 Write-Step "Installation des dependances React (frontend/src)..."
 Set-Location "frontend\src"
 npm install
 if ($LASTEXITCODE -ne 0) { Set-Location "..\.."; Write-Fail "npm install frontend a echoue" }
+Write-Step "Build du frontend React (genere dist/)..."
+npm run build
+if ($LASTEXITCODE -ne 0) { Set-Location "..\.."; Write-Fail "npm run build a echoue" }
 Set-Location "..\.."
-Write-Ok "Dependances React installees"
+Write-Ok "Frontend installe et compile"
 
 # ETAPE 7 - venv Python
 Write-Step "Creation de l'environnement virtuel Python..."
