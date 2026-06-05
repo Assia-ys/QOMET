@@ -129,8 +129,11 @@ Write-Step "Installation des dependances React (frontend/src)..."
 Set-Location "frontend\src"
 npm install
 if ($LASTEXITCODE -ne 0) { Set-Location "..\.."; Write-Fail "npm install frontend a echoue" }
+Write-Step "Build du frontend React (genere le dossier dist/)..."
+npm run build
+if ($LASTEXITCODE -ne 0) { Set-Location "..\.."; Write-Fail "npm run build a echoue" }
 Set-Location "..\.."
-Write-Ok "Dependances React installees"
+Write-Ok "Dependances React installees et frontend compile"
 
 # ══════════════════════════════════════════════════════════════
 # ENVIRONNEMENT VIRTUEL PYTHON
